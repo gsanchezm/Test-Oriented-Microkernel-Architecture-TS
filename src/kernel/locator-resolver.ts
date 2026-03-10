@@ -10,11 +10,16 @@ let locatorsCache: Record<string, any> | null = null;
 let cachedPlatform: string | null = null;
 let cachedViewport: string | null = null;
 
+function resolveMobile(node: any, os: 'android' | 'ios'): string | undefined {
+    if (typeof node.mobile === 'string') return node.mobile;
+    return node.mobile?.[os];
+}
+
 // Strategy Map for platform-specific locator resolution (O(1) lookup instead of if/else chains)
 const LOCATOR_STRATEGIES: Record<string, (node: any, viewport: string) => string | undefined> = {
     web: (node, viewport) => typeof node.web === 'string' ? node.web : node.web?.[viewport],
-    android: (node) => node.mobile?.android,
-    ios: (node) => node.mobile?.ios,
+    android: (node) => resolveMobile(node, 'android'),
+    ios: (node) => resolveMobile(node, 'ios'),
 };
 
 function getPlatform(): string {

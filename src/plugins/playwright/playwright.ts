@@ -75,6 +75,13 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
     },
   ],
   [
+    'READ_TEXT',
+    async (_page, _browser, selector) => {
+      const texts = await _page.locator(selector).allTextContents();
+      return texts.join('\n');
+    },
+  ],
+  [
     'TEARDOWN',
     async () => {
       // Crucial for freeing up memory (the 512MB cgroup limit)

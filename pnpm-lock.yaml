@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@gatling.io/core':
+        specifier: ^3.14.903
+        version: 3.15.1
+      '@gatling.io/http':
+        specifier: ^3.14.905
+        version: 3.15.1
       '@grpc/grpc-js':
         specifier: ^1.14.3
         version: 1.14.3
@@ -133,6 +139,15 @@ packages:
 
   '@cucumber/tag-expressions@8.1.0':
     resolution: {integrity: sha512-UFeOVUyc711/E7VHjThxMwg3jbGod9TlbM1gxNixX/AGDKg82Eha4cE0tKki3GGUs7uB2NyI+hQAuhB8rL2h5A==}
+
+  '@gatling.io/core@3.15.1':
+    resolution: {integrity: sha512-rgPZdGDsIQ79eqcRbykQA/tZjVCcQiYX6yB247nVAmFlmuo+4YfXCY0HsQSpYw40pmM+c1rJxqVm+h8qcm1sRQ==}
+
+  '@gatling.io/http@3.15.1':
+    resolution: {integrity: sha512-oR3JldMppwJk+AqS/2E+HdddqzMY7rAuFSYIa3de0nWx/VpOntym8LdPck6VilvDzs/D+kbbbIHg1apWa2MNjA==}
+
+  '@gatling.io/jvm-types@3.15.1':
+    resolution: {integrity: sha512-vv0EOAUfARwS1d7ZI+MeMygzYd4wGqM8flMubawgsfY7q6lOsfgnD8fs6BHByW5Hrvjc6X7x43E/HrPaynx4LA==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -1828,6 +1843,17 @@ snapshots:
       lodash.sortby: 4.7.0
 
   '@cucumber/tag-expressions@8.1.0': {}
+
+  '@gatling.io/core@3.15.1':
+    dependencies:
+      '@gatling.io/jvm-types': 3.15.1
+
+  '@gatling.io/http@3.15.1':
+    dependencies:
+      '@gatling.io/core': 3.15.1
+      '@gatling.io/jvm-types': 3.15.1
+
+  '@gatling.io/jvm-types@3.15.1': {}
 
   '@grpc/grpc-js@1.14.3':
     dependencies:

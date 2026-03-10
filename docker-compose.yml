@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  proxy:
+    build:
+      context: .
+      target: proxy
+    ports:
+      - "50051:50051"
+    environment:
+      - PLAYWRIGHT_ADDRESS=playwright-plugin:50052
+      - APPIUM_ADDRESS=appium-plugin:50053
+      - GATLING_ADDRESS=gatling-plugin:50054
+      - API_ADAPTER_ADDRESS=api-plugin:50055
+      - PLATFORM=${PLATFORM:-web}
+      - VIEWPORT=${VIEWPORT:-desktop}
+    depends_on:
+      - playwright-plugin
+      - api-plugin
+
+  playwright-plugin:
+    build:
+      context: .
+      target: playwright-plugin
+    environment:
+      - PLAYWRIGHT_PORT=50052
+      - HEADLESS=${HEADLESS:-true}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  appium-plugin:
+    build:
+      context: .
+      target: appium-plugin
+    environment:
+      - APPIUM_PLUGIN_PORT=50053
+      - APPIUM_HOST=${APPIUM_HOST:-host.docker.internal}
+      - APPIUM_PORT=${APPIUM_PORT:-4723}
+      - PLATFORM=${PLATFORM:-android}
+      - ANDROID_APP_PATH=${ANDROID_APP_PATH}
+      - IOS_APP_PATH=${IOS_APP_PATH}
+      - IOS_UDID=${IOS_UDID:-auto}
+    profiles:
+      - mobile
+
+  api-plugin:
+    build:
+      context: .
+      target: api-plugin
+    environment:
+      - API_PLUGIN_PORT=50055
+      - API_BASE_URL=${API_BASE_URL}
+
+  gatling-plugin:
+    build:
+      context: .
+      target: gatling-plugin
+    environment:
+      - GATLING_PLUGIN_PORT=50054
+    profiles:
+      - performance
+
+  test-runner:
+    build:
+      context: .
+      target: test-runner
+    environment:
+      - PROXY_ADDRESS=proxy:50051
+      - DRIVER=${DRIVER:-playwright}
+      - PLATFORM=${PLATFORM:-web}
+      - VIEWPORT=${VIEWPORT:-desktop}
+      - API_BASE_URL=${API_BASE_URL}
+      - BASE_URL=${BASE_URL}
+      - COUNTRY_CODE=${COUNTRY_CODE:-MX}
+      - LANGUAGE=${LANGUAGE:-es}
+    depends_on:
+      - proxy

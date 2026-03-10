@@ -1,4 +1,4 @@
-import { HttpClient } from '../../../../adapters/api/http';
+import { HttpClient } from '../../../../plugins/api/http';
 
 const LOGIN_PATH = '/api/auth/login';
 const DEFAULT_TIMEOUT_MS = 10_000;

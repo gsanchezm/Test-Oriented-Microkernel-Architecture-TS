@@ -1,12 +1,8 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import * as path from 'path';
-import * as playwrightAdapter from '../adapters/playwright/playwright';
-import * as apiAdapter from '../adapters/api/api';
-import * as gatlingAdapter from '../adapters/gatling/gatling';
 import { logger } from '../utils/logger';
 import { resolveLocator } from './locator-resolver';
-// import * as appiumAdapter from '../adapters/appium/appium'; // We will build this next
 
 // --- Constants ---
 
@@ -14,6 +10,16 @@ const PROTO_PATH = path.resolve(__dirname, '../proto/ptom.proto');
 const DEFAULT_MAX_RETRIES = 3;
 const BASE_BACKOFF_MS = 100;
 const SERVER_PORT = '0.0.0.0:50051';
+const ACTION_TYPE_SEPARATOR = '||';
+
+// --- Plugin Address Configuration (environment-driven) ---
+
+const PLUGIN_ADDRESSES: Readonly<Record<string, string>> = {
+    playwright:  process.env.PLAYWRIGHT_ADDRESS  || 'localhost:50052',
+    appium:      process.env.APPIUM_ADDRESS       || 'localhost:50053',
+    performance: process.env.GATLING_ADDRESS      || 'localhost:50054',
+    api:         process.env.API_ADAPTER_ADDRESS   || 'localhost:50055',
+};
 
 // --- Types ---
 
@@ -43,28 +49,68 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 });
 const ptomProto = grpc.loadPackageDefinition(packageDefinition) as any;
 
-// --- 2. Transient Jitter Detection via Compiled RegExp ---
+// --- 2. Plugin Client Pool (lazy initialization) ---
 
-// Compiling all signatures into a single, highly optimized Regular Expression
+const pluginClients: Map<string, any> = new Map();
+
+function getPluginClient(platform: string): any {
+    const key = platform.toLowerCase();
+    if (pluginClients.has(key)) return pluginClients.get(key);
+
+    const address = PLUGIN_ADDRESSES[key];
+    if (!address) {
+        throw new Error(`No plugin address configured for platform: "${platform}"`);
+    }
+
+    const client = new ptomProto.ActionService(
+        address,
+        grpc.credentials.createInsecure(),
+    );
+    pluginClients.set(key, client);
+    return client;
+}
+
+// --- 3. Route to Plugin via gRPC (replaces in-memory adapter calls) ---
+
+function routeToPlugin(
+    platform: string,
+    actionId: string,
+    targetSelector: string,
+): Promise<string> {
+    const client = getPluginClient(platform);
+
+    return new Promise((resolve, reject) => {
+        client.ExecuteIntent(
+            { actionId, targetSelector, platform },
+            (err: Error | null, response: any) => {
+                if (err) return reject(err);
+                if (response.status === 'FAIL') {
+                    return reject(new Error(response.errorMessage));
+                }
+                resolve(response.payload);
+            },
+        );
+    });
+}
+
+// --- 4. Transient Jitter Detection via Compiled RegExp ---
+
 const TRANSIENT_SIGNATURE_REGEX = new RegExp(
     'staleelementreference|elementnotinteractable|nosuchelement|timeouterror|targetclosederror|node is detached',
-    'i' // 'i' flag makes it case-insensitive natively
+    'i',
 );
 
 function isTransientJitter(error: unknown): boolean {
     const { message = '', name = '' } = error as { message?: string; name?: string };
-    const signature = `${name}: ${message}`;
-
-    // The RegExp engine evaluates this in a highly optimized C++ binding under the hood
-    return TRANSIENT_SIGNATURE_REGEX.test(signature);
+    return TRANSIENT_SIGNATURE_REGEX.test(`${name}: ${message}`);
 }
 
-// --- 3. Delay helper ---
+// --- 5. Delay helper ---
 
 const delay = (ms: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-// --- 4. Chaos Suppressor (Lyapunov Stabilizer) ---
+// --- 6. Chaos Suppressor (Lyapunov Stabilizer) ---
 
 async function suppressChaos(
     intentFn: () => Promise<string>,
@@ -78,7 +124,6 @@ async function suppressChaos(
             const retriesExhausted = attempt >= maxRetries;
             const deterministic = !isTransientJitter(error);
 
-            // Guard: non-retryable → fail immediately
             if (deterministic || retriesExhausted) {
                 return {
                     status: 'FAIL',
@@ -86,7 +131,6 @@ async function suppressChaos(
                 };
             }
 
-            // Exponential backoff: absorb the temporal perturbation
             const delayMs = BASE_BACKOFF_MS * (1 << (attempt + 1));
             logger.warn(
                 `[Chaos Control] Perturbation intercepted: ${(error as Error).name}. ` +
@@ -99,33 +143,24 @@ async function suppressChaos(
     return { status: 'FAIL', error: 'Chaos suppression threshold exceeded.' };
 }
 
-// --- 5. Platform Adapter Routing ---
+// --- 7. TYPE-aware Locator Resolution ---
 
-type AdapterFn = (actionId: string, targetSelector: string) => Promise<string>;
+function resolveSelector(actionId: string, rawSelector: string): string {
+    const normalized = actionId.toUpperCase();
 
-const adapterMap: ReadonlyMap<string, AdapterFn> = new Map([
-    ['playwright', playwrightAdapter.execute],
-    ['api', apiAdapter.execute],
-    ['performance', gatlingAdapter.execute],
-    // ['appium', appiumAdapter.execute],
-]);
-
-function routeToAdapter(
-    platform: string,
-    actionId: string,
-    targetSelector: string,
-): Promise<string> {
-    const adapter = adapterMap.get(platform.toLowerCase());
-
-    // Guard: unknown platform
-    if (!adapter) {
-        return Promise.reject(new Error(`Unsupported platform: "${platform}"`));
+    // For TYPE actions, format is "logicalKey||text".
+    // Resolve only the key portion; preserve the text payload.
+    if (normalized === 'TYPE' && rawSelector.includes(ACTION_TYPE_SEPARATOR)) {
+        const sepIndex = rawSelector.indexOf(ACTION_TYPE_SEPARATOR);
+        const logicalKey = rawSelector.slice(0, sepIndex);
+        const textPayload = rawSelector.slice(sepIndex);
+        return resolveLocator(logicalKey) + textPayload;
     }
 
-    return adapter(actionId, targetSelector);
+    return resolveLocator(rawSelector);
 }
 
-// --- 6. Telemetry ---
+// --- 8. Telemetry ---
 
 function emitTelemetry(
     actionId: string,
@@ -145,32 +180,29 @@ function emitTelemetry(
     process.stdout.write(JSON.stringify(record) + '\n');
 }
 
-// --- 7. gRPC Handler ---
+// --- 9. gRPC Handler ---
 
 async function handleExecuteIntent(call: any, callback: any): Promise<void> {
     const startMark = performance.now();
     const { actionId, targetSelector, platform } = call.request;
 
-    let concreteSelector = targetSelector;
     let outcome: IntentOutcome;
 
     try {
         // --- THE INDIRECTION BOUNDARY (PROXY PATTERN) ---
-        // Intercept the logical key (e.g., "checkoutConfirmBtn") and mathematically
-        // resolve it to a platform/viewport specific selector using the .env context.
-        concreteSelector = resolveLocator(targetSelector);
+        // Intercept the logical key and resolve it to a platform/viewport
+        // specific selector using the .env context.
+        const concreteSelector = resolveSelector(actionId, targetSelector);
 
-        // Pass the CONCRETE selector down to the adapters, wrapped in the Lyapunov Stabilizer
+        // Forward the CONCRETE selector to the plugin, wrapped in the Lyapunov Stabilizer
         outcome = await suppressChaos(() =>
-            routeToAdapter(platform, actionId, concreteSelector),
+            routeToPlugin(platform, actionId, concreteSelector),
         );
     } catch (error: any) {
-        // If resolution fails (e.g., key doesn't exist for this platform), 
-        // it is a deterministic failure, not chaos. We fail immediately.
         outcome = { status: 'FAIL', error: error.message };
     }
 
-    // Emit Telemetry using the original logical key to keep cross-platform metrics uniform
+    // Emit Telemetry using the original logical key for cross-platform metrics
     emitTelemetry(actionId, platform, outcome, performance.now() - startMark);
 
     callback(null, {
@@ -180,7 +212,7 @@ async function handleExecuteIntent(call: any, callback: any): Promise<void> {
     });
 }
 
-// --- 8. Server Bootstrap ---
+// --- 10. Server Bootstrap ---
 
 function main(): void {
     const server = new grpc.Server();
@@ -193,7 +225,6 @@ function main(): void {
         SERVER_PORT,
         grpc.ServerCredentials.createInsecure(),
         (err, port) => {
-            // Guard: binding failure
             if (err) {
                 logger.error(`Failed to bind server: ${err}`);
                 return;

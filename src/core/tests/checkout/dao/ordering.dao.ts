@@ -1,4 +1,4 @@
-import { HttpClient, CountryCode } from '../../../../adapters/api/http';
+import { HttpClient, CountryCode } from '../../../../plugins/api/http';
 
 export interface CountryInfo {
     code: CountryCode;

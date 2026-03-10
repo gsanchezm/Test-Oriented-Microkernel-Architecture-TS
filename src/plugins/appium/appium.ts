@@ -13,13 +13,26 @@ let driver: Browser | null = null;
 
 const ACTION_TYPE_SEPARATOR = '||';
 
-const capabilities = {
+const PLATFORM = (process.env.PLATFORM || 'android').toLowerCase();
+
+const androidCapabilities = {
     platformName: 'Android',
     'appium:automationName': 'UiAutomator2',
-    'appium:app': process.env.APP_PATH || '/app/builds/demo.apk', // Injected via Docker volume
-    'appium:noReset': false, // Crucial: Forces a clean app state per session
+    'appium:app': process.env.ANDROID_APP_PATH || '/app/builds/demo.apk',
+    'appium:noReset': false,
     'appium:fullReset': false,
 };
+
+const iosCapabilities = {
+    platformName: 'iOS',
+    'appium:automationName': 'XCUITest',
+    'appium:app': process.env.IOS_APP_PATH || '/app/builds/OmniPizza.zip',
+    'appium:noReset': false,
+    'appium:fullReset': false,
+    'appium:udid': process.env.IOS_UDID || 'auto',
+};
+
+const capabilities = PLATFORM === 'ios' ? iosCapabilities : androidCapabilities;
 
 const wdioOptions = {
     hostname: process.env.APPIUM_HOST || '127.0.0.1',
@@ -33,7 +46,7 @@ const wdioOptions = {
 async function ensureDriver(): Promise<Browser> {
     if (driver) return driver;
 
-    console.log('[Appium Adapter] Bootstrapping UiAutomator2 engine...');
+    console.log(`[Appium Adapter] Bootstrapping ${PLATFORM === 'ios' ? 'XCUITest' : 'UiAutomator2'} engine...`);
     driver = await remote(wdioOptions);
     return driver;
 }

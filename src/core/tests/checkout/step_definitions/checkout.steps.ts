@@ -1,8 +1,12 @@
-import { Given, Then, When } from '@cucumber/cucumber';
+import { AfterAll, Given, Then, When } from '@cucumber/cucumber';
 import { UsersDataSource } from '../../../test-data/users.data-source';
 import { LoginDao } from '../dao/login.dao';
 import { OrderingDao } from '../dao/ordering.dao';
 import type { CheckoutWorld } from '../../support/world';
+import { sendIntent, closeClient } from '../../../../kernel/client';
+import { fillDeliveryAddress, fillContactInfo } from '../actions/checkout-address.molecule';
+import { selectPaymentMethod, fillCardDetails } from '../actions/checkout-payment.molecule';
+import { placeOrder, verifyOrderSummary } from '../actions/checkout-order.molecule';
 
 
 const usersDataSource = new UsersDataSource();
@@ -84,28 +88,34 @@ Given(
   }
 );
 
-When('they provide delivery address {string} zip {string}', function (street: string, zip: string) {
-  throw new Error('Step not implemented.');
+When('they provide delivery address {string} zip {string}', async function (street: string, zip: string) {
+  await fillDeliveryAddress(street, zip);
 });
 
-When('they provide contact name {string} phone {string}', function (name: string, phone: string) {
-  throw new Error('Step not implemented.');
+When('they provide contact name {string} phone {string}', async function (name: string, phone: string) {
+  await fillContactInfo(name, phone);
 });
 
-When('they choose payment method {string}', function (paymentMethod: string) {
-  throw new Error('Step not implemented.');
+When('they choose payment method {string}', async function (paymentMethod: string) {
+  await selectPaymentMethod();
 });
 
 When(
   'provide card details with card number {string} expiration date {string} and cvv {string}',
-  function (card: string, exp: string, cvv: string) {
-    throw new Error('Step not implemented.');
-  }
+  async function (card: string, exp: string, cvv: string) {
+    await fillCardDetails(card, exp, cvv);
+  },
 );
 
 Then(
   'the order is accepted with subtotal {string} tax {string} and total {string}',
-  function (subtotal: string, tax: string, total: string) {
-    throw new Error('Step not implemented.');
-  }
+  async function (subtotal: string, tax: string, total: string) {
+    await placeOrder();
+    await verifyOrderSummary(subtotal, tax, total);
+  },
 );
+
+AfterAll(async function () {
+  await sendIntent('TEARDOWN', '');
+  closeClient();
+});
