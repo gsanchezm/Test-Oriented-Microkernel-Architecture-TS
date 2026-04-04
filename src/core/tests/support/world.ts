@@ -1,5 +1,6 @@
 import { CountryCode } from '../../shared/enums/country-code.enum';
 import type { LoginResponse } from '../checkout/dao/login.dao';
+import type { CartItemResponse, CountryInfo } from '../checkout/dao/ordering.dao';
 
 export interface CheckoutWorld {
     auth?: {
@@ -11,6 +12,7 @@ export interface CheckoutWorld {
     };
     orderContext?: {
         market: CountryCode;
+        countryInfo: CountryInfo;
         availableLanguages: string[];
         requiredFields: string[];
         currency: string;
@@ -21,6 +23,7 @@ export interface CheckoutWorld {
         pizzaId: string;
         pizzaName: string;
         unitPrice: number;
+        cartItems: CartItemResponse[];
     };
 }
 

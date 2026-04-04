@@ -37,7 +37,10 @@ export function sendIntent(
     targetSelector: string,
     platform?: string,
 ): Promise<IntentResult> {
-    const resolvedPlatform = platform || process.env.DRIVER || 'playwright';
+    const driver = platform || process.env.DRIVER || 'playwright';
+    // Append worker ID so the plugin can isolate browser contexts per parallel worker
+    const workerId = process.env.CUCUMBER_WORKER_ID ?? '0';
+    const resolvedPlatform = `${driver}:${workerId}`;
 
     return new Promise((resolve, reject) => {
         client.ExecuteIntent(

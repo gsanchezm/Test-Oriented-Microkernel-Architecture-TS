@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "proxy": "ts-node -r dotenv/config src/kernel/chaos-proxy.ts",
+    "plugins": "ts-node -r dotenv/config src/kernel/start-plugins.ts",
     "plugin:playwright": "ts-node -r dotenv/config src/plugins/playwright/server.ts",
     "plugin:appium": "ts-node -r dotenv/config src/plugins/appium/server.ts",
     "plugin:api": "ts-node -r dotenv/config src/plugins/api/server.ts",
@@ -15,7 +16,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.29.1",
   "engines": {
-    "node": "20.19.x"
+    "node": "20 || 22 || >=24"
   },
   "description": "",
   "dependencies": {

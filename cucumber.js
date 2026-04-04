@@ -8,5 +8,6 @@ module.exports = {
     format: ["progress"],
 
     timeout: 180000,
+    parallel: 1,
   },
 };

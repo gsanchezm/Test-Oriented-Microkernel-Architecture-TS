@@ -1,7 +1,8 @@
 import { sendIntent } from '../../../../kernel/client';
 
-export async function selectPaymentMethod(): Promise<void> {
-    await sendIntent('CLICK', 'paymentMethodList');
+export async function selectPaymentMethod(method: string): Promise<void> {
+    const locatorKey = method.toLowerCase() === 'cash' ? 'paymentCashButton' : 'paymentCardButton';
+    await sendIntent('CLICK', locatorKey);
 }
 
 export async function fillCardDetails(card: string, exp: string, cvv: string): Promise<void> {

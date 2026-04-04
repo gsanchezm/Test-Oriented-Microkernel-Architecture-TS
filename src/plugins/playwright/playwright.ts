@@ -1,33 +1,64 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { logger } from '../../utils/logger';
 
 // --- Types ---
 
 type ActionHandler = (page: Page, browser: Browser, target: string) => Promise<string>;
 
-// --- State Encapsulation ---
-// The container isolates the process (S_A1 ∩ S_A2 = ∅),
-// so this singleton state is safe and perfectly atomic.
+// --- Viewport Profiles ---
+// desktop: null viewport + --start-maximized lets the OS control window size
+// responsive: fixed mobile dimensions, no maximizing
+
+const isDesktop = (process.env.VIEWPORT ?? 'desktop') === 'desktop';
+const RESPONSIVE_VIEWPORT = { width: 390, height: 844 };  // iPhone 14 Pro
+
+// --- Browser singleton + per-session context map ---
+// Each parallel Cucumber worker gets its own isolated BrowserContext → Page.
+
 let browser: Browser | null = null;
-let page: Page | null = null;
+const sessions: Map<string, { context: BrowserContext; page: Page }> = new Map();
 
-// --- Lazy Engine Bootstrap ---
+async function ensureBrowser(): Promise<Browser> {
+  if (browser) return browser;
 
-async function ensureEngine(): Promise<{ browser: Browser; page: Page }> {
-  if (browser && page) return { browser, page };
+  const headless = process.env.HEADLESS !== 'false';
+  const launchArgs = isDesktop && !headless ? ['--start-maximized'] : [];
 
-  logger.info('[Playwright Adapter] Bootstrapping chromium engine...');
-  browser = await chromium.launch({ headless: process.env.HEADLESS !== 'false' });
-  page = await browser.newPage();
-  return { browser, page };
+  logger.info(`[Playwright Adapter] Launching browser (viewport: ${isDesktop ? 'maximized' : '390x844'}, headless: ${headless})...`);
+  browser = await chromium.launch({ headless, args: launchArgs });
+  return browser;
+}
+
+async function ensureSession(sessionId: string): Promise<{ browser: Browser; page: Page }> {
+  if (sessions.has(sessionId)) {
+    const s = sessions.get(sessionId)!;
+    return { browser: browser!, page: s.page };
+  }
+
+  const b = await ensureBrowser();
+  const context = await b.newContext({ viewport: isDesktop ? null : RESPONSIVE_VIEWPORT });
+  const page = await context.newPage();
+  sessions.set(sessionId, { context, page });
+  logger.info(`[Playwright Adapter] Session "${sessionId}" created (total active: ${sessions.size})`);
+  return { browser: b, page };
 }
 
 // --- Teardown Helper ---
 
-async function teardown(): Promise<void> {
-  await browser?.close();
-  browser = null;
-  page = null;
+async function teardown(sessionId: string): Promise<void> {
+  const session = sessions.get(sessionId);
+  if (session) {
+    await session.context.close();
+    sessions.delete(sessionId);
+    logger.info(`[Playwright Adapter] Session "${sessionId}" closed (remaining: ${sessions.size})`);
+  }
+
+  // Close browser when all sessions are done
+  if (sessions.size === 0 && browser) {
+    await browser.close();
+    browser = null;
+    logger.info('[Playwright Adapter] Browser closed — all sessions complete');
+  }
 }
 
 // --- Intent → Handler Map ---
@@ -45,9 +76,6 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
   [
     'CLICK',
     async (_page, _browser, selector) => {
-      // Playwright's native auto-waiting applies here.
-      // If the DOM is highly unstable, Playwright throws a TimeoutError
-      // that bubbles up the gRPC channel to the Chaos Suppressor.
       await _page.click(selector);
       return `Click executed on element: ${selector}`;
     },
@@ -57,7 +85,6 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
     async (_page, _browser, composite) => {
       const sepIndex = composite.indexOf(ACTION_TYPE_SEPARATOR);
 
-      // Guard: malformed input
       if (sepIndex === -1) {
         throw new Error("TYPE action requires 'selector||text' format.");
       }
@@ -65,7 +92,6 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
       const selector = composite.slice(0, sepIndex);
       const text = composite.slice(sepIndex + ACTION_TYPE_SEPARATOR.length);
 
-      // Guard: empty text payload
       if (!text) {
         throw new Error("TYPE action requires non-empty text after 'selector||'.");
       }
@@ -91,8 +117,7 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
   [
     'TEARDOWN',
     async () => {
-      // Crucial for freeing up memory (the 512MB cgroup limit)
-      await teardown();
+      // sessionId is handled in execute() before calling the handler
       return 'Playwright execution environment terminated securely.';
     },
   ],
@@ -103,15 +128,21 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
 export async function execute(
   actionId: string,
   targetSelector: string,
+  sessionId: string = '0',
 ): Promise<string> {
   const normalizedAction = actionId.toUpperCase();
   const handler = actionHandlers.get(normalizedAction);
 
-  // Guard: unknown intent is a deterministic logic failure, not chaos
   if (!handler) {
     throw new Error(`Unsupported Playwright actionId: ${actionId}`);
   }
 
-  const { browser: b, page: p } = await ensureEngine();
+  // TEARDOWN is session-scoped
+  if (normalizedAction === 'TEARDOWN') {
+    await teardown(sessionId);
+    return 'Playwright execution environment terminated securely.';
+  }
+
+  const { browser: b, page: p } = await ensureSession(sessionId);
   return handler(p, b, targetSelector);
 }

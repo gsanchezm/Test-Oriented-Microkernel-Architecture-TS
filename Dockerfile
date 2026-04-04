@@ -1,4 +1,4 @@
-FROM node:20.19-slim AS base
+FROM node:22-slim AS base
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile

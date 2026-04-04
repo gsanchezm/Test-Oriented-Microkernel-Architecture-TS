@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 
 const PROTO_PATH = path.resolve(__dirname, '../proto/ptom.proto');
 
-type ExecuteFn = (actionId: string, targetSelector: string) => Promise<string>;
+type ExecuteFn = (actionId: string, targetSelector: string, sessionId: string) => Promise<string>;
 
 export function startPluginServer(
     pluginName: string,
@@ -22,10 +22,12 @@ export function startPluginServer(
     const ptomProto = (grpc.loadPackageDefinition(packageDef) as any).ptom;
 
     async function handleExecuteIntent(call: any, callback: any): Promise<void> {
-        const { actionId, targetSelector } = call.request;
+        const { actionId, targetSelector, platform } = call.request;
+        // Extract sessionId from "driver:sessionId" format (e.g. "playwright:2")
+        const sessionId = (platform as string)?.split(':')[1] ?? '0';
 
         try {
-            const result = await executeFn(actionId, targetSelector);
+            const result = await executeFn(actionId, targetSelector, sessionId);
             callback(null, { status: 'PASS', payload: result, errorMessage: '' });
         } catch (error: any) {
             callback(null, { status: 'FAIL', payload: '', errorMessage: error.message });

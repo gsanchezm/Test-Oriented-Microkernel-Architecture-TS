@@ -34,10 +34,22 @@ export interface CartItemRequest {
     quantity: number;
 }
 
+export interface CartItemResponse {
+    id: string;
+    signature: string;
+    pizza_id: string;
+    pizza: Pizza;
+    quantity: number;
+    config: { size: string; toppings: string[] };
+    unit_price: number;
+    currency: string;
+    currency_symbol: string;
+}
+
 export interface CartResponse {
     username: string;
     country_code: CountryCode;
-    cart_items: CartItemRequest[];
+    cart_items: CartItemResponse[];
     updated_at: string;
 }
 
@@ -98,6 +110,18 @@ export class OrderingDao {
                 'x-country-code': params.countryCode,
             },
             body: { items: params.items },
+        });
+    }
+
+    async getCart(params: {
+        token: string;
+        countryCode: CountryCode;
+    }): Promise<CartResponse> {
+        return this.httpClient.get<CartResponse>('/api/cart', {
+            headers: {
+                Authorization: `Bearer ${params.token}`,
+                'x-country-code': params.countryCode,
+            },
         });
     }
 }

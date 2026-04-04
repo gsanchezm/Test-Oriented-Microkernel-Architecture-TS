@@ -1,4 +1,4 @@
-import { AfterAll, Given, Then, When, setDefaultTimeout } from '@cucumber/cucumber';
+import { After, AfterAll, Given, Then, When, setDefaultTimeout } from '@cucumber/cucumber';
 
 setDefaultTimeout(180_000);
 import { UsersDataSource } from '../../../test-data/users.data-source';
@@ -71,6 +71,7 @@ Given('they are ordering in market {string}', async function (market: string) {
   const world = this as CheckoutWorld;
   world.orderContext = {
     market: selectedCountry.code,
+    countryInfo: selectedCountry,
     availableLanguages: selectedCountry.languages,
     requiredFields: selectedCountry.required_fields,
     currency: selectedCountry.currency,
@@ -81,6 +82,7 @@ Given('they are ordering in market {string}', async function (market: string) {
     pizzaId: '',
     pizzaName: '',
     unitPrice: 0,
+    cartItems: [],
   };
 });
 
@@ -125,12 +127,18 @@ Given(
     }, 'Pizza selected for order');
 
     // Add to cart via API ($S_0$ state injection)
-    const cartResponse = await orderingDao.addToCart({
+    await orderingDao.addToCart({
       token,
       countryCode: market,
       items: [{ pizza_id: selectedPizza.id, size, quantity: qty }],
     });
-    log.info({ cartItems: cartResponse.cart_items }, 'Cart populated via API');
+
+    // Fetch enriched cart — POST only stores IDs, GET returns full item details (unit_price, pizza object, etc.)
+    const enrichedCart = await orderingDao.getCart({ token, countryCode: market });
+    const enrichedItems = enrichedCart.cart_items;
+    log.info({ cartItems: enrichedItems }, 'Cart populated via API');
+
+    const unitPrice = enrichedItems[0]?.unit_price ?? selectedPizza.price;
 
     world.orderContext = {
       ...(world.orderContext as NonNullable<CheckoutWorld['orderContext']>),
@@ -139,24 +147,31 @@ Given(
       qty,
       pizzaId: selectedPizza.id,
       pizzaName: selectedPizza.name,
-      unitPrice: selectedPizza.price,
+      unitPrice,
+      cartItems: enrichedItems,
     };
   }
 );
 
 When(
-  'they provide delivery details {string} {string} for {string} {string}',
-  async function (street: string, zip: string, name: string, phone: string) {
+  'they provide delivery details {string} {string}, {string} for {string} {string}',
+  async function (street: string, zip: string, suburb: string, name: string, phone: string) {
     const world = this as CheckoutWorld;
     const token = world.auth?.token;
     if (!token) throw new Error('Missing auth token. Ensure login step runs first');
     const market = world.orderContext?.market;
     if (!market) throw new Error('Missing market context. Ensure market step runs first');
 
-    log.info({ street, zip, name, phone }, 'Filling delivery details');
+    log.info({ street, zip, suburb: suburb || undefined, name, phone }, 'Filling delivery details');
     await fillDeliveryDetails(
-      { token, username: world.auth!.username, countryCode: market },
-      { street, zip },
+      {
+        token,
+        username: world.auth!.username,
+        countryCode: market,
+        cartItems: world.orderContext!.cartItems,
+        countryInfo: world.orderContext!.countryInfo,
+      },
+      { street, zip, suburb: suburb || undefined },
       { name, phone },
     );
     log.info('Delivery details submitted');
@@ -181,12 +196,21 @@ Then(
   },
 );
 
+After(async function () {
+  try {
+    // Clear browser state between scenarios without closing the browser
+    await sendIntent('EVALUATE', 'localStorage.clear(); sessionStorage.clear()');
+    await sendIntent('NAVIGATE', process.env.BASE_URL!);
+  } catch {
+    // Proxy may not be running (e.g. DAO-only test runs)
+  }
+});
+
 AfterAll(async function () {
-  log.info('Tearing down');
   try {
     await sendIntent('TEARDOWN', '');
   } catch {
-    // Proxy may not be running (e.g. DAO-only test runs)
+    // no-op
   }
   closeClient();
 });

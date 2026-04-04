@@ -7,6 +7,7 @@ import { placeOrder, verifyOrderSummary } from '../actions/checkout-order.molecu
 export interface DeliveryDetails {
     street: string;
     zip: string;
+    suburb?: string;
 }
 
 export interface ContactDetails {
@@ -34,12 +35,12 @@ export async function fillDeliveryDetails(
 ): Promise<void> {
     await injectBrowserSession(session);
     await navigateToCheckout();
-    await fillDeliveryAddress(delivery.street, delivery.zip);
+    await fillDeliveryAddress(delivery.street, delivery.zip, delivery.suburb);
     await fillContactInfo(contact.name, contact.phone);
 }
 
 export async function submitPayment(payment: PaymentDetails): Promise<void> {
-    await selectPaymentMethod();
+    await selectPaymentMethod(payment.method);
 
     if (payment.method === 'Credit Card' && payment.card && payment.exp && payment.cvv) {
         await fillCardDetails(payment.card, payment.exp, payment.cvv);

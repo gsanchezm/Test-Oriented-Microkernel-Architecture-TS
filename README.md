@@ -20,93 +20,169 @@ The **Microkernel** (`chaos-proxy`) receives generic `ExecuteIntent` gRPC calls,
 
 ## Atomic Design Layers
 
-| AHM Layer | Clean Code Equivalent | Folder | Purpose |
-|-----------|----------------------|--------|---------|
-| Atoms | -- | `kernel/client.ts` | `sendIntent()` -- indivisible primitives |
-| Molecules | Actions | `[domain]/actions/` | Grouped atomic intents (cross-platform) |
-| Organisms | Use Cases | `[domain]/usecases/` | Orchestrate actions into business flows |
-| Eco-Systems | Scenarios | `[domain]/features/` + `step_definitions/` | BDD scenarios composing use cases + DAOs |
+| AHM Layer | Folder | Purpose |
+|-----------|--------|---------|
+| Atoms | `kernel/client.ts` | `sendIntent()` — indivisible gRPC primitives |
+| Molecules | `[domain]/actions/` | Grouped atomic intents (cross-platform reusable) |
+| Organisms | `[domain]/usecases/` | Orchestrate actions into business flows |
+| Eco-Systems | `[domain]/features/` + `step_definitions/` | BDD scenarios composing use cases + DAOs |
 
 ## Project Structure
 
 ```
 src/
   proto/                   # gRPC service definitions (ptom.proto)
-  kernel/                  # Microkernel: proxy, client, locator resolver, plugin factory
+  kernel/                  # Microkernel: proxy, client, locator resolver, plugin factory, launcher
   plugins/                 # Isolated gRPC plugin servers
     playwright/            #   Web automation (Chromium)
-    appium/                #   Mobile automation (Android/iOS)
+    appium/                #   Mobile automation (Android / iOS)
     gatling/               #   Performance testing (@gatling.io TS DSL)
     api/                   #   API testing (HttpClient)
   core/
-    test-data/             # Data sources (users.json)
+    test-data/             # Data sources (users.json, etc.)
     tests/
-      [domain]/            # e.g., 'checkout'
-        actions/           # Molecules: reusable business action wrappers
+      [domain]/            # e.g. 'checkout'
+        actions/           # Molecules: reusable cross-platform action wrappers
         usecases/          # Organisms: business flow orchestration
-        features/          # Eco-Systems: BDD scenarios (.feature)
-        step_definitions/  # Thin bindings (Gherkin -> use cases + DAOs)
+        features/          # Eco-Systems: BDD scenarios (.feature files)
+        step_definitions/  # Thin Gherkin bindings → use cases + DAOs
         locators/          # JSON mapping logical keys to platform selectors
-        dao/               # API state injection (S0)
+        dao/               # API state injection ($S_0$)
   utils/                   # Shared utilities (pino logger)
-  telemetry/               # Observability and metrics
+
+plugins.config.ts          # Plugin registry — enable/disable plugins
+.env                       # Local environment configuration (gitignored)
+.env.example               # Template for environment configuration
 ```
 
 ## Prerequisites
 
-- Node.js 20.19.x (see `.nvmrc`)
+- Node.js 22 LTS (see `.nvmrc`)
 - pnpm 10.29.x
 
-## Setup
-
 ```bash
+nvm use        # switches to Node 22 from .nvmrc
 pnpm install
 ```
 
-## Running Tests
+## Running Tests (Local)
 
-Start the microkernel and the required plugin, then run Cucumber:
+### Option A — Plugin launcher (recommended)
+
+Enable the plugins you need in `.env`, then start everything with two terminals:
 
 ```bash
-# Terminal 1: Start the proxy
-pnpm proxy
+# Terminal 1: Start the microkernel proxy
+pnpm run proxy
 
-# Terminal 2: Start the plugin for your target platform
-pnpm plugin:playwright   # Web
-pnpm plugin:appium       # Mobile
-pnpm plugin:api          # API
-pnpm plugin:gatling      # Performance
+# Terminal 2: Start all enabled plugins (controlled by .env)
+pnpm run plugins
 
 # Terminal 3: Run tests
 pnpm test
 ```
 
+Plugins are toggled in `.env`:
+
+```env
+PLUGIN_PLAYWRIGHT=true
+PLUGIN_APPIUM=false
+PLUGIN_API=true
+PLUGIN_GATLING=false
+```
+
+### Option B — Start plugins individually
+
+```bash
+pnpm run plugin:playwright   # Web
+pnpm run plugin:appium       # Mobile
+pnpm run plugin:api          # API
+pnpm run plugin:gatling      # Performance
+```
+
 ### With Docker
 
 ```bash
-# Web testing (default)
+# Web + API (default)
 docker compose up
 
-# Mobile testing
+# Android (emulator via docker-android + Appium server)
 docker compose --profile mobile up
 
 # Performance testing
 docker compose --profile performance up
 ```
 
+### Android emulator (docker-android)
+
+The `mobile` profile starts three services in order:
+
+```
+android-emulator  →  appium-server  →  appium-plugin
+(docker-android)     (Appium 2.x)      (gRPC plugin)
+```
+
+`android-emulator` uses [`halimqarroum/docker-android`](https://github.com/HQarroum/docker-android) and requires KVM on Linux. On macOS you can run the emulator natively instead and point `APPIUM_HOST=localhost`.
+
+**Required env vars for mobile:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANDROID_API_LEVEL` | `34` | Android API level (`28`–`34`) |
+| `ANDROID_IMG_TYPE` | `google_apis` | `google_apis` or `google_apis_playstore` |
+| `ANDROID_DEVICE_ID` | `pixel` | AVD device profile |
+| `ANDROID_EMULATOR_MEMORY` | `4096` | RAM in MB |
+| `ANDROID_EMULATOR_CORES` | `2` | vCPU count |
+| `ANDROID_APP_PATH` | — | Path to `.apk` under test |
+
 ## Environment Configuration
 
-The `.env` file controls the execution matrix:
+Copy `.env.example` to `.env` and fill in the values:
+
+```bash
+cp .env.example .env
+```
+
+### Key variables
 
 | Variable | Options | Description |
 |----------|---------|-------------|
-| `PLATFORM` | `web`, `android`, `ios`, `api` | Target platform |
-| `VIEWPORT` | `desktop`, `responsive` | Web viewport (only when `PLATFORM=web`) |
-| `DRIVER` | `playwright`, `appium`, `api` | Automation driver |
+| `PLATFORM` | `web` `android` `ios` `api` | Target platform |
+| `VIEWPORT` | `desktop` `responsive` | Web viewport (only when `PLATFORM=web`) |
+| `DRIVER` | `playwright` `appium` `api` | Automation driver |
 | `BASE_URL` | URL | Web application under test |
 | `API_BASE_URL` | URL | Backend API for state injection |
-| `COUNTRY_CODE` | `US`, `MX`, `CH`, `JP` | Market context |
-| `HEADLESS` | `true`, `false` | Browser visibility |
+| `HEADLESS` | `true` `false` | Browser visibility |
+| `LOG_LEVEL` | `fatal` `error` `warn` `info` `debug` `trace` | Pino log level |
+
+### Plugin addresses (proxy → plugins)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROXY_ADDRESS` | `localhost:50051` | Used by `client.ts` to reach the proxy |
+| `PLAYWRIGHT_ADDRESS` | `localhost:50052` | Used by proxy to reach Playwright plugin |
+| `APPIUM_ADDRESS` | `localhost:50053` | Used by proxy to reach Appium plugin |
+| `GATLING_ADDRESS` | `localhost:50054` | Used by proxy to reach Gatling plugin |
+| `API_ADAPTER_ADDRESS` | `localhost:50055` | Used by proxy to reach API plugin |
+
+### Plugin listen ports (each plugin server)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLAYWRIGHT_PORT` | `50052` | Port the Playwright plugin binds to |
+| `APPIUM_PORT_GRPC` | `50053` | Port the Appium plugin binds to |
+| `API_PLUGIN_PORT` | `50055` | Port the API plugin binds to |
+| `GATLING_PLUGIN_PORT` | `50054` | Port the Gatling plugin binds to |
+
+### Appium (mobile only)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APPIUM_HOST` | `localhost` | Appium server host |
+| `APPIUM_PORT` | `4723` | Appium server port |
+| `ANDROID_APP_PATH` | — | Path to `.apk` under test |
+| `IOS_APP_PATH` | — | Path to `.zip` under test |
+| `IOS_UDID` | `auto` | iOS device UDID |
 
 ## Cross-Platform Locators
 
@@ -127,34 +203,32 @@ Locator JSON files map logical keys to platform-specific selectors. The proxy re
 }
 ```
 
-Actions always use logical keys (`streetInput`), never raw selectors. The same test code runs across all platforms.
+Actions always use logical keys (`streetInput`), never raw selectors. The same test code runs across all platforms without modification.
 
 ## Key Concepts
 
 ### Chaos Suppression
-The proxy detects transient failures (stale elements, timeouts, detached nodes) and automatically retries with exponential backoff. Deterministic failures fail immediately.
+The proxy detects transient failures (stale elements, timeouts, detached nodes) and automatically retries with exponential backoff. Deterministic failures fail immediately without retrying.
 
-### API State Injection
-DAOs bypass flaky UI setup by injecting test state directly via API calls. Login, cart creation, and market selection happen through `HttpClient`, then UI tests attach to the pre-built state.
+### API State Injection ($S_0$)
+`Given` steps inject test state directly via API calls using DAOs, bypassing flaky UI setup flows. Login, cart creation, and market selection happen through `HttpClient`. `When`/`Then` steps then attach to this pre-built state via the UI.
+
+### Browser Session Isolation
+Each Cucumber worker gets its own `BrowserContext` in Playwright. `localStorage` is cleared between scenarios so state never leaks across scenario outlines.
 
 ### Plugin Isolation
-Each plugin runs as an independent gRPC server. Plugins are stateless from the proxy's perspective -- the proxy resolves locators and handles retries before forwarding.
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| `docs/atomic_design_testing.md` | Atomic Design layer mapping and conventions |
-| `docs/tom_plugin_implementation_plan.md` | TOM plugin architecture roadmap |
-| `docs/locator-schema-prompt.md` | Prompt for generating locator JSON artifacts |
+Each plugin runs as an independent gRPC server. The proxy handles locator resolution, chaos suppression, and telemetry — plugins are pure execution engines with no knowledge of test logic.
 
 ## Tech Stack
 
-- **Test Framework**: Cucumber (BDD)
-- **Language**: TypeScript
-- **Web Automation**: Playwright
-- **Mobile Automation**: WebDriverIO + Appium (UiAutomator2 / XCUITest)
-- **Performance**: Gatling (@gatling.io/core + @gatling.io/http)
-- **Communication**: gRPC (@grpc/grpc-js)
-- **Logging**: Pino
-- **Containerization**: Docker + Docker Compose
+| Concern | Library |
+|---------|---------|
+| Test framework | Cucumber (BDD) |
+| Language | TypeScript |
+| Web automation | Playwright |
+| Mobile automation | WebDriverIO + Appium (UiAutomator2 / XCUITest) |
+| Performance | @gatling.io/core + @gatling.io/http |
+| Communication | gRPC (@grpc/grpc-js) |
+| Logging | Pino |
+| Containerization | Docker + Docker Compose |
+| Package manager | pnpm |

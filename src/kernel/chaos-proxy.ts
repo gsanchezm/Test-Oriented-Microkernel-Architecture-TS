@@ -54,7 +54,8 @@ const ptomProto = (grpc.loadPackageDefinition(packageDefinition) as any).ptom;
 const pluginClients: Map<string, any> = new Map();
 
 function getPluginClient(platform: string): any {
-    const key = platform.toLowerCase();
+    // platform may be "playwright:0" — extract the driver name for routing
+    const key = platform.split(':')[0].toLowerCase();
     if (pluginClients.has(key)) return pluginClients.get(key);
 
     const address = PLUGIN_ADDRESSES[key];

@@ -23,6 +23,13 @@
       "ios": "~input-zip-code"
     }
   },
+  "suburbInput": {
+    "web": "[data-testid='colonia']",
+    "mobile": {
+      "android": "id=input-colonia",
+      "ios": "~input-colonia"
+    }
+  },
   "fullNameInput": {
     "web": {
       "responsive": "[data-testid='full-name-responsive']",
@@ -46,6 +53,17 @@
       "android": "android=new UiSelector().descriptionStartsWith(\"btn-payment-\")",
       "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-payment-'`]"
     }
+  },
+  "paymentCardButton": {
+    "web": {
+      "responsive": "button[data-testid='payment-card-responsive']",
+      "desktop": "button[data-testid='payment-card-desktop']"
+    },
+    "mobile": "~btn-payment-card"
+  },
+  "paymentCashButton": {
+    "web": "button[data-testid='payment-cash']",
+    "mobile": "~btn-payment-cash"
   },
   "cardHolderNameInput": {
     "web": "[data-testid='card-holder']",

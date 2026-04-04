@@ -1,13 +1,9 @@
 import { remote, Browser } from 'webdriverio';
+import { logger } from '../../utils/logger';
 
 // --- Types ---
 
 type ActionHandler = (driver: Browser, target: string) => Promise<string>;
-
-// --- State Encapsulation ---
-// Strict container isolation ensures this driver instance belongs solely to the current Atom.
-// S_A1 ∩ S_A2 = ∅ is maintained.
-let driver: Browser | null = null;
 
 // --- Configuration ---
 
@@ -41,21 +37,29 @@ const wdioOptions = {
     capabilities,
 };
 
-// --- Lazy Engine Bootstrap ---
+// --- Session Map (mirrors Playwright pattern for parallel isolation) ---
 
-async function ensureDriver(): Promise<Browser> {
-    if (driver) return driver;
+const sessions: Map<string, Browser> = new Map();
 
-    console.log(`[Appium Adapter] Bootstrapping ${PLATFORM === 'ios' ? 'XCUITest' : 'UiAutomator2'} engine...`);
-    driver = await remote(wdioOptions);
+async function ensureSession(sessionId: string): Promise<Browser> {
+    if (sessions.has(sessionId)) return sessions.get(sessionId)!;
+
+    logger.info(`[Appium] Bootstrapping ${PLATFORM === 'ios' ? 'XCUITest' : 'UiAutomator2'} session "${sessionId}"...`);
+    const driver = await remote(wdioOptions);
+    sessions.set(sessionId, driver);
+    logger.info(`[Appium] Session "${sessionId}" created (total active: ${sessions.size})`);
     return driver;
 }
 
 // --- Teardown Helper ---
 
-async function teardown(): Promise<void> {
-    await driver?.deleteSession();
-    driver = null;
+async function teardown(sessionId: string): Promise<void> {
+    const driver = sessions.get(sessionId);
+    if (driver) {
+        await driver.deleteSession();
+        sessions.delete(sessionId);
+        logger.info(`[Appium] Session "${sessionId}" closed (remaining: ${sessions.size})`);
+    }
 }
 
 // --- Intent → Handler Map ---
@@ -64,7 +68,7 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
     [
         'NAVIGATE',
         async (_driver, url) => {
-            // In mobile, "navigate" often translates to Deep Linking to bypass UI navigation chaos
+            // On mobile, NAVIGATE translates to a deep link to bypass UI navigation
             await _driver.url(url);
             return `Deep-linked successfully to ${url}`;
         },
@@ -72,8 +76,6 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
     [
         'CLICK',
         async (_driver, selector) => {
-            // If the mobile element is animating or off-screen, Appium throws 'NoSuchElement'
-            // or 'ElementNotInteractable'. The proxy's Lyapunov Stabilizer catches this and applies backoff.
             const target = await _driver.$(selector);
             await target.click();
             return `Tapped on mobile element: ${selector}`;
@@ -84,7 +86,6 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
         async (_driver, composite) => {
             const sepIndex = composite.indexOf(ACTION_TYPE_SEPARATOR);
 
-            // Guard: malformed input
             if (sepIndex === -1) {
                 throw new Error("TYPE action requires 'selector||text' format.");
             }
@@ -92,7 +93,6 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
             const selector = composite.slice(0, sepIndex);
             const text = composite.slice(sepIndex + ACTION_TYPE_SEPARATOR.length);
 
-            // Guard: empty text payload
             if (!text) {
                 throw new Error("TYPE action requires non-empty text after 'selector||'.");
             }
@@ -103,10 +103,26 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
         },
     ],
     [
+        'READ_TEXT',
+        async (_driver, selector) => {
+            const elements = await _driver.$$(selector);
+            const texts = await Promise.all(elements.map((el) => el.getText()));
+            return texts.join('\n');
+        },
+    ],
+    [
+        'EVALUATE',
+        async (_driver, script) => {
+            // Works for WebView contexts; for native apps this executes mobile: shell or
+            // Appium's execute() bridge depending on the automation context.
+            const result = await _driver.execute(script);
+            return result !== undefined ? String(result) : '';
+        },
+    ],
+    [
         'TEARDOWN',
         async () => {
-            // Purge the mobile session to prevent state leakage into the host
-            await teardown();
+            // sessionId is handled in execute() before calling the handler
             return 'Appium execution environment terminated securely.';
         },
     ],
@@ -117,15 +133,21 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
 export async function execute(
     actionId: string,
     targetSelector: string,
+    sessionId: string = '0',
 ): Promise<string> {
     const normalizedAction = actionId.toUpperCase();
     const handler = actionHandlers.get(normalizedAction);
 
-    // Guard: unknown intent is a deterministic logic failure, not chaos
     if (!handler) {
         throw new Error(`Unsupported Appium actionId: ${actionId}`);
     }
 
-    const activeDriver = await ensureDriver();
-    return handler(activeDriver, targetSelector);
+    // TEARDOWN is session-scoped — skip ensureSession to avoid booting a driver just to close it
+    if (normalizedAction === 'TEARDOWN') {
+        await teardown(sessionId);
+        return 'Appium execution environment terminated securely.';
+    }
+
+    const driver = await ensureSession(sessionId);
+    return handler(driver, targetSelector);
 }
