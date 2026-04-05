@@ -1,0 +1,15 @@
+{
+  "platformName": "iOS",
+  "appium:automationName": "XCUITest",
+  "appium:deviceName": "iPhone 17 Pro",
+  "appium:platformVersion": "26.2",
+  "appium:noReset": true,
+  "appium:fullReset": false,
+  "appium:usePrebuiltWDA": false,
+  "appium:newCommandTimeout": 12000,
+  "appium:wdaLocalPort": 8101,
+  "appium:wdaLaunchTimeout": 360000,
+  "appium:wdaConnectionTimeout": 360000,
+  "appium:showXcodeLog": true,
+  "appium:autoAcceptAlerts": true
+}

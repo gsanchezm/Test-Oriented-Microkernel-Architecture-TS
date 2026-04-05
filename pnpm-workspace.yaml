@@ -1,4 +1,7 @@
 onlyBuiltDependencies:
+  - appium
   - edgedriver
+  - esbuild
   - geckodriver
   - protobufjs
+  - sharp

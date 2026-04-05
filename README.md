@@ -8,15 +8,20 @@ A cross-platform E2E testing framework built on a **Testing Oriented Microkernel
 Cucumber Steps --> client.ts --> chaos-proxy (:50051) --> plugin servers
                                     |                       |-- playwright (:50052)
                                     |                       |-- appium     (:50053)
-                                    |                       |-- gatling    (:50054)
+                                    |                       |-- gatling    (:50054)  <-- TOM-driven perf
                                     |                       |-- api        (:50055)
                                     |
                                     +-- locator resolution
                                     +-- chaos suppression (Lyapunov stabilizer)
                                     +-- telemetry emission
+
+Gatling CLI ----------------------> [domain]/simulations/   <-- standalone load tests
+                                    (mirrors feature Examples data, produces HTML reports)
 ```
 
 The **Microkernel** (`chaos-proxy`) receives generic `ExecuteIntent` gRPC calls, resolves logical locator keys to platform-specific selectors, applies exponential backoff for transient failures, and forwards the intent to the appropriate plugin server.
+
+Performance testing operates in two modes: **TOM-driven** (via the Gatling gRPC plugin, triggered from Cucumber) and **standalone** (Gatling CLI runs simulations directly, co-located with their feature files).
 
 ## Atomic Design Layers
 
@@ -26,6 +31,7 @@ The **Microkernel** (`chaos-proxy`) receives generic `ExecuteIntent` gRPC calls,
 | Molecules | `[domain]/actions/` | Grouped atomic intents (cross-platform reusable) |
 | Organisms | `[domain]/usecases/` | Orchestrate actions into business flows |
 | Eco-Systems | `[domain]/features/` + `step_definitions/` | BDD scenarios composing use cases + DAOs |
+| Resonance | `[domain]/simulations/` | Gatling simulations co-located with their feature, reusing the same Examples data |
 
 ## Project Structure
 
@@ -45,6 +51,7 @@ src/
         actions/           # Molecules: reusable cross-platform action wrappers
         usecases/          # Organisms: business flow orchestration
         features/          # Eco-Systems: BDD scenarios (.feature files)
+        simulations/       # Gatling load simulations (mirror feature Examples data)
         step_definitions/  # Thin Gherkin bindings → use cases + DAOs
         locators/          # JSON mapping logical keys to platform selectors
         dao/               # API state injection ($S_0$)
@@ -134,6 +141,63 @@ android-emulator  →  appium-server  →  appium-plugin
 | `ANDROID_EMULATOR_MEMORY` | `4096` | RAM in MB |
 | `ANDROID_EMULATOR_CORES` | `2` | vCPU count |
 | `ANDROID_APP_PATH` | — | Path to `.apk` under test |
+
+## Performance Testing
+
+Performance tests have two modes that serve different purposes:
+
+| Mode | Entry point | When to use |
+|------|-------------|-------------|
+| **TOM-driven** | `PLUGIN_GATLING=true` + Cucumber `@performance` tag | Trigger load from a feature scenario, stays in the BDD loop |
+| **Standalone simulation** | `pnpm perf:*` | CI load gates, HTML reports, injection control |
+
+### Standalone simulations
+
+Simulations live alongside their feature files so test data and scenarios stay co-located:
+
+```
+src/core/tests/[domain]/
+  features/               ← BDD scenarios (.feature)
+  simulations/            ← Gatling simulations (mirror the feature's Examples)
+    checkout-load.ts
+```
+
+### Checkout simulation
+
+[src/core/tests/checkout/simulations/checkout-load.ts](src/core/tests/checkout/simulations/checkout-load.ts) mirrors `checkout.feature` at the API level:
+
+```
+Login (/api/auth/login)
+  └─→ Get Pizzas (/api/pizzas, x-country-code: <market>)
+        └─→ Add to Cart (/api/cart)
+```
+
+The feeder is seeded from the feature's **Examples** table — each virtual user receives a market/item/size/qty row in circular order:
+
+| Row | Market | Item | Size | Qty |
+|-----|--------|------|------|-----|
+| 1 | US | Pepperoni | Large | 1 |
+| 2 | MX | Margarita | Medium | 3 |
+| 3 | CH | Marinara | Small | 1 |
+| 4 | JP | Pepperoni | Family | 2 |
+
+### Profiles
+
+| Profile | Command | Users | Injection |
+|---------|---------|-------|-----------|
+| Smoke | `pnpm perf:smoke` | 1 | at once — validates the chain end-to-end |
+| Load | `pnpm perf:load` | 20 | ramp over 2 min — realistic sustained traffic |
+| Stress | `pnpm perf:stress` | 50 | at once — peak burst |
+
+**Env overrides:**
+
+```bash
+PERF_USERS=30 pnpm perf:load         # override user count
+PERF_DURATION=60 pnpm perf:load      # override ramp duration (seconds)
+```
+
+> **First run** downloads the Gatling JRE (~200 MB). Subsequent runs are instant.
+> HTML reports are written to `target/gatling/`.
 
 ## Environment Configuration
 

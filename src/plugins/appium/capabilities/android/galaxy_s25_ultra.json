@@ -1,0 +1,16 @@
+{
+  "platformName": "Android",
+  "appium:platformVersion": "16",
+  "appium:deviceName": "Galaxy S25 Ultra",
+  "appium:automationName": "UiAutomator2",
+  "appium:appPackage": "com.omnipizza.app",
+  "appium:appWaitActivity": "com.omnipizza.app.MainActivity",
+  "appium:autoGrantPermissions": true,
+  "appium:newCommandTimeout": 12000,
+  "appium:appWaitDuration": 60000,
+  "appium:adbExecTimeout": 120000,
+  "appium:appWaitForLaunch": true,
+  "appium:autoLaunch": true,
+  "appium:uiautomator2ServerLaunchTimeout": 120000,
+  "appium:uiautomator2ServerInstallTimeout": 120000
+}

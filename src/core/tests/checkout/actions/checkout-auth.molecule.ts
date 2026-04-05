@@ -49,6 +49,11 @@ export async function injectBrowserSession(session: BrowserSessionState): Promis
         `localStorage.removeItem('omnipizza-order')`,
     ];
 
+    // On mobile (React Native WebView), switch to WebView context so localStorage is accessible
+    if (process.env.DRIVER === 'appium') {
+        await sendIntent('SWITCH_CONTEXT', 'WEBVIEW');
+    }
+
     await sendIntent('EVALUATE', setters.join('; '));
 
     log.info(

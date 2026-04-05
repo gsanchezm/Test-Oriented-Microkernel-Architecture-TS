@@ -9,29 +9,34 @@
     "plugin:appium": "ts-node -r dotenv/config src/plugins/appium/server.ts",
     "plugin:api": "ts-node -r dotenv/config src/plugins/api/server.ts",
     "plugin:gatling": "ts-node -r dotenv/config src/plugins/gatling/server.ts",
-    "test": "cucumber-js"
+    "test": "cucumber-js",
+    "perf:smoke": "PERF_PROFILE=smoke node -r dotenv/config node_modules/@gatling.io/cli/target/index.js run --typescript --simulations-folder src/core/tests",
+    "perf:load": "PERF_PROFILE=load node -r dotenv/config node_modules/@gatling.io/cli/target/index.js run --typescript --simulations-folder src/core/tests",
+    "perf:stress": "PERF_PROFILE=stress node -r dotenv/config node_modules/@gatling.io/cli/target/index.js run --typescript --simulations-folder src/core/tests"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.29.1",
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": "20 || 22 || >=24"
   },
   "description": "",
   "dependencies": {
+    "@gatling.io/core": "^3.14.903",
+    "@gatling.io/http": "^3.14.905",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
+    "appium": "^3.2.2",
     "minio": "^8.0.6",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
     "playwright": "^1.58.2",
-    "@gatling.io/core": "^3.14.903",
-    "@gatling.io/http": "^3.14.905",
     "webdriverio": "^9.24.0"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^12.6.0",
+    "@gatling.io/cli": "^3.14.0",
     "@types/node": "^25.3.0",
     "@types/pino": "^7.0.5",
     "dotenv": "^17.3.1",
