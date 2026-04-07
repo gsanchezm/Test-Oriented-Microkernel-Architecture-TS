@@ -196,7 +196,7 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
                 await _driver.executeScript('mobile: deepLink', [{ url, package: appId }]);
             }
 
-            logger.debug({ url, appId, platform: PLATFORM }, '[Appium] Deep link invoked');
+            logger.debug({ url, appId, platform: PLATFORM }, '[Appium] Deep link processed');
             return `Deep linked to: ${url}`;
         },
     ],
@@ -336,6 +336,12 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
 ]);
 
 // --- Public API ---
+
+export async function teardownAllSessions(): Promise<void> {
+    const ids = [...sessions.keys()];
+    await Promise.all(ids.map(teardown));
+    logger.info('[Appium] All sessions closed');
+}
 
 export async function execute(
     actionId: string,

@@ -1,21 +1,21 @@
 import { startPluginServer } from '../../kernel/plugin-server.factory';
-import { execute } from './appium';
+import { execute, teardownAllSessions } from './appium';
 import { bootAppiumServer, shutdownAppiumServer } from './appium-lifecycle';
+
+async function shutdown(pluginShutdown: () => Promise<void>): Promise<void> {
+    await pluginShutdown();        // stop accepting new gRPC intents
+    await teardownAllSessions();   // close all WebdriverIO sessions
+    await shutdownAppiumServer();  // stop Appium HTTP server (if we started it)
+    process.exit(0);
+}
 
 async function main(): Promise<void> {
     await bootAppiumServer();
-    startPluginServer('Appium', process.env.APPIUM_PORT_GRPC || '50053', execute);
+    const { shutdown: pluginShutdown } = startPluginServer('Appium', process.env.APPIUM_PORT_GRPC || '50053', execute);
+
+    process.on('SIGTERM', () => shutdown(pluginShutdown));
+    process.on('SIGINT', () => shutdown(pluginShutdown));
 }
-
-process.on('SIGTERM', async () => {
-    await shutdownAppiumServer();
-    process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-    await shutdownAppiumServer();
-    process.exit(0);
-});
 
 main().catch((err) => {
     console.error('[Appium] Failed to start:', err);

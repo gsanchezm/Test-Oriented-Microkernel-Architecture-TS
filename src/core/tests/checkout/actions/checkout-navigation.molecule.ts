@@ -16,10 +16,13 @@ export async function navigateToCheckout(market?: string, accessToken?: string):
         if (market) params.set('market', market);
         if (accessToken) params.set('accessToken', accessToken);
         await sendIntent('DEEP_LINK', `omnipizza://checkout?${params.toString()}`);
-        await sendIntent('WAIT_FOR_ELEMENT', 'checkoutHeader||8000');
-        // Wait for the first form input to confirm the checkout form is fully rendered,
-        // not just the navigation bar header.
-        await sendIntent('WAIT_FOR_ELEMENT', 'streetInput||10000');
+        // Step 1: confirm we landed on the checkout screen (empty or loaded)
+        // screen-checkout-empty is shown while the cart hydration API call is in flight
+        await sendIntent('WAIT_FOR_ELEMENT', 'checkoutScreenLanding||8000');
+        // Step 2: wait for cart hydration — screen flips to screen-checkout once API responds
+        await sendIntent('WAIT_FOR_ELEMENT', 'checkoutHeader||15000');
+        // Step 3: form inputs confirm the checkout form is fully rendered
+        await sendIntent('WAIT_FOR_ELEMENT', 'streetInput||5000');
         log.info({ market }, 'Deep linked to checkout screen (atomic mobile path)');
         return;
     }

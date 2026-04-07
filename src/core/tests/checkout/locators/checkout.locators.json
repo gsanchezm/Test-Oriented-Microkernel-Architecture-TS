@@ -3,6 +3,9 @@
     "web": "h1:has-text(\"Checkout\")",
     "mobile": "~screen-checkout"
   },
+  "checkoutScreenLanding": {
+    "mobile": "-ios class chain:**/XCUIElementTypeOther[`name == 'screen-checkout' OR name == 'screen-checkout-empty'`]"
+  },
   "streetInput": {
     "web": {
       "responsive": "[data-testid='address-responsive']",

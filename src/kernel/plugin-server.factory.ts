@@ -11,7 +11,7 @@ export function startPluginServer(
     pluginName: string,
     port: string,
     executeFn: ExecuteFn,
-): void {
+): { shutdown: () => Promise<void> } {
     const packageDef = protoLoader.loadSync(PROTO_PATH, {
         keepCase: true,
         longs: String,
@@ -50,4 +50,13 @@ export function startPluginServer(
             logger.info(`[${pluginName}] Plugin listening on port ${boundPort}`);
         },
     );
+
+    return {
+        shutdown: () => new Promise<void>((resolve) => {
+            server.tryShutdown((err) => {
+                if (err) logger.error(`[${pluginName}] Shutdown error: ${err}`);
+                resolve();
+            });
+        }),
+    };
 }

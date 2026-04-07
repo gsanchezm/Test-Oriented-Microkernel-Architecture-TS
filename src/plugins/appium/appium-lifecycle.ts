@@ -1,3 +1,4 @@
+import * as net from 'net';
 import { main as startAppium } from 'appium';
 import { logger } from '../../utils/logger';
 
@@ -20,8 +21,22 @@ const APPIUM_LOG_FILE = process.env.APPIUM_LOG_FILE; // optional: write logs to 
 
 let serverHandle: Awaited<ReturnType<typeof startAppium>> | undefined;
 
+function isPortInUse(port: number, host: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        const probe = net.createConnection({ port, host });
+        probe.once('connect', () => { probe.destroy(); resolve(true); });
+        probe.once('error', () => { probe.destroy(); resolve(false); });
+    });
+}
+
 export async function bootAppiumServer(): Promise<void> {
     if (serverHandle) return; // idempotent — safe to call in parallel test workers
+
+    const alreadyRunning = await isPortInUse(APPIUM_PORT, APPIUM_HOST);
+    if (alreadyRunning) {
+        log.info({ port: APPIUM_PORT }, '[Appium] Server already running — skipping boot');
+        return;
+    }
 
     log.info({ host: APPIUM_HOST, port: APPIUM_PORT, loglevel: APPIUM_LOG_LEVEL }, '[Appium] Booting server...');
 
