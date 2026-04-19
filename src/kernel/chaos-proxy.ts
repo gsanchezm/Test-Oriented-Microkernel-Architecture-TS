@@ -3,13 +3,15 @@ import * as protoLoader from '@grpc/proto-loader';
 import * as path from 'path';
 import { logger } from '../utils/logger';
 import { resolveLocator } from './locator-resolver';
+import { ensurePortFree } from './port-guard';
 
 // --- Constants ---
 
 const PROTO_PATH = path.resolve(__dirname, '../proto/ptom.proto');
 const DEFAULT_MAX_RETRIES = 3;
 const BASE_BACKOFF_MS = 100;
-const SERVER_PORT = '0.0.0.0:50051';
+const SERVER_PORT_NUMBER = 50051;
+const SERVER_PORT = `0.0.0.0:${SERVER_PORT_NUMBER}`;
 const ACTION_TYPE_SEPARATOR = '||';
 
 // --- Plugin Address Configuration (environment-driven) ---
@@ -227,7 +229,9 @@ async function handleExecuteIntent(call: any, callback: any): Promise<void> {
 
 // --- 10. Server Bootstrap ---
 
-function main(): void {
+async function main(): Promise<void> {
+    await ensurePortFree(SERVER_PORT_NUMBER);
+
     const server = new grpc.Server();
 
     server.addService(ptomProto.ActionService.service, {
@@ -240,7 +244,7 @@ function main(): void {
         (err, port) => {
             if (err) {
                 logger.error(`Failed to bind server: ${err}`);
-                return;
+                process.exit(1);
             }
             logger.warn(
                 `[p-TOM] Microkernel listening on TCP port ${port} (Pi-Calculus Channel established)`,
@@ -249,4 +253,7 @@ function main(): void {
     );
 }
 
-main();
+main().catch((err) => {
+    logger.error(`Startup failed: ${err.message}`);
+    process.exit(1);
+});

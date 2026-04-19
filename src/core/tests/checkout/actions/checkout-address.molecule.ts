@@ -1,10 +1,19 @@
 import { sendIntent } from '../../../../kernel/client';
 
-export async function fillDeliveryAddress(street: string, zip: string, suburb?: string): Promise<void> {
+export interface SecondaryAddressField {
+    locatorKey: string;
+    value: string;
+}
+
+export async function fillDeliveryAddress(
+    street: string,
+    zip: string,
+    secondary?: SecondaryAddressField,
+): Promise<void> {
     await sendIntent('TYPE', `streetInput||${street}`);
     await sendIntent('TYPE', `zipCodeInput||${zip}`);
-    if (suburb) {
-        await sendIntent('TYPE', `suburbInput||${suburb}`);
+    if (secondary) {
+        await sendIntent('TYPE', `${secondary.locatorKey}||${secondary.value}`);
     }
 }
 

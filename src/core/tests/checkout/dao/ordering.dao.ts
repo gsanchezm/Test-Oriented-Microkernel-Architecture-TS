@@ -7,8 +7,40 @@ export interface CountryInfo {
     required_fields: string[];
     optional_fields: string[];
     tax_rate: number;
+    delivery_fee: number;
+    tip_field: string;
+    tip_mode: 'percentage';
     languages: string[];
     decimal_places?: number;
+}
+
+export interface CheckoutRequest {
+    country_code: CountryCode;
+    items: CartItemRequest[];
+    name: string;
+    address: string;
+    phone: string;
+    payment_method: string;
+    zip_code?: string;
+    plz?: string;
+    colonia?: string;
+    prefectura?: string;
+    card_number?: string;
+    card_expiry?: string;
+    card_cvv?: string;
+    [tipField: string]: unknown;
+}
+
+export interface CheckoutResponse {
+    order_id: string;
+    status: string;
+    subtotal: number;
+    delivery_fee: number;
+    tax: number;
+    tip?: number;
+    total: number;
+    currency: string;
+    currency_symbol: string;
 }
 
 export interface Pizza {
@@ -122,6 +154,20 @@ export class OrderingDao {
                 Authorization: `Bearer ${params.token}`,
                 'x-country-code': params.countryCode,
             },
+        });
+    }
+
+    async placeOrder(params: {
+        token: string;
+        countryCode: CountryCode;
+        body: CheckoutRequest;
+    }): Promise<CheckoutResponse> {
+        return this.httpClient.post<CheckoutResponse>('/api/checkout', {
+            headers: {
+                Authorization: `Bearer ${params.token}`,
+                'x-country-code': params.countryCode,
+            },
+            body: params.body,
         });
     }
 }

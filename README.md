@@ -38,6 +38,31 @@ Performance testing operates in two modes: **TOM-driven** (Gatling gRPC plugin t
 
 ## Atomic Design Layers
 
+```mermaid
+graph TD
+    %% Define Styles
+    classDef atom fill:#f3e8ff,stroke:#a855f7,stroke-width:2px,color:#4c1d95,rx:10px,ry:10px;
+    classDef molecule fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#3730a3,rx:10px,ry:10px;
+    classDef organism fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#166534,rx:10px,ry:10px;
+    classDef ecosystem fill:#fef08a,stroke:#eab308,stroke-width:2px,color:#854d0e,rx:10px,ry:10px;
+    classDef resonance fill:#ffedd5,stroke:#f97316,stroke-width:2px,color:#9a3412,rx:10px,ry:10px;
+    classDef helix fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b,rx:10px,ry:10px;
+
+    Atom["⚛️ Atoms<br/>(gRPC Intents / Primitives)"]:::atom
+    Molecule["🧬 Molecules<br/>(Cross-platform Actions)"]:::molecule
+    Organism["🦠 Organisms<br/>(Business Flow Use Cases)"]:::organism
+    EcoSystem["🌍 Eco-Systems<br/>(BDD Features / Scenarios)"]:::ecosystem
+    Resonance["🌊 Resonance<br/>(DAST / Performance Gatling)"]:::resonance
+    Helix["🌀 Execution Helix<br/>(CI/CD / Microkernel Workflows)"]:::helix
+
+    Atom ==> Molecule
+    Molecule ==> Organism
+    Organism ==> EcoSystem
+    EcoSystem -.-> Resonance
+    EcoSystem ==> Helix
+    Resonance ==> Helix
+```
+
 | AHM Layer | Folder | Purpose |
 |-----------|--------|---------|
 | Atoms | `kernel/client.ts` | `sendIntent()` — indivisible gRPC primitives |
@@ -45,6 +70,19 @@ Performance testing operates in two modes: **TOM-driven** (Gatling gRPC plugin t
 | Organisms | `[domain]/usecases/` | Orchestrate actions into business flows |
 | Eco-Systems | `[domain]/features/` + `step_definitions/` | BDD scenarios composing use cases + DAOs |
 | Resonance | `[domain]/simulations/` | Gatling simulations co-located with their feature, driven by the same Examples data |
+| Execution Helix | `.github/workflows/` | CI/CD pipelines uniting all layers into parallel, isolated orbits governed by mathematical constraints |
+
+### Adapting other Test Categories
+
+Since AHM explicitly focuses on orchestrating dynamic end-to-end and process boundary verifications via the Microkernel, adapting other tests follows strict architectural mapping:
+
+*   **Dynamic UI Assessments (Visual Testing, Accessibility):**
+    These map directly onto the architecture. An accessibility check or visual snapshot is treated as a new **Molecule** (e.g., `actions/ui-validators.ts`) which triggers a specific **Atom** intent (e.g., `COMPARE_VISUAL_SNAPSHOT`) via gRPC. The validation is invoked by the **Eco-System** (`Then it matches the visual baseline`).
+*   **Security Testing (DAST vs SAST):**
+    *   **DAST (Dynamic Application Security Testing):** Fits into the **Resonance** layer. Like load-testing, dynamic vulnerability scanning can utilize the feature's usecase and flow definitions to inject payloads during a running E2E automation session.
+    *   **SAST (Static Application Security Testing):** Excluded from the AHM Microkernel ecosystem. As it analyzes static code rather than runtime states, it operates purely as an antecedent CI pipeline job.
+*   **Unit Tests (White-box / Component):**
+    Unit tests mathematically evaluate code locally, lacking stochastic noise or network jitter, meaning they **do not require** the $\lambda < 0$ (Chaos Suppression) proxy. Therefore, they fall completely **outside** the AHM Microkernel boundary and should reside strictly at the repository level alongside the source code.
 
 ## Project Structure
 
@@ -197,10 +235,10 @@ Both modes run the same `checkout-load.gatling.ts` simulation. The difference is
 
 ### Feature-driven feeder
 
-The feeder is no longer hardcoded. `featureToCheckoutRows()` reads `checkout.feature` at bundle time and returns all Examples rows as typed `CheckoutRow` objects:
+The feeder is no longer hardcoded. `featureToCheckoutRows()` reads `place-delivery-order.feature` at bundle time and returns all Examples rows as typed `CheckoutRow` objects:
 
 ```
-checkout.feature (Examples: Credit Card + Cash)
+place-delivery-order.feature (Examples: Credit Card + Cash)
   └─→ featureToCheckoutRows(['Credit Card', 'Cash'])
         └─→ arrayFeeder([...8 rows...]).circular()
 ```

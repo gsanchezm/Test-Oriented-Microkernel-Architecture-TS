@@ -23,11 +23,18 @@
       "ios": "~input-zipcode"
     }
   },
-  "suburbInput": {
+  "coloniaInput": {
     "web": "[data-testid='colonia']",
     "mobile": {
       "android": "id=input-colonia",
       "ios": "~input-colonia"
+    }
+  },
+  "prefecturaInput": {
+    "web": "[data-testid='prefectura']",
+    "mobile": {
+      "android": "id=input-prefectura",
+      "ios": "~input-prefectura"
     }
   },
   "fullNameInput": {
@@ -111,5 +118,25 @@
       "desktop": "[data-testid='place-order-btn-desktop']"
     },
     "mobile": "~btn-place-order"
+  },
+  "orderSummaryTitle": {
+    "web": "[data-testid='order-summary-title']",
+    "mobile": "~text-section-summary"
+  },
+  "orderTotalValue": {
+    "web": "[data-testid='order-total']",
+    "mobile": "~text-total-value"
+  },
+  "orderSubtotalValue": {
+    "web": "[data-testid='order-subtotal']",
+    "mobile": "~text-subtotal-value"
+  },
+  "orderTaxValue": {
+    "web": "[data-testid='order-tax']",
+    "mobile": "~text-tax-value"
+  },
+  "orderDeliveryValue": {
+    "web": "[data-testid='order-delivery']",
+    "mobile": "~text-delivery-value"
   }
 }

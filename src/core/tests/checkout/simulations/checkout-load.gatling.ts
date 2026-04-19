@@ -1,7 +1,7 @@
 /**
  * Checkout Load Simulation
  *
- * Feature-driven: feeder rows come directly from checkout.feature Examples tables.
+ * Feature-driven: feeder rows come directly from place-delivery-order.feature Examples tables.
  * The .feature file is the single source of truth — no hardcoded data here.
  *
  * API flow (mirrors the Scenario Outline at the HTTP level):
@@ -40,7 +40,7 @@ import { http } from '@gatling.io/http';
 import { checkoutRows } from './checkout-rows.generated';
 
 // ---------------------------------------------------------------------------
-// Feeder — sourced from checkout.feature Examples tables (pre-generated)
+// Feeder — sourced from place-delivery-order.feature Examples tables (pre-generated)
 // Re-generate with: ts-node scripts/generate-checkout-feeder.ts
 // ---------------------------------------------------------------------------
 
@@ -167,12 +167,19 @@ export default simulation((setUp) => {
 
         // ── Step 3: Checkout ───────────────────────────────────────────────
         // Mirrors: "they provide delivery details" + "they choose payment method"
+        // Response validated for internal consistency:
+        //   total = subtotal + delivery_fee + tax (+ tip, currently always 0)
         .exec(
             http('Checkout')
                 .post('/api/checkout')
-                .header('Authorization', (session: Session) => `Bearer ${session.get<string>('token')}`)
+                .header('x-country-code', (session: Session) => session.get<string>('market'))
+                .header('Authorization',  (session: Session) => `Bearer ${session.get<string>('token')}`)
                 .body(StringBody((session: Session) => session.get<string>('checkoutBody')))
-                .check(jsonPath('$.order_id').exists()),
+                .check(jsonPath('$.order_id').exists())
+                .check(jsonPath('$.subtotal').exists())
+                .check(jsonPath('$.delivery_fee').exists())
+                .check(jsonPath('$.tax').exists())
+                .check(jsonPath('$.total').exists()),
         );
 
     setUp(checkout.injectOpen(injectionProfile())).protocols(httpProtocol);

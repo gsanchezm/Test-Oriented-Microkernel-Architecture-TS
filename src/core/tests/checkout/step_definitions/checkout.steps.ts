@@ -200,14 +200,23 @@ When(
   },
 );
 
-Then(
-  'the order is accepted with subtotal {string} tax {string} and total {string}',
-  async function (subtotal: string, tax: string, total: string) {
-    log.info({ subtotal, tax, total }, 'Verifying order acceptance');
-    await verifyOrderAccepted({ subtotal, tax, total });
-    log.info({ subtotal, tax, total }, 'Order verified successfully');
-  },
-);
+Then('the order is accepted', async function () {
+  const world = this as CheckoutWorld;
+  const countryInfo = world.orderContext?.countryInfo;
+  if (!countryInfo) {
+    throw new Error('Missing country metadata. Ensure market step runs before verification.');
+  }
+
+  log.info({
+    market: countryInfo.code,
+    taxRate: countryInfo.tax_rate,
+    deliveryFee: countryInfo.delivery_fee,
+  }, 'Verifying order acceptance');
+
+  await verifyOrderAccepted(countryInfo, world.orderContext!.cartItems);
+
+  log.info({ market: countryInfo.code }, 'Order verified successfully');
+});
 
 After(async function () {
   try {

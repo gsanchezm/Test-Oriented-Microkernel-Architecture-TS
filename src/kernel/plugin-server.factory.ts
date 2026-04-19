@@ -2,6 +2,7 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import * as path from 'path';
 import { logger } from '../utils/logger';
+import { ensurePortFree } from './port-guard';
 
 const PROTO_PATH = path.resolve(__dirname, '../proto/ptom.proto');
 
@@ -39,17 +40,28 @@ export function startPluginServer(
         ExecuteIntent: handleExecuteIntent,
     });
 
-    server.bindAsync(
-        `0.0.0.0:${port}`,
-        grpc.ServerCredentials.createInsecure(),
-        (err, boundPort) => {
-            if (err) {
-                logger.error(`[${pluginName}] Bind failed: ${err}`);
-                return;
-            }
-            logger.info(`[${pluginName}] Plugin listening on port ${boundPort}`);
-        },
-    );
+    // Reclaim the port from any stale copy of this plugin before binding,
+    // then bind. Runs async so the factory keeps its synchronous signature.
+    (async () => {
+        try {
+            await ensurePortFree(parseInt(port, 10));
+        } catch (err: any) {
+            logger.error(`[${pluginName}] Port guard failed: ${err.message}`);
+            process.exit(1);
+        }
+
+        server.bindAsync(
+            `0.0.0.0:${port}`,
+            grpc.ServerCredentials.createInsecure(),
+            (err, boundPort) => {
+                if (err) {
+                    logger.error(`[${pluginName}] Bind failed: ${err}`);
+                    process.exit(1);
+                }
+                logger.info(`[${pluginName}] Plugin listening on port ${boundPort}`);
+            },
+        );
+    })();
 
     return {
         shutdown: () => new Promise<void>((resolve) => {

@@ -1,8 +1,22 @@
 import { injectBrowserSession, BrowserSessionState } from '../actions/checkout-auth.molecule';
 import { navigateToCheckout } from '../actions/checkout-navigation.molecule';
-import { fillDeliveryAddress, fillContactInfo } from '../actions/checkout-address.molecule';
+import { fillDeliveryAddress, fillContactInfo, SecondaryAddressField } from '../actions/checkout-address.molecule';
 import { selectPaymentMethod, fillCardDetails } from '../actions/checkout-payment.molecule';
-import { placeOrder, verifyOrderSummary } from '../actions/checkout-order.molecule';
+import { placeOrder, verifyOrderAccepted as verifyOrderOnUI } from '../actions/checkout-order.molecule';
+import type { CartItemResponse, CountryInfo } from '../dao/ordering.dao';
+
+const SECONDARY_ADDRESS_FIELDS = ['colonia', 'prefectura'] as const;
+
+function pickSecondaryAddressField(
+    countryInfo: CountryInfo,
+    value?: string,
+): SecondaryAddressField | undefined {
+    if (!value) return undefined;
+    const field = countryInfo.required_fields.find((f) =>
+        (SECONDARY_ADDRESS_FIELDS as readonly string[]).includes(f),
+    );
+    return field ? { locatorKey: `${field}Input`, value } : undefined;
+}
 
 export interface DeliveryDetails {
     street: string;
@@ -15,12 +29,6 @@ export interface ContactDetails {
     phone: string;
 }
 
-export interface OrderExpectation {
-    subtotal: string;
-    tax: string;
-    total: string;
-}
-
 export async function fillDeliveryDetails(
     session: BrowserSessionState,
     delivery: DeliveryDetails,
@@ -28,7 +36,8 @@ export async function fillDeliveryDetails(
 ): Promise<void> {
     await injectBrowserSession(session);
     await navigateToCheckout(session.countryCode, session.token);
-    await fillDeliveryAddress(delivery.street, delivery.zip, delivery.suburb);
+    const secondary = pickSecondaryAddressField(session.countryInfo, delivery.suburb);
+    await fillDeliveryAddress(delivery.street, delivery.zip, secondary);
     await fillContactInfo(contact.name, contact.phone);
 }
 
@@ -45,7 +54,10 @@ export async function enterCardDetails(
     await fillCardDetails(card, exp, cvv, holderName);
 }
 
-export async function verifyOrderAccepted(expected: OrderExpectation): Promise<void> {
+export async function verifyOrderAccepted(
+    countryInfo: CountryInfo,
+    cartItems: CartItemResponse[],
+): Promise<void> {
     await placeOrder();
-    await verifyOrderSummary(expected.subtotal, expected.tax, expected.total);
+    await verifyOrderOnUI(countryInfo, cartItems);
 }

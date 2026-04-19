@@ -46,10 +46,20 @@ function killPlugin(name: string): Promise<void> {
     if (!child) return Promise.resolve();
 
     return new Promise((resolve) => {
-        child.once('exit', () => resolve());
+        let settled = false;
+        const done = () => {
+            if (settled) return;
+            settled = true;
+            resolve();
+        };
+
+        child.once('exit', done);
         child.kill('SIGTERM');
-        // Force-kill after 3 s if it doesn't exit cleanly
-        setTimeout(() => { child.kill('SIGKILL'); resolve(); }, 3000);
+
+        // Escalate to SIGKILL after 3 s, but still wait for the real exit
+        // before resolving — otherwise the port may still be held when the
+        // next spawn tries to bind it (EADDRINUSE).
+        setTimeout(() => { if (!settled) child.kill('SIGKILL'); }, 3000);
     });
 }
 
@@ -66,42 +76,61 @@ function enabledNames(): Set<string> {
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let reloadInProgress = false;
+let reloadQueued     = false;
 
 async function onEnvChanged(): Promise<void> {
-    log.info('.env changed — reloading...');
-    reloadEnv();
-
-    const nowEnabled  = enabledNames();
-    const wasRunning  = new Set(running.keys());
-
-    const toStop      = [...wasRunning].filter(n => !nowEnabled.has(n));
-    const toStart     = [...nowEnabled].filter(n => !wasRunning.has(n));
-    // Restart plugins that were already running so they pick up new env values
-    const toRestart   = [...wasRunning].filter(n => nowEnabled.has(n));
-
-    log.info({ toStop, toStart, toRestart }, 'Plugin diff');
-
-    // Stop removed
-    await Promise.all(toStop.map(name => {
-        log.info({ name }, 'Stopping plugin (disabled in .env)');
-        return killPlugin(name);
-    }));
-
-    // Restart running ones with fresh env
-    for (const name of toRestart) {
-        const plugin = plugins.find(p => p.name === name)!;
-        log.info({ name }, 'Restarting plugin (env changed)');
-        await killPlugin(name);
-        spawnPlugin(plugin);
+    // Serialize reloads — fs.watch on macOS can emit multiple `change` events
+    // per save, and edits during an in-flight reload must not trigger a
+    // concurrent run (two overlapping spawns race on the same port).
+    if (reloadInProgress) {
+        reloadQueued = true;
+        return;
     }
+    reloadInProgress = true;
 
-    // Start newly enabled ones
-    for (const name of toStart) {
-        const plugin = plugins.find(p => p.name === name)!;
-        spawnPlugin(plugin);
+    try {
+        log.info('.env changed — reloading...');
+        reloadEnv();
+
+        const nowEnabled  = enabledNames();
+        const wasRunning  = new Set(running.keys());
+
+        const toStop      = [...wasRunning].filter(n => !nowEnabled.has(n));
+        const toStart     = [...nowEnabled].filter(n => !wasRunning.has(n));
+        // Restart plugins that were already running so they pick up new env values
+        const toRestart   = [...wasRunning].filter(n => nowEnabled.has(n));
+
+        log.info({ toStop, toStart, toRestart }, 'Plugin diff');
+
+        // Stop removed
+        await Promise.all(toStop.map(name => {
+            log.info({ name }, 'Stopping plugin (disabled in .env)');
+            return killPlugin(name);
+        }));
+
+        // Restart running ones with fresh env
+        for (const name of toRestart) {
+            const plugin = plugins.find(p => p.name === name)!;
+            log.info({ name }, 'Restarting plugin (env changed)');
+            await killPlugin(name);
+            spawnPlugin(plugin);
+        }
+
+        // Start newly enabled ones
+        for (const name of toStart) {
+            const plugin = plugins.find(p => p.name === name)!;
+            spawnPlugin(plugin);
+        }
+
+        log.info(`Hot-reload complete. Running: [${[...running.keys()].join(', ')}]`);
+    } finally {
+        reloadInProgress = false;
+        if (reloadQueued) {
+            reloadQueued = false;
+            void onEnvChanged();
+        }
     }
-
-    log.info(`Hot-reload complete. Running: [${[...running.keys()].join(', ')}]`);
 }
 
 function watchEnv(): void {

@@ -150,6 +150,33 @@ async function teardown(sessionId: string): Promise<void> {
     }
 }
 
+// --- Text Extraction ---
+
+/**
+ * Read the visible text of an element. When the app sets `accessibilityLabel`
+ * equal to `testID` (a common anti-pattern), `getText()` returns the id
+ * instead of the rendered text. In that case, fall back to the iOS `value`
+ * attribute or a descendant StaticText that carries the actual string.
+ */
+async function readVisibleText(el: any): Promise<string> {
+    const text = (await el.getText().catch(() => '')) as string;
+    if (PLATFORM !== 'ios') return text;
+
+    const id = (await el.getAttribute('name').catch(() => '')) as string;
+    const labelShadowsId = text && id && text === id;
+    if (!labelShadowsId) return text;
+
+    const value = (await el.getAttribute('value').catch(() => '')) as string;
+    if (value) return value;
+
+    const childStatics = await el.$$('XCUIElementTypeStaticText').getElements().catch(() => []);
+    for (const child of childStatics) {
+        const childText = (await child.getText().catch(() => '')) as string;
+        if (childText && childText !== id) return childText;
+    }
+    return text;
+}
+
 // --- Intent → Handler Map ---
 
 const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
@@ -289,7 +316,7 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
             const elements = _driver.$$(selector);
             const texts: string[] = [];
             for (const el of await elements.getElements()) {
-                texts.push(await el.getText());
+                texts.push(await readVisibleText(el));
             }
             return texts.join('\n');
         },
