@@ -446,6 +446,20 @@ function normalizeTypedValue(value: string): string {
     return value.replace(/\s+/g, ' ').trim();
 }
 
+function digitsOnly(value: string): string {
+    return value.replace(/\D/g, '');
+}
+
+function typedValuesMatch(expected: string, actual: string): boolean {
+    if (actual === expected) return true;
+
+    const expectedDigits = digitsOnly(expected);
+    const actualDigits = digitsOnly(actual);
+    return expectedDigits.length > 0 &&
+        expectedDigits === actualDigits &&
+        expectedDigits.length >= Math.min(4, expected.length);
+}
+
 function shouldVerifyTypedText(text: string): boolean {
     return PLATFORM === 'ios' && /[A-Za-z\s]/.test(text);
 }
@@ -465,7 +479,7 @@ async function typeTextIntoTarget(
 
     const expected = normalizeTypedValue(text);
     let actual = normalizeTypedValue(await readEditableValue(target));
-    if (actual === expected) return;
+    if (typedValuesMatch(expected, actual)) return;
 
     // iOS occasionally truncates strings containing spaces through setValue
     // (for example "123 Luxury Avenue" becoming "1Avenue"). Retype through
@@ -474,14 +488,14 @@ async function typeTextIntoTarget(
         await clearAndFocus(target);
         await driver.executeScript('mobile: type', [{ text }]);
         actual = normalizeTypedValue(await readEditableValue(target));
-        if (actual === expected) return;
+        if (typedValuesMatch(expected, actual)) return;
     } catch { /* fall through to W3C keys */ }
 
     try {
         await clearAndFocus(target);
         await driver.keys(text.split('') as any);
         actual = normalizeTypedValue(await readEditableValue(target));
-        if (actual === expected) return;
+        if (typedValuesMatch(expected, actual)) return;
     } catch { /* fall through to chunked addValue */ }
 
     await clearAndFocus(target);
@@ -491,7 +505,7 @@ async function typeTextIntoTarget(
     }
 
     actual = normalizeTypedValue(await readEditableValue(target));
-    if (actual !== expected) {
+    if (!typedValuesMatch(expected, actual)) {
         throw new Error(`[TYPE] iOS text entry mismatch: expected "${text}", got "${actual}"`);
     }
 }
