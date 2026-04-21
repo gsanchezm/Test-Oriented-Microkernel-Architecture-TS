@@ -216,8 +216,8 @@ async function swipeUpBulk(driver: Browser): Promise<void> {
 async function swipeUpW3C(driver: Browser, percent = 0.55): Promise<void> {
     const size = await driver.getWindowSize();
     const centerX = Math.round(size.width / 2);
-    const startY = Math.round(size.height * 0.72);
-    const endY = Math.round(size.height * Math.max(0.15, 0.72 - percent));
+    const startY = Math.round(size.height * 0.78);
+    const endY = Math.round(size.height * Math.max(0.12, 0.78 - percent));
 
     await driver.performActions([{
         type: 'pointer',
@@ -349,6 +349,18 @@ async function isFrameInTapZone(
     }
 }
 
+async function tapElementCenter(
+    driver: Browser,
+    target: ReturnType<Browser['$']>,
+): Promise<void> {
+    const loc = await (target.getLocation() as Promise<{ x: number; y: number }>);
+    const size = await (target.getSize() as Promise<{ width: number; height: number }>);
+    const windowSize = await driver.getWindowSize();
+    const centerX = Math.max(1, Math.min(windowSize.width - 1, loc.x + size.width / 2));
+    const centerY = Math.max(65, Math.min(windowSize.height - 24, loc.y + size.height / 2));
+    await driver.executeScript('mobile: tap', [{ x: centerX, y: centerY }]);
+}
+
 async function dismissKeyboard(driver: Browser): Promise<void> {
     if (PLATFORM !== 'ios') return;
     if (!(await isKeyboardShown(driver))) return;
@@ -390,14 +402,18 @@ async function scrollIntoViewSafe(
     driver: Browser,
     target: ReturnType<Browser['$']>,
     selector: string,
-    maxAttempts = 8,
+    maxAttempts = 3,
 ): Promise<void> {
     if (await isFrameInTapZone(driver, target)) return;
 
     let displayed = await isTrulyDisplayed(driver, target);
     let attempts = 0;
     while (!displayed && attempts < maxAttempts) {
-        await swipeUpW3C(driver);
+        try {
+            await swipeUpBulk(driver);
+        } catch {
+            await swipeUpW3C(driver, 0.66);
+        }
         displayed = await isFrameInTapZone(driver, target) || await isTrulyDisplayed(driver, target);
         attempts++;
     }
@@ -450,18 +466,37 @@ function digitsOnly(value: string): string {
     return value.replace(/\D/g, '');
 }
 
-function typedValuesMatch(expected: string, actual: string): boolean {
+function isCardNumberSelector(selector: string): boolean {
+    return selector.includes('input-card-number');
+}
+
+function isMaskedValue(value: string): boolean {
+    return /^[•●*]+$/.test(value);
+}
+
+function typedValuesMatch(expected: string, actual: string, selector = ''): boolean {
     if (actual === expected) return true;
+    if (isMaskedValue(actual)) {
+        return actual.length === expected.length;
+    }
 
     const expectedDigits = digitsOnly(expected);
     const actualDigits = digitsOnly(actual);
+    if (isCardNumberSelector(selector) && expectedDigits.length >= 12) {
+        return actualDigits === expectedDigits ||
+            actualDigits === expectedDigits.slice(-4);
+    }
+
     return expectedDigits.length > 0 &&
         expectedDigits === actualDigits &&
         expectedDigits.length >= Math.min(4, expected.length);
 }
 
-function shouldVerifyTypedText(text: string): boolean {
-    return PLATFORM === 'ios' && /[A-Za-z]/.test(text);
+function shouldVerifyTypedText(text: string, selector = ''): boolean {
+    if (PLATFORM !== 'ios') return false;
+    if (/[A-Za-z]/.test(text)) return true;
+    if (isCardNumberSelector(selector)) return true;
+    return /^\d{3,}$/.test(text);
 }
 
 async function clearAndFocus(target: ReturnType<Browser['$']>): Promise<void> {
@@ -473,13 +508,14 @@ async function typeTextIntoTarget(
     driver: Browser,
     target: ReturnType<Browser['$']>,
     text: string,
+    selector = '',
 ): Promise<void> {
     await (target.setValue(text) as Promise<void>);
-    if (!shouldVerifyTypedText(text)) return;
+    if (!shouldVerifyTypedText(text, selector)) return;
 
     const expected = normalizeTypedValue(text);
     let actual = normalizeTypedValue(await readEditableValue(target));
-    if (typedValuesMatch(expected, actual)) return;
+    if (typedValuesMatch(expected, actual, selector)) return;
 
     // iOS occasionally truncates strings containing spaces through setValue
     // (for example "123 Luxury Avenue" becoming "1Avenue"). Retype through
@@ -488,14 +524,14 @@ async function typeTextIntoTarget(
         await clearAndFocus(target);
         await driver.executeScript('mobile: type', [{ text }]);
         actual = normalizeTypedValue(await readEditableValue(target));
-        if (typedValuesMatch(expected, actual)) return;
+        if (typedValuesMatch(expected, actual, selector)) return;
     } catch { /* fall through to W3C keys */ }
 
     try {
         await clearAndFocus(target);
         await driver.keys(text.split('') as any);
         actual = normalizeTypedValue(await readEditableValue(target));
-        if (typedValuesMatch(expected, actual)) return;
+        if (typedValuesMatch(expected, actual, selector)) return;
     } catch { /* fall through to chunked addValue */ }
 
     await clearAndFocus(target);
@@ -505,7 +541,7 @@ async function typeTextIntoTarget(
     }
 
     actual = normalizeTypedValue(await readEditableValue(target));
-    if (!typedValuesMatch(expected, actual)) {
+    if (!typedValuesMatch(expected, actual, selector)) {
         throw new Error(`[TYPE] iOS text entry mismatch: expected "${text}", got "${actual}"`);
     }
 }
@@ -626,14 +662,18 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
                     const centerX = loc.x + size.width / 2;
                     const centerY = loc.y + size.height / 2;
                     process.stderr.write(`[Appium-DBG] CLICK ${selector} frame=(${loc.x},${loc.y},${size.width}x${size.height}) center=(${centerX},${centerY})\n`);
-                    const VIEWPORT_BOTTOM = 780;
-                    if (centerY > VIEWPORT_BOTTOM) {
-                        const clampedY = VIEWPORT_BOTTOM - 10;
+                    const windowSize = await _driver.getWindowSize();
+                    const VIEWPORT_BOTTOM = Math.min(windowSize.height - 90, 780);
+                    if (selector.includes('btn-place-order') || centerY > VIEWPORT_BOTTOM) {
+                        const clampedY = Math.min(Math.max(65, centerY), VIEWPORT_BOTTOM - 10);
                         process.stderr.write(`[Appium-DBG] CLICK ${selector} tap-clamped at (${centerX},${clampedY})\n`);
                         await _driver.executeScript('mobile: tap', [{ x: centerX, y: clampedY }]);
                         dbg('post-click(clamped)');
                         return `Tapped (clamped) on mobile element: ${selector}`;
                     }
+                    await tapElementCenter(_driver, target);
+                    dbg('post-click(coords)');
+                    return `Tapped on mobile element by coordinates: ${selector}`;
                 } catch (err) {
                     process.stderr.write(`[Appium-DBG] CLICK ${selector} frame lookup failed: ${(err as Error).message}\n`);
                 }
@@ -666,7 +706,7 @@ const actionHandlers: ReadonlyMap<string, ActionHandler> = new Map([
                 await scrollIntoViewSafe(_driver, target, selector, 3);
             }
             await (target.click() as Promise<void>);
-            await typeTextIntoTarget(_driver, target, text);
+            await typeTextIntoTarget(_driver, target, text, selector);
             await dismissKeyboard(_driver);
             return `Typed text into mobile element: ${selector}`;
         },
