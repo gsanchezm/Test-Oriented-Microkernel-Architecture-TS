@@ -107,18 +107,18 @@ jobs:
           PLUGIN_API: 'true'
 
       - name: Run Cucumber suite (API layer)
-        run: pnpm test
+        run: pnpm test --tags '@api'
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: api
           DRIVER: api
 
   # ---------------------------------------------------------------------------
-  # Job 2: Web E2E — Playwright
+  # Job 2: Web E2E — Playwright Desktop
   # Runs on: push, PR, manual (platform=all|web)
   # ---------------------------------------------------------------------------
   e2e-web:
-    name: E2E — Web (Playwright)
+    name: E2E — Web Desktop (Playwright)
     runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
@@ -171,7 +171,7 @@ jobs:
           PLUGIN_API: 'true'
 
       - name: Run E2E tests
-        run: pnpm test
+        run: pnpm test --tags '@desktop'
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
@@ -181,7 +181,74 @@ jobs:
           HEADLESS: 'true'
 
   # ---------------------------------------------------------------------------
-  # Job 3: Android E2E — Appium + docker-android
+  # Job 3: Web E2E — Playwright Responsive
+  # Runs on: push, PR, manual (platform=all|web)
+  # ---------------------------------------------------------------------------
+  e2e-web-responsive:
+    name: E2E — Web Responsive (Playwright)
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'web'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start proxy + plugins
+        run: |
+          npx ts-node -r dotenv/config src/kernel/chaos-proxy.ts &
+          npx ts-node -r dotenv/config src/plugins/playwright/server.ts &
+          npx ts-node -r dotenv/config src/plugins/api/server.ts &
+          for port in 50051 50052 50055; do
+            for i in $(seq 1 20); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              sleep 1
+            done
+          done
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLUGIN_PLAYWRIGHT: 'true'
+          PLUGIN_API: 'true'
+
+      - name: Run E2E tests
+        run: pnpm test --tags '@responsive'
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          HEADLESS: 'true'
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Android E2E — Appium + docker-android
   # Runs on: manual ONLY (platform=all|android)
   # ---------------------------------------------------------------------------
   e2e-android:
@@ -282,7 +349,7 @@ jobs:
           PLUGIN_API: 'true'
 
       - name: Run E2E tests
-        run: pnpm test
+        run: pnpm test --tags '@android'
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: android
@@ -298,7 +365,7 @@ jobs:
         run: docker stop android-emulator && docker rm android-emulator
 
   # ---------------------------------------------------------------------------
-  # Job 4: Perf — Gatling Simulation
+  # Job 5: Perf — Gatling Simulation
   # Runs on: push to main, manual (platform=all|perf)
   # ---------------------------------------------------------------------------
   perf-gatling:
