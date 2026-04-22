@@ -77,6 +77,9 @@ function loadCapabilities(sessionId: string = '0'): Record<string, unknown> {
         if (appPath) caps['appium:app'] = appPath;
     }
 
+    const deviceName = process.env[`${PLATFORM.toUpperCase()}_DEVICE_NAME`];
+    if (deviceName) caps['appium:deviceName'] = deviceName;
+
     // UDID — resolved per session to support parallel devices
     const udid = resolveUdid(sessionId);
     if (udid) caps['appium:udid'] = udid;

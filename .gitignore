@@ -32,7 +32,13 @@ Thumbs.db
 *.tsbuildinfo
 
 # Local agent/tooling and large app artifacts
-assets/
+assets/**
+!assets/
+!assets/apps/
+!assets/apps/android/
+!assets/apps/android/.gitkeep
+!assets/apps/ios/
+!assets/apps/ios/.gitkeep
 .antigravity/
 .agents/
 docs/
