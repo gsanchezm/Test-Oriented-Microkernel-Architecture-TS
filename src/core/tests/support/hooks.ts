@@ -1,5 +1,5 @@
 import { AfterStep, AfterAll, BeforeAll } from '@cucumber/cucumber';
-import { logEvent, TelemetryEvent } from '../../../telemetry/logger';
+import { ensureTelemetryFile, logEvent, TelemetryEvent } from '../../../telemetry/logger';
 import { streamToMinio } from '../../../telemetry/minio-publisher';
 import { randomUUID } from 'crypto';
 
@@ -39,6 +39,10 @@ AfterStep(async function ({ pickle, pickleStep, result }) {
 });
 
 AfterAll(async function () {
+  if (currentRunId) {
+    telemetryFilePath = ensureTelemetryFile(currentRunId);
+  }
+
   if (telemetryFilePath && currentRunId) {
     await streamToMinio(telemetryFilePath, currentRunId);
   }

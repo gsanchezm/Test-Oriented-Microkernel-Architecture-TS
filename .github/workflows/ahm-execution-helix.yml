@@ -62,9 +62,8 @@ jobs:
     name: API E2E — Checkout
     runs-on: ubuntu-latest
     if: >-
-      github.event_name != 'workflow_dispatch'
-      || inputs.platform == 'all'
-      || inputs.platform == 'api'
+      github.event_name == 'workflow_dispatch'
+      && inputs.platform == 'api'
 
     steps:
       - uses: actions/checkout@v6
@@ -127,7 +126,7 @@ jobs:
             echo "No results directory found. Telemetry is required for AHM runs."
             exit 1
           fi
-          npx ts-node scripts/parse-telemetry.ts "$RESULTS_DIR"
+          npx ts-node src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
 
       - name: Upload Telemetry Artifacts
         if: always()
@@ -219,7 +218,7 @@ jobs:
             echo "No results directory found. Telemetry is required for AHM runs."
             exit 1
           fi
-          npx ts-node scripts/parse-telemetry.ts "$RESULTS_DIR"
+          npx ts-node src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
 
       - name: Upload Telemetry Artifacts
         if: always()
@@ -311,7 +310,7 @@ jobs:
             echo "No results directory found. Telemetry is required for AHM runs."
             exit 1
           fi
-          npx ts-node scripts/parse-telemetry.ts "$RESULTS_DIR"
+          npx ts-node src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
 
       - name: Upload Telemetry Artifacts
         if: always()
@@ -458,7 +457,7 @@ jobs:
             echo "No results directory found. Telemetry is required for AHM runs."
             exit 1
           fi
-          npx ts-node scripts/parse-telemetry.ts "$RESULTS_DIR"
+          npx ts-node src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
 
       - name: Upload Telemetry Artifacts
         if: always()
@@ -588,7 +587,7 @@ jobs:
             echo "No results directory found. Telemetry is required for AHM runs."
             exit 1
           fi
-          npx ts-node scripts/parse-telemetry.ts "$RESULTS_DIR"
+          npx ts-node src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
 
       - name: Upload Telemetry Artifacts
         if: always()

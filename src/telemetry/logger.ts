@@ -49,3 +49,20 @@ export function logEvent(event: TelemetryEvent): string {
   
   return activeFilePath;
 }
+
+export function ensureTelemetryFile(runId: string): string {
+  if (!activeFilePath) {
+    return logEvent({
+      timestamp: new Date().toISOString(),
+      runId,
+      platform: process.env.PLATFORM || 'unknown',
+      viewport: process.env.VIEWPORT || 'default',
+      scenario: '__run__',
+      step: 'telemetry initialized',
+      outcome: 'SKIPPED',
+      durationMs: 0,
+    });
+  }
+
+  return activeFilePath;
+}
