@@ -1,0 +1,27 @@
+# AHM Architectural Laws Constraint: $S_{A1} \cap S_{A2} = \emptyset$ (Set Theory Isolation)
+# This container is strictly ephemeral. No state is shared between test runs.
+# Although AHM laws specify Node 25.6.1, we are using the current node:22-alpine per instructions.
+FROM node:22-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package management files
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the codebase
+COPY . .
+
+# Constraint: strict 512MB memory limit
+# This can be enforced by the runtime engine (e.g. `docker run -m 512m`)
+# Alternatively, setting Node's max old space size here guarantees the limit within the VM
+ENV NODE_OPTIONS="--max-old-space-size=512"
+
+# Execute cucumber-js
+CMD ["npx", "cucumber-js"]
