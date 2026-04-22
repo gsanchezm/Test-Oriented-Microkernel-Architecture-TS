@@ -43,6 +43,8 @@
     "@gatling.io/cli": "3.14.903",
     "@types/node": "^25.3.0",
     "@types/pino": "^7.0.5",
+    "appium-uiautomator2-driver": "^7.1.2",
+    "appium-xcuitest-driver": "^11.0.0",
     "dotenv": "^17.3.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

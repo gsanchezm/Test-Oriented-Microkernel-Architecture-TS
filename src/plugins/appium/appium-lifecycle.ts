@@ -7,12 +7,6 @@ const log = logger.child({ layer: 'appium-lifecycle' });
 const APPIUM_HOST = process.env.APPIUM_HOST || '127.0.0.1';
 const APPIUM_PORT = parseInt(process.env.APPIUM_PORT || '4723', 10);
 
-// Point programmatic Appium to the global driver installation.
-// When launched from node_modules, Appium defaults to a local APPIUM_HOME
-// that has no drivers installed. APPIUM_HOME must be set before `main()` runs.
-if (!process.env.APPIUM_HOME) {
-    process.env.APPIUM_HOME = `${process.env.HOME}/.appium`;
-}
 // Appium loglevel format: "console[:file]"
 // e.g. "info" logs info+ to console; "info:debug" logs info+ to console and debug+ to file
 type AppiumLogLevel = 'error' | 'warn' | 'info' | 'debug' | `${'error'|'warn'|'info'|'debug'}:${'error'|'warn'|'info'|'debug'}`;

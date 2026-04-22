@@ -51,6 +51,12 @@ importers:
       '@types/pino':
         specifier: ^7.0.5
         version: 7.0.5
+      appium-uiautomator2-driver:
+        specifier: ^7.1.2
+        version: 7.1.2(appium@3.2.2)
+      appium-xcuitest-driver:
+        specifier: ^11.0.0
+        version: 11.0.0(appium@3.2.2)
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
@@ -82,6 +88,10 @@ packages:
 
   '@appium/schema@1.1.0':
     resolution: {integrity: sha512-m0vTLU7mhC9RR294Nz84g+FhEQ0iZKq6p3rfz1+qfEqCXRXUvDbllSOu2tCVpBKMIoEFZAmkwjuwXobJpCnilQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  '@appium/strongbox@1.1.0':
+    resolution: {integrity: sha512-X+Ff/6sGiTXHx2W3s+Gg3XyZMbIZe5v3jFSrwUJ9kH7NuGzpzrzEoKx9EMOw7iXVLMV6/NmuDQPq80gzOcRwjA==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
 
   '@appium/support@7.0.6':
@@ -684,6 +694,11 @@ packages:
   '@xmldom/xmldom@0.8.12':
     resolution: {integrity: sha512-9k/gHF6n/pAi/9tqr3m3aqkuiNosYTurLLUtc7xQ9sxB/wm7WPygCv8GYa6mS0fLJEHhqMC1ATYhz++U/lRHqg==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
+
+  '@xmldom/xmldom@0.9.10':
+    resolution: {integrity: sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw==}
+    engines: {node: '>=14.6'}
 
   '@zip.js/zip.js@2.8.21':
     resolution: {integrity: sha512-fkyzXISE3IMrstDO1AgPkJCx14MYHP/suIGiAovEYEuBjq3mffsuL6aMV7ohOSjW4rXtuACuUfpA3GtITgdtYg==}
@@ -751,6 +766,64 @@ packages:
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
 
+  appium-adb@14.3.2:
+    resolution: {integrity: sha512-V3YLPzHHG8vjw8oQ7d7sR6OvbadLIYwv5WYji3/YBrAe0NTRzhzj07e/m3XML+ipDOweZhKBebAclavdgkJWWg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-android-driver@13.1.2:
+    resolution: {integrity: sha512-ZzzJvGjxhGSNEwgK3DS8zs5yXAQ9u7n+vRV25dYN2Dt1ORrvsbEBnKhv9+5a/FeV9ivKg47J6r2kDV8DcDL8LQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+    peerDependencies:
+      appium: ^3.0.0-rc.2
+
+  appium-chromedriver@8.2.27:
+    resolution: {integrity: sha512-7E3akwZ8rxc8LJCouoAAnUHiuKATm8gwO7qNq4OY0FL85jAltdXfY6z1jBT2NO7UrIacSeUpMMMzo8mypWrr+g==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-ios-device@3.1.11:
+    resolution: {integrity: sha512-ccW8jAfZTtKc6mvFbbHCkVbB8/OxOdBolAB/sAHmwGl0jDrCrzMWOINkx1EdZx6QIrNPAw11Op1HibIRU66RWA==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-ios-remotexpc@0.45.2:
+    resolution: {integrity: sha512-ff0cWRGHbamv6vXN3zuLYhWayebF6JIyc0fBctNes+81fFgnpt1bW7dFCRCbvCjh/iLvR5Kq13UZAmO/fYZ20Q==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-ios-simulator@8.0.13:
+    resolution: {integrity: sha512-P18eWCMhgcCr4thItQGgmCFwZLtj+et0MvJRgOwGTTKqAvKzCY+hJJqJ45x25n9Z7MdEX9QjHmYiak4ywuZmkg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-ios-tuntap@0.2.1:
+    resolution: {integrity: sha512-HphORfK06YGjFOB4bzR7RJcRHiRVQEmbK3Qmgn4c+iKuobX91Z5z6mm4tN+PrSZsYJJ9KMyMqec3IqxNVYSapw==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-remote-debugger@15.7.2:
+    resolution: {integrity: sha512-G5rpn88wUD/Vm0tkVw5PN5FA3xww7EhJPAXRvKpF+NW5H2JY83n6fv5WpvUIrR1Bv+SUCupncZVf+Ge5JcZEUQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-uiautomator2-driver@7.1.2:
+    resolution: {integrity: sha512-exm8loSaNFh61DMTf/BeFL/J6xY6w+Ta24g8exKEchowCWpm4zimGC4y8BRoP6+1iQ+R88x4fMIvAx8Uf9M7bQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+    peerDependencies:
+      appium: ^3.0.0-rc.2
+
+  appium-uiautomator2-server@9.11.2:
+    resolution: {integrity: sha512-4Oc75RQgBM1P12kN2/8xif1MFSBfu0e+y7wZRgdZ/wr+WpzSMlv7opycwfbmMAjtvrvHyzIRMgiNFtDI79vHiw==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-webdriveragent@12.0.0:
+    resolution: {integrity: sha512-vlOyne17os2DSQp3Ar5+2LiPq3ljmdyQ4zVxW6Rr7Qi5TZs5wHSRLzlUlkm5Z1XKs6c2E1dwDtQVtLMvKkbDiQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-xcode@6.1.10:
+    resolution: {integrity: sha512-Grd85la64SFSOidd48j9KBfasmByvXgtL0NCECgoj4DAeo/qytNKKdwbxhLqiOMqw/6i68KZEqJyWOQufu8TYg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  appium-xcuitest-driver@11.0.0:
+    resolution: {integrity: sha512-VyC/p097h9JUVL2SJNVokqy4XWTiUWfvftuQH5Kdn8y+50Mc81rdm1xIUtngx5aMl8dv+rvTDHDFhQ+8tPfkQg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+    peerDependencies:
+      appium: ^3.0.0-rc.2
+
   appium@3.2.2:
     resolution: {integrity: sha512-M3q1Hzb0rdbbMPWLrt9F/KmsSQwVHR0dc+hAf3kiW5CS4WlW+CTinnqtEMHORh5kiKWJWiDC37cfaO9GeE3zVA==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
@@ -783,6 +856,9 @@ packages:
 
   async-lock@1.4.1:
     resolution: {integrity: sha512-Az2ZTpuytrtqENulXwO3GGv1Bztugx6TT37NIo7imr/Qo0gsYiGtSdBa2B6fsXhTpVZDNfu1Qn3pk531e3q+nQ==}
+
+  async@2.6.4:
+    resolution: {integrity: sha512-mzo5dfJYwAn29PeiJ0zvwTo04zj8HDJj0Mn8TD7sno7q12prdbnasKJHhkm2c1LgrhlJ0teaea8860oxi51mGA==}
 
   async@3.2.6:
     resolution: {integrity: sha512-htCUDlxyyCLMgaM3xXg0C0LW2xqfuQ6p05pCEIsXuyQ+a1koYKTuBMzRNwmybfLgvJDMd0r1LTn4+E0Ti6C2AA==}
@@ -1040,6 +1116,9 @@ packages:
     resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
     engines: {node: ^12.20.0 || >=14}
 
+  compare-versions@6.1.1:
+    resolution: {integrity: sha512-4hm4VPpIecmlg59CHXnRDnqGplJFrbLG4aFEl5vl6cK1u76ws3LLvX7ikFnTDl5vo39sjWD6AaDPYodJp/NNHg==}
+
   compress-commons@6.0.2:
     resolution: {integrity: sha512-6FqVXeETqWPoGcfzrXb37E50NP0LXT8kAMu5ooZayhWWdgEY4lBEEcbQNXtkuKQsGduxiIcI4gOTsxTmuq/bSg==}
     engines: {node: '>= 14'}
@@ -1088,6 +1167,9 @@ packages:
 
   css-select@5.2.2:
     resolution: {integrity: sha512-TizTzUddG/xYLA3NXodFM0fSbNizXjOKhqiQQwvhlspadZokn1KDy0NZFS0wuEubIYAV5/c1/lAr0TaaFXEXzw==}
+
+  css-selector-parser@3.3.0:
+    resolution: {integrity: sha512-Y2asgMGFqJKF4fq4xHDSlFYIkeVfRsm69lQC1q9kbEsH5XtnINTMrweLkjYMeaUgiXBy/uvKeO/a1JHTNnmB2g==}
 
   css-shorthand-properties@1.1.2:
     resolution: {integrity: sha512-C2AugXIpRGQTxaCW0N7n5jD/p5irUmCrwl03TrnMFBHDbdq44CFWR2zO7rK9xPN4Eo3pUxC4vQzQgbIpzrD1PQ==}
@@ -1185,6 +1267,10 @@ packages:
     resolution: {integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ==}
     engines: {node: '>=0.3.1'}
 
+  dnssd@0.4.1:
+    resolution: {integrity: sha512-mEz5Ii+o+k3kYHTXY6fTLOjCwraX8TQowIgUySAbEYuGqtSMbfBc/tvDZ8wGPywnmlLE6/XeXi6qPcAKVTvPUQ==}
+    hasBin: true
+
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
 
@@ -1257,6 +1343,10 @@ packages:
   entities@7.0.1:
     resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
     engines: {node: '>=0.12'}
+
+  env-paths@4.0.0:
+    resolution: {integrity: sha512-pxP8eL2SwwaTRi/KHYwLYXinDs7gL3jxFcBYmEdYfZmZXbaVDvdppd0XBU8qVz03rDfKZMXg1omHCbsJjZrMsw==}
+    engines: {node: '>=20'}
 
   err-code@2.0.3:
     resolution: {integrity: sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==}
@@ -1609,6 +1699,14 @@ packages:
     resolution: {integrity: sha512-7PnF4oN3CvZF23ADhA5wRaYEQpJ8qygSkbtTXWBeXWXmEVRXK+1ITciHWwHhsjv1TmW0MgacIv6hEi5pX5NQdA==}
     engines: {node: '>=10'}
 
+  ini@6.0.0:
+    resolution: {integrity: sha512-IBTdIkzZNOpqm7q3dRqJvMaldXjDHWkEDfrwGEQTs5eaQMWV+djAhR+wahyNNMAa+qpbDUhBMVt4ZKNwpPm7xQ==}
+    engines: {node: ^20.17.0 || >=22.9.0}
+
+  io.appium.settings@7.0.23:
+    resolution: {integrity: sha512-/Tx216t06td2/mPY3+RjO///5qF0NUqStZm2BW6/3mUCwxHdRw+e9+S/QwOsGKNDAvEIyQ6VR+JCdxy1DHCscA==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
   ip-address@10.1.0:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
     engines: {node: '>= 12'}
@@ -1645,6 +1743,9 @@ packages:
     resolution: {integrity: sha512-2HvIEKRoqS62guEC+qBjpvRubdX910WCMuJTZ+I9yvqKU2/12eSL549HMwtabb4oupdj2sMP50k+XJfB/8JE6w==}
     engines: {node: '>=8'}
 
+  is-number-like@1.0.8:
+    resolution: {integrity: sha512-6rZi3ezCyFcn5L71ywzz2bS5b2Igl1En3eTlZlvKjpz1n3IZLAYMbKYAIQgFmEu0GENg92ziU/faEOA/aixjbA==}
+
   is-path-inside@3.0.3:
     resolution: {integrity: sha512-Fd4gABb+ycGAmKou8eMftCupSir5lRxqf4aD/vd0cD2qc4HL07OjCeuHMr8Ro4CoMaeCKDB0/ECBOVWjTwUvPQ==}
     engines: {node: '>=8'}
@@ -1659,6 +1760,10 @@ packages:
   is-regex@1.2.1:
     resolution: {integrity: sha512-MjYsKHO5O7mCsmRGxWcLWheFqN9DJ/2TmngvjKXihe6efViPqc274+Fx/4fYj/r03+ESvBdTXK0V6tA3rgez1g==}
     engines: {node: '>= 0.4'}
+
+  is-safe-filename@0.1.1:
+    resolution: {integrity: sha512-4SrR7AdnY11LHfDKTZY1u6Ga3RuxZdl3YKWWShO5iyuG5h8QS4GD2tOb04peBJ5I7pXbR+CGBNEhTcwK+FzN3g==}
+    engines: {node: '>=20'}
 
   is-stream@2.0.1:
     resolution: {integrity: sha512-hFoiJiTl63nn+kstHGBtewWSKnQLpyb155KHheA1l39uvtO9nWIop1p3udqPcUd/xbF1VLMO4n7OI6p7RbngDg==}
@@ -1689,6 +1794,10 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  isexe@3.1.5:
+    resolution: {integrity: sha512-6B3tLtFqtQS4ekarvLVMZ+X+VlvQekbe4taUkf/rhVO3d/h0M2rfARm/pXLcPEsjjMsFgrFgSrhQIxcSVrBz8w==}
+    engines: {node: '>=18'}
+
   isexe@4.0.0:
     resolution: {integrity: sha512-FFUtZMpoZ8RqHS3XeXEmHWLA4thH+ZxCv2lOiPIn1Xc7CxrqhWzNSDzD+/chS/zbYezmiwWLdQC09JdQKmthOw==}
     engines: {node: '>=20'}
@@ -1707,9 +1816,16 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
+  js2xmlparser2@0.2.0:
+    resolution: {integrity: sha512-SzFGc1hQqzpDcalKmrM5gobSMGRSRg2lgaZrHGIfowrmd8+uaI+PWW62jcCGIqI+b4wdyYK0VKMhvVtJfkD0cg==}
+
   jsftp@2.1.3:
     resolution: {integrity: sha512-r79EVB8jaNAZbq8hvanL8e8JGu2ZNr2bXdHC4ZdQhRImpSPpnWwm5DYVzQ5QxJmtGtKhNNuvqGgbNaFl604fEQ==}
     engines: {node: '>=6'}
+
+  json-parse-even-better-errors@4.0.0:
+    resolution: {integrity: sha512-lR4MXjGNgkJc7tkQ97kb2nuEMnNCyU//XYVH0MKTGcXEiSudQ5MKGKen3C5QubYy0vmq+JGitUg92uuywGEwIA==}
+    engines: {node: ^18.17.0 || >=20.5.0}
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
@@ -1756,6 +1872,9 @@ packages:
 
   lodash.clonedeep@4.5.0:
     resolution: {integrity: sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ==}
+
+  lodash.isfinite@3.3.2:
+    resolution: {integrity: sha512-7FGG40uhC8Mm633uKW1r58aElFlBlxCrg9JfSi3P6aYiWmfiWF0PgMd86ZUsxE5GwWPdHoS2+48bwTh2VPkIQA==}
 
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
@@ -1826,6 +1945,10 @@ packages:
   media-typer@1.1.0:
     resolution: {integrity: sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==}
     engines: {node: '>= 0.8'}
+
+  memorystream@0.3.1:
+    resolution: {integrity: sha512-S3UwM3yj5mtUSEfP41UZmt/0SCoVYUcU1rkXv+BQ5Ig8ndL4sPoJNBUJERafdPb5jjHJGuMgytgKvKIf58XNBw==}
+    engines: {node: '>= 0.10.0'}
 
   merge-descriptors@2.0.0:
     resolution: {integrity: sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==}
@@ -1930,6 +2053,12 @@ packages:
     resolution: {integrity: sha512-YTefgdpKKFgoTDbEUqXqgUJct2OG6/4hs4XWLsxcHkDLj/x/V8WmKIRppPnXP5feQ7d1vuYWSp3qKkxfwaFaxA==}
     engines: {node: '>=18.0.0'}
 
+  moment-timezone@0.6.1:
+    resolution: {integrity: sha512-1B9lmAhB9D9/sHaPC1N7wLFEVUoFldxOpOO96lOD1PvJ43vCd0ozDPbu0FEL3++VvawOlDkq8YD373tJmP5JHw==}
+
+  moment@2.30.1:
+    resolution: {integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==}
+
   morgan@1.10.1:
     resolution: {integrity: sha512-223dMRJtI/l25dJKWpgij2cMtywuG/WiUKXdvwfbhGKBhy1puASqXwFzmWZ7+K73vUPoR7SS2Qz2cI/g9MKw0A==}
     engines: {node: '>= 0.8.0'}
@@ -1958,6 +2087,22 @@ packages:
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
 
+  node-addon-api@8.7.0:
+    resolution: {integrity: sha512-9MdFxmkKaOYVTV+XVRG8ArDwwQ77XIgIPyKASB1k3JPq3M8fGQQQE3YpMOrKm6g//Ktx8ivZr8xo1Qmtqub+GA==}
+    engines: {node: ^18 || ^20 || >= 21}
+
+  node-devicectl@1.2.1:
+    resolution: {integrity: sha512-fhAS1WKDzK9BOgknZcl6CmCQMnA2s0kxp1ehbhzZguqqMoR1G8eNhd9G3HxFcYJhDChzgOrG4w1IcAwe1uziwQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
+  node-gyp-build@4.8.4:
+    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
+    hasBin: true
+
+  node-simctl@8.1.7:
+    resolution: {integrity: sha512-Kue/EfM/kpGtiAymTHD3xRL2rqHEpgFPcNKxmqIq/OvX3u0ylXxDVrtQ5C60Q2Suuwxa7jn9nmcm/VjCE9jPwA==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
   node-stream-zip@1.15.0:
     resolution: {integrity: sha512-LN4fydt9TqhZhThkZIVQnF9cwjU3qmUH9h78Mx/K7d3VvfRqqwthLwJEUOEL0QPZ0XQmNN7be5Ggit5+4dq3Bw==}
     engines: {node: '>=0.12.0'}
@@ -1969,6 +2114,15 @@ packages:
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
+
+  npm-normalize-package-bin@4.0.0:
+    resolution: {integrity: sha512-TZKxPvItzai9kN9H/TkmCtx/ZN/hvr3vUycjlfmH0ootY9yFBzNOpiXAdIn1Iteqsvk4lQn6B5PTrt+n6h8k/w==}
+    engines: {node: ^18.17.0 || >=20.5.0}
+
+  npm-run-all2@8.0.4:
+    resolution: {integrity: sha512-wdbB5My48XKp2ZfJUlhnLVihzeuA1hgBnqB2J9ahV77wLS+/YAJAlN8I+X3DIFIPZ3m5L7nplmlbhNiFDmXRDA==}
+    engines: {node: ^20.5.0 || >=22.0.0, npm: '>= 10'}
+    hasBin: true
 
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
@@ -2090,6 +2244,15 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
+  picomatch@4.0.4:
+    resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
+    engines: {node: '>=12'}
+
+  pidtree@0.6.0:
+    resolution: {integrity: sha512-eG2dWTVw5bzqGRztnHExczNxt5VGsE6OwTeCG3fdUf9KBsZzO3R5OIIIzWR+iZA0NtZ+RDVdaoE2dK1cn6jH4g==}
+    engines: {node: '>=0.10'}
+    hasBin: true
+
   pino-abstract-transport@3.0.0:
     resolution: {integrity: sha512-wlfUczU+n7Hy/Ha5j9a/gZNy7We5+cXp8YL+X+PG8S0KXxw7n/JXA3c46Y0zQznIJ83URJiwy7Lh56WLokNuxg==}
 
@@ -2121,6 +2284,10 @@ packages:
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
+
+  portscanner@2.2.0:
+    resolution: {integrity: sha512-IFroCz/59Lqa2uBvzK3bKDbDDIEaAY8XJ1jFxcLWTqosrsc32//P4VuSB2vZXoHiHqOmx8B5L5hnKOxL/7FlPw==}
+    engines: {node: '>=0.4', npm: '>=1.0.0'}
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -2190,6 +2357,10 @@ packages:
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
     engines: {node: '>= 0.10'}
+
+  read-package-json-fast@4.0.0:
+    resolution: {integrity: sha512-qpt8EwugBWDw2cgE2W+/3oxC+KTez2uSVR8JU9Q36TXPAGCaozfQUs59v4j4GFpWTaw0i6hAZSvOmu1J0uOEUg==}
+    engines: {node: ^18.17.0 || >=20.5.0}
 
   read-package-up@12.0.0:
     resolution: {integrity: sha512-Q5hMVBYur/eQNWDdbF4/Wqqr9Bjvtrw2kjGxxBbKLbx8bVCL8gcArjTy8zDUuLGQicftpMuU0riQNcAsbtOVsw==}
@@ -2267,6 +2438,11 @@ packages:
 
   rgb2hex@0.2.5:
     resolution: {integrity: sha512-22MOP1Rh7sAo1BZpDG6R5RFYzR2lYEgwq7HEmyW2qcsOqR2lQKmn+O//xV3YG/0rrhMC6KVX2hU+ZXuaw9a5bw==}
+
+  rimraf@6.1.3:
+    resolution: {integrity: sha512-LKg+Cr2ZF61fkcaK1UdkH2yEBBKnYjTyWzTJT6KNPcSPaiT7HSdhtMXQuN5wkTX0Xu72KQ1l8S42rlmexS2hSA==}
+    engines: {node: 20 || >=22}
+    hasBin: true
 
   router@2.2.0:
     resolution: {integrity: sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==}
@@ -2389,6 +2565,10 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
+
+  slugify@1.6.9:
+    resolution: {integrity: sha512-vZ7rfeehZui7wQs438JXBckYLkIIdfHOXsaVEUMyS5fHo1483l1bMdo0EDSWYclY0yZKFOipDy4KHuKs6ssvdg==}
+    engines: {node: '>=8.0.0'}
 
   smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
@@ -2549,6 +2729,10 @@ packages:
     resolution: {integrity: sha512-xEQ0UCeUoprhDDADFKaxv9nzE+PlDTw/mgG0aX7ccxg+EGx8bCEiX25qQ0JPSjSS66sQyXEPFQR3nV5ZxiOcmw==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
 
+  teen_process@4.1.1:
+    resolution: {integrity: sha512-E9gaYuVaWrvbxzZDgZ/MjWkPKqiKETBWSRy06qz1GOyKU22mI76JrxzaGbeddcHcmW8ZFXPowPv1ad3a7S+Xvg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0, npm: '>=10'}
+
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
 
@@ -2635,6 +2819,11 @@ packages:
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -2749,6 +2938,11 @@ packages:
     engines: {node: '>= 8'}
     hasBin: true
 
+  which@5.0.0:
+    resolution: {integrity: sha512-JEdGzHwwkrbWoGOlIHqQ5gtprKGOenpDHpxE9zVR1bWbOtYRyPPHMe9FaP6x61CmNaTThSkb0DAJte5jD+DmzQ==}
+    engines: {node: ^18.17.0 || >=20.5.0}
+    hasBin: true
+
   which@6.0.1:
     resolution: {integrity: sha512-oGLe46MIrCRqX7ytPUf66EAYvdeMIZYn3WaocqqKZAxrBpkqHfL/qvTyJ/bTk5+AqHCjXmrv3CEWgy368zhRUg==}
     engines: {node: ^20.17.0 || >=22.9.0}
@@ -2800,6 +2994,10 @@ packages:
   xmlbuilder@15.1.1:
     resolution: {integrity: sha512-yMqGBqtXyeN1e3TGYvgNgDVZ3j84W4cwkOXQswghol6APgZWaff9lnbvN7MHYJOiXsvGPXtjTYJEiC9J2wv9Eg==}
     engines: {node: '>=8.0'}
+
+  xpath@0.0.34:
+    resolution: {integrity: sha512-FxF6+rkr1rNSQrhUNYrAFJpRXNzlDoMxeXN5qI84939ylEv3qqPFKa85Oxr6tDaJKqwW6KKyo2v26TSv3k6LeA==}
+    engines: {node: '>=0.6.0'}
 
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
@@ -2925,6 +3123,11 @@ snapshots:
   '@appium/schema@1.1.0':
     dependencies:
       json-schema: 0.4.0
+
+  '@appium/strongbox@1.1.0':
+    dependencies:
+      env-paths: 4.0.0
+      slugify: 1.6.9
 
   '@appium/support@7.0.6':
     dependencies:
@@ -3543,6 +3746,9 @@ snapshots:
 
   '@xmldom/xmldom@0.8.12': {}
 
+  '@xmldom/xmldom@0.9.10':
+    optional: true
+
   '@zip.js/zip.js@2.8.21': {}
 
   '@zxing/text-encoding@0.9.0':
@@ -3591,6 +3797,247 @@ snapshots:
   ansi-styles@6.2.3: {}
 
   any-promise@1.3.0: {}
+
+  appium-adb@14.3.2:
+    dependencies:
+      '@appium/support': 7.0.6
+      async-lock: 1.4.1
+      asyncbox: 6.1.0
+      bluebird: 3.7.2
+      ini: 6.0.0
+      lodash: 4.17.23
+      lru-cache: 11.2.6
+      semver: 7.7.4
+      teen_process: 4.0.10
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+
+  appium-android-driver@13.1.2(appium@3.2.2):
+    dependencies:
+      '@appium/support': 7.0.6
+      '@colors/colors': 1.6.0
+      appium: 3.2.2
+      appium-adb: 14.3.2
+      appium-chromedriver: 8.2.27
+      asyncbox: 6.1.0
+      axios: 1.13.6
+      bluebird: 3.7.2
+      io.appium.settings: 7.0.23
+      lodash: 4.17.23
+      lru-cache: 11.2.6
+      moment: 2.30.1
+      moment-timezone: 0.6.1
+      portscanner: 2.2.0
+      semver: 7.7.4
+      teen_process: 4.0.10
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bufferutil
+      - debug
+      - react-native-b4a
+      - supports-color
+      - utf-8-validate
+
+  appium-chromedriver@8.2.27:
+    dependencies:
+      '@appium/base-driver': 10.2.2
+      '@appium/support': 7.0.6
+      '@xmldom/xmldom': 0.8.12
+      appium-adb: 14.3.2
+      asyncbox: 6.1.0
+      axios: 1.13.6
+      bluebird: 3.7.2
+      compare-versions: 6.1.1
+      lodash: 4.17.23
+      semver: 7.7.4
+      teen_process: 4.0.10
+      xpath: 0.0.34
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+      - supports-color
+
+  appium-ios-device@3.1.11:
+    dependencies:
+      '@appium/support': 7.0.6
+      asyncbox: 6.1.0
+      axios: 1.13.6
+      bluebird: 3.7.2
+      bplist-creator: 0.1.1
+      bplist-parser: 0.3.2
+      lodash: 4.17.23
+      semver: 7.7.4
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+
+  appium-ios-remotexpc@0.45.2:
+    dependencies:
+      '@appium/strongbox': 1.1.0
+      '@appium/support': 7.0.6
+      '@types/node': 25.3.0
+      '@xmldom/xmldom': 0.9.10
+      appium-ios-tuntap: 0.2.1
+      axios: 1.13.6
+      commander: 14.0.3
+      dnssd: 0.4.1
+      minimatch: 10.2.2
+      node-devicectl: 1.2.1
+      npm-run-all2: 8.0.4
+      path-to-regexp: 8.3.0
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+    optional: true
+
+  appium-ios-simulator@8.0.13:
+    dependencies:
+      '@appium/support': 7.0.6
+      '@xmldom/xmldom': 0.8.12
+      appium-xcode: 6.1.10
+      async-lock: 1.4.1
+      asyncbox: 6.1.0
+      bluebird: 3.7.2
+      lodash: 4.17.23
+      node-simctl: 8.1.7
+      semver: 7.7.4
+      teen_process: 4.0.10
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+
+  appium-ios-tuntap@0.2.1:
+    dependencies:
+      '@appium/support': 7.0.6
+      node-addon-api: 8.7.0
+      node-gyp-build: 4.8.4
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+    optional: true
+
+  appium-remote-debugger@15.7.2:
+    dependencies:
+      '@appium/base-driver': 10.2.2
+      '@appium/support': 7.0.6
+      appium-ios-device: 3.1.11
+      async-lock: 1.4.1
+      asyncbox: 6.1.0
+      bluebird: 3.7.2
+      glob: 13.0.6
+      lodash: 4.17.23
+      teen_process: 4.0.10
+    optionalDependencies:
+      appium-ios-remotexpc: 0.45.2
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+      - supports-color
+
+  appium-uiautomator2-driver@7.1.2(appium@3.2.2):
+    dependencies:
+      appium: 3.2.2
+      appium-adb: 14.3.2
+      appium-android-driver: 13.1.2(appium@3.2.2)
+      appium-uiautomator2-server: 9.11.2
+      asyncbox: 6.1.0
+      axios: 1.13.6
+      bluebird: 3.7.2
+      css-selector-parser: 3.3.0
+      io.appium.settings: 7.0.23
+      lodash: 4.17.23
+      portscanner: 2.2.0
+      teen_process: 4.0.10
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bufferutil
+      - debug
+      - react-native-b4a
+      - supports-color
+      - utf-8-validate
+
+  appium-uiautomator2-server@9.11.2: {}
+
+  appium-webdriveragent@12.0.0:
+    dependencies:
+      '@appium/base-driver': 10.2.2
+      '@appium/strongbox': 1.1.0
+      '@appium/support': 7.0.6
+      appium-ios-device: 3.1.11
+      appium-ios-simulator: 8.0.13
+      async-lock: 1.4.1
+      asyncbox: 6.1.0
+      axios: 1.13.6
+      bluebird: 3.7.2
+      lodash: 4.17.23
+      teen_process: 4.0.10
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+      - supports-color
+
+  appium-xcode@6.1.10:
+    dependencies:
+      '@appium/support': 7.0.6
+      asyncbox: 6.1.0
+      bluebird: 3.7.2
+      lodash: 4.17.23
+      plist: 3.1.0
+      semver: 7.7.4
+      teen_process: 4.0.10
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - debug
+      - react-native-b4a
+
+  appium-xcuitest-driver@11.0.0(appium@3.2.2):
+    dependencies:
+      '@appium/strongbox': 1.1.0
+      '@colors/colors': 1.6.0
+      appium: 3.2.2
+      appium-ios-device: 3.1.11
+      appium-ios-simulator: 8.0.13
+      appium-remote-debugger: 15.7.2
+      appium-webdriveragent: 12.0.0
+      appium-xcode: 6.1.10
+      async-lock: 1.4.1
+      asyncbox: 6.1.0
+      axios: 1.13.6
+      bluebird: 3.7.2
+      commander: 14.0.3
+      css-selector-parser: 3.3.0
+      js2xmlparser2: 0.2.0
+      lodash: 4.17.23
+      lru-cache: 11.2.6
+      moment: 2.30.1
+      moment-timezone: 0.6.1
+      node-devicectl: 1.2.1
+      node-simctl: 8.1.7
+      portscanner: 2.2.0
+      semver: 7.7.4
+      teen_process: 4.0.10
+      winston: 3.19.0
+      ws: 8.19.0
+    optionalDependencies:
+      appium-ios-remotexpc: 0.45.2
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bufferutil
+      - debug
+      - react-native-b4a
+      - supports-color
+      - utf-8-validate
 
   appium@3.2.2:
     dependencies:
@@ -3668,6 +4115,10 @@ snapshots:
       tslib: 2.8.1
 
   async-lock@1.4.1: {}
+
+  async@2.6.4:
+    dependencies:
+      lodash: 4.17.23
 
   async@3.2.6: {}
 
@@ -3942,6 +4393,8 @@ snapshots:
 
   commander@9.5.0: {}
 
+  compare-versions@6.1.1: {}
+
   compress-commons@6.0.2:
     dependencies:
       crc-32: 1.2.2
@@ -3986,6 +4439,8 @@ snapshots:
       domhandler: 5.0.3
       domutils: 3.2.2
       nth-check: 2.1.1
+
+  css-selector-parser@3.3.0: {}
 
   css-shorthand-properties@1.1.2: {}
 
@@ -4052,6 +4507,9 @@ snapshots:
   diff@4.0.4: {}
 
   diff@8.0.3: {}
+
+  dnssd@0.4.1:
+    optional: true
 
   dom-serializer@2.0.0:
     dependencies:
@@ -4127,6 +4585,10 @@ snapshots:
   entities@6.0.1: {}
 
   entities@7.0.1: {}
+
+  env-paths@4.0.0:
+    dependencies:
+      is-safe-filename: 0.1.1
 
   err-code@2.0.3: {}
 
@@ -4523,6 +4985,17 @@ snapshots:
 
   ini@2.0.0: {}
 
+  ini@6.0.0: {}
+
+  io.appium.settings@7.0.23:
+    dependencies:
+      '@appium/logger': 2.0.5
+      asyncbox: 6.1.0
+      bluebird: 3.7.2
+      lodash: 4.17.23
+      semver: 7.7.4
+      teen_process: 4.0.10
+
   ip-address@10.1.0: {}
 
   ipaddr.js@1.9.1: {}
@@ -4553,6 +5026,10 @@ snapshots:
 
   is-interactive@1.0.0: {}
 
+  is-number-like@1.0.8:
+    dependencies:
+      lodash.isfinite: 3.3.2
+
   is-path-inside@3.0.3: {}
 
   is-plain-obj@4.1.0: {}
@@ -4565,6 +5042,8 @@ snapshots:
       gopd: 1.2.0
       has-tostringtag: 1.0.2
       hasown: 2.0.2
+
+  is-safe-filename@0.1.1: {}
 
   is-stream@2.0.1: {}
 
@@ -4584,6 +5063,9 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  isexe@3.1.5:
+    optional: true
+
   isexe@4.0.0: {}
 
   jackspeak@3.4.3:
@@ -4598,6 +5080,8 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
+  js2xmlparser2@0.2.0: {}
+
   jsftp@2.1.3(supports-color@10.2.2):
     dependencies:
       debug: 3.2.7(supports-color@10.2.2)
@@ -4608,6 +5092,9 @@ snapshots:
       unorm: 1.6.0
     transitivePeerDependencies:
       - supports-color
+
+  json-parse-even-better-errors@4.0.0:
+    optional: true
 
   json-schema-traverse@1.0.0: {}
 
@@ -4653,6 +5140,8 @@ snapshots:
   lodash.camelcase@4.3.0: {}
 
   lodash.clonedeep@4.5.0: {}
+
+  lodash.isfinite@3.3.2: {}
 
   lodash.merge@4.6.2: {}
 
@@ -4722,6 +5211,9 @@ snapshots:
   math-intrinsics@1.1.0: {}
 
   media-typer@1.1.0: {}
+
+  memorystream@0.3.1:
+    optional: true
 
   merge-descriptors@2.0.0: {}
 
@@ -4826,6 +5318,12 @@ snapshots:
 
   modern-tar@0.7.5: {}
 
+  moment-timezone@0.6.1:
+    dependencies:
+      moment: 2.30.1
+
+  moment@2.30.1: {}
+
   morgan@1.10.1:
     dependencies:
       basic-auth: 2.0.1
@@ -4857,15 +5355,54 @@ snapshots:
       lower-case: 2.0.2
       tslib: 2.8.1
 
+  node-addon-api@8.7.0:
+    optional: true
+
+  node-devicectl@1.2.1:
+    dependencies:
+      '@appium/logger': 2.0.5
+      lodash: 4.17.23
+      teen_process: 4.1.1
+
+  node-gyp-build@4.8.4:
+    optional: true
+
+  node-simctl@8.1.7:
+    dependencies:
+      '@appium/logger': 2.0.5
+      asyncbox: 6.1.0
+      bluebird: 3.7.2
+      lodash: 4.17.23
+      rimraf: 6.1.3
+      semver: 7.7.4
+      teen_process: 4.0.10
+      uuid: 13.0.0
+      which: 6.0.1
+
   node-stream-zip@1.15.0: {}
 
   normalize-package-data@8.0.0:
     dependencies:
       hosted-git-info: 9.0.2
-      semver: 7.7.3
+      semver: 7.7.4
       validate-npm-package-license: 3.0.4
 
   normalize-path@3.0.0: {}
+
+  npm-normalize-package-bin@4.0.0:
+    optional: true
+
+  npm-run-all2@8.0.4:
+    dependencies:
+      ansi-styles: 6.2.3
+      cross-spawn: 7.0.6
+      memorystream: 0.3.1
+      picomatch: 4.0.4
+      pidtree: 0.6.0
+      read-package-json-fast: 4.0.0
+      shell-quote: 1.8.3
+      which: 5.0.0
+    optional: true
 
   nth-check@2.1.1:
     dependencies:
@@ -4995,6 +5532,12 @@ snapshots:
 
   picocolors@1.1.1: {}
 
+  picomatch@4.0.4:
+    optional: true
+
+  pidtree@0.6.0:
+    optional: true
+
   pino-abstract-transport@3.0.0:
     dependencies:
       split2: 4.2.0
@@ -5046,6 +5589,11 @@ snapshots:
       xmlbuilder: 15.1.1
 
   pluralize@8.0.0: {}
+
+  portscanner@2.2.0:
+    dependencies:
+      async: 2.6.4
+      is-number-like: 1.0.8
 
   possible-typed-array-names@1.1.0: {}
 
@@ -5130,6 +5678,12 @@ snapshots:
       iconv-lite: 0.7.2
       unpipe: 1.0.0
 
+  read-package-json-fast@4.0.0:
+    dependencies:
+      json-parse-even-better-errors: 4.0.0
+      npm-normalize-package-bin: 4.0.0
+    optional: true
+
   read-package-up@12.0.0:
     dependencies:
       find-up-simple: 1.0.1
@@ -5213,6 +5767,11 @@ snapshots:
   retry@0.12.0: {}
 
   rgb2hex@0.2.5: {}
+
+  rimraf@6.1.3:
+    dependencies:
+      glob: 13.0.6
+      package-json-from-dist: 1.0.1
 
   router@2.2.0:
     dependencies:
@@ -5384,6 +5943,8 @@ snapshots:
   signal-exit@3.0.7: {}
 
   signal-exit@4.1.0: {}
+
+  slugify@1.6.9: {}
 
   smart-buffer@4.2.0: {}
 
@@ -5572,6 +6133,11 @@ snapshots:
       lodash: 4.17.23
       shell-quote: 1.8.3
 
+  teen_process@4.1.1:
+    dependencies:
+      lodash: 4.17.23
+      shell-quote: 1.8.3
+
   teex@1.0.1:
     dependencies:
       streamx: 2.23.0
@@ -5657,6 +6223,9 @@ snapshots:
       mime-types: 3.0.2
 
   typescript@5.9.3: {}
+
+  typescript@6.0.3:
+    optional: true
 
   undici-types@6.21.0: {}
 
@@ -5806,6 +6375,11 @@ snapshots:
     dependencies:
       isexe: 2.0.0
 
+  which@5.0.0:
+    dependencies:
+      isexe: 3.1.5
+    optional: true
+
   which@6.0.1:
     dependencies:
       isexe: 4.0.0
@@ -5860,6 +6434,8 @@ snapshots:
   xmlbuilder@11.0.1: {}
 
   xmlbuilder@15.1.1: {}
+
+  xpath@0.0.34: {}
 
   y18n@5.0.8: {}
 

@@ -405,7 +405,6 @@ jobs:
 
       - name: Start Appium server
         run: |
-          pnpm exec appium driver install uiautomator2
           pnpm exec appium --relaxed-security &
           sleep 5
 
@@ -561,7 +560,6 @@ jobs:
 
       - name: Start Appium server
         run: |
-          pnpm exec appium driver install xcuitest
           pnpm exec appium --relaxed-security &
           sleep 5
 
