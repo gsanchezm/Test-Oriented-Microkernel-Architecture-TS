@@ -203,6 +203,8 @@ android-emulator  →  appium-server  →  appium-plugin
 | `ANDROID_EMULATOR_MEMORY` | `4096` | RAM in MB |
 | `ANDROID_EMULATOR_CORES` | `2` | vCPU count |
 | `ANDROID_APP_PATH` | — | Path to `.apk` under test |
+| `CAP_PROFILE` | `docker_android` | Appium capabilities profile for the Docker emulator |
+| `ANDROID_UDID` | — | ADB device id; GitHub Actions uses `localhost:5555` |
 
 ## Plugin Hot Reload
 
@@ -379,6 +381,7 @@ cp .env.example .env
 |----------|---------|-------------|
 | `APPIUM_HOST` | `localhost` | Appium server host |
 | `APPIUM_PORT` | `4723` | Appium server port |
+| `CAP_PROFILE` | — | Capability JSON filename under `src/plugins/appium/capabilities/{platform}` |
 | `ANDROID_APP_PATH` | — | Path to `.apk` under test |
 | `IOS_APP_PATH` | — | Path to `.zip` under test |
 | `IOS_UDID` | `auto` | iOS device UDID |

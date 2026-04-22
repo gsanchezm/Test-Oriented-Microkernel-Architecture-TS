@@ -84,7 +84,9 @@ services:
       - APPIUM_HOST=appium-server
       - APPIUM_PORT=4723
       - PLATFORM=${PLATFORM:-android}
+      - CAP_PROFILE=${CAP_PROFILE:-docker_android}
       - ANDROID_APP_PATH=${ANDROID_APP_PATH}
+      - ANDROID_UDID=${ANDROID_UDID}
       - IOS_APP_PATH=${IOS_APP_PATH}
       - IOS_UDID=${IOS_UDID:-auto}
     depends_on:

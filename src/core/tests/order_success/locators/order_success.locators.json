@@ -1,6 +1,9 @@
 {
   "orderSuccessScreen": {
-    "web": "[data-testid='order-success']",
+    "web": {
+      "desktop": "[data-testid='order-success-title-desktop']",
+      "responsive": "[data-testid='order-success-title-responsive']"
+    },
     "mobile": {
       "android": "~screen-order-success",
       "ios": "~btn-order-details"

@@ -50,7 +50,6 @@ on:
 # ---------------------------------------------------------------------------
 env:
   NODE_VERSION: '22'
-  PNPM_VERSION: '10'
   LOG_LEVEL: info
 
 # =============================================================================
@@ -80,8 +79,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -138,8 +135,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -213,8 +208,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -247,6 +240,7 @@ jobs:
       - name: Start Appium server
         run: |
           npm install -g appium@latest
+          appium driver install uiautomator2
           appium --relaxed-security &
           sleep 5
 
@@ -281,7 +275,9 @@ jobs:
           DRIVER: appium
           APPIUM_HOST: localhost
           APPIUM_PORT: '4723'
+          CAP_PROFILE: docker_android
           ANDROID_APP_PATH: assets/apps/android/app-release.apk
+          ANDROID_UDID: localhost:5555
           PLUGIN_APPIUM: 'true'
           PLUGIN_API: 'true'
 
@@ -293,7 +289,9 @@ jobs:
           DRIVER: appium
           APPIUM_HOST: localhost
           APPIUM_PORT: '4723'
+          CAP_PROFILE: docker_android
           ANDROID_APP_PATH: assets/apps/android/app-release.apk
+          ANDROID_UDID: localhost:5555
 
       - name: Stop emulator
         if: always()
@@ -321,8 +319,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Cache pnpm store
         uses: actions/cache@v4
