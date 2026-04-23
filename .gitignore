@@ -48,3 +48,4 @@ src/core/tests/checkout/simulations/checkout-rows.generated.ts
 results/
 artifacts/
 generate-ahm-data.sh
+.claude/
