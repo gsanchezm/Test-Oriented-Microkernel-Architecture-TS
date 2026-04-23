@@ -14,6 +14,42 @@ ANDROID_API_LEVEL="${ANDROID_API_LEVEL:-33}"
 PERF_PROFILE="${PERF_PROFILE:-smoke}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-5}"
 
+latest_dispatch_run_id() {
+  gh run list \
+    --workflow "$WORKFLOW" \
+    --branch "$REF" \
+    --event workflow_dispatch \
+    --limit 1 \
+    --json databaseId \
+    --jq '.[0].databaseId // 0' 2>/dev/null || echo 0
+}
+
+dispatch_workflow() {
+  local before_run_id dispatch_output status after_run_id
+
+  before_run_id="$(latest_dispatch_run_id)"
+
+  if dispatch_output="$(gh "${args[@]}" 2>&1)"; then
+    [[ -n "$dispatch_output" ]] && echo "$dispatch_output"
+    return 0
+  fi
+
+  status=$?
+  [[ -n "$dispatch_output" ]] && echo "$dispatch_output" >&2
+
+  if [[ "$dispatch_output" == *"HTTP 500: Failed to run workflow dispatch"* ]]; then
+    sleep 3
+    after_run_id="$(latest_dispatch_run_id)"
+
+    if [[ "$after_run_id" != "0" && "$after_run_id" != "$before_run_id" ]]; then
+      echo "GitHub returned HTTP 500, but workflow run $after_run_id was queued."
+      return 0
+    fi
+  fi
+
+  return $status
+}
+
 echo "Initiating AHM Data Generation..."
 echo "Target Platform: $PLATFORM"
 echo "Git Ref: $REF"
@@ -44,7 +80,7 @@ do
   fi
 
   # Trigger the GitHub Action via API.
-  gh "${args[@]}"
+  dispatch_workflow
   
   # 5-second buffer to prevent hitting GitHub's API rate limits
   sleep "$SLEEP_SECONDS"
