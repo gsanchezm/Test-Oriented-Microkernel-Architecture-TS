@@ -5,8 +5,9 @@
   "appium:bundleId": "com.omnipizza.app",
   "appium:noReset": true,
   "appium:newCommandTimeout": 12000,
+  "appium:wdaLocalPort": 8101,
   "appium:wdaLaunchTimeout": 240000,
   "appium:wdaConnectionTimeout": 240000,
-  "appium:usePrebuiltWDA": true,
-  "appium:showXcodeLog": true
+  "appium:showXcodeLog": true,
+  "appium:isHeadless": true
 }
