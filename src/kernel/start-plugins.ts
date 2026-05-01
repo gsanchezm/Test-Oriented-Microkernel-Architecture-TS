@@ -2,7 +2,7 @@ import { spawn, ChildProcess } from 'child_process';
 import * as fs   from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { logger } from '../utils/logger';
+import { logger } from '@utils/logger';
 
 // Import at module load — plugin definitions read process.env at call time via `get enabled()`
 import plugins, { PluginDefinition } from '../../plugins.config';

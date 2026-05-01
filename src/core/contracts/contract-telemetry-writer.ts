@@ -6,7 +6,7 @@ import {
   CONTRACT_TELEMETRY_SCHEMA_VERSION,
   ContractTelemetryEvent,
   VisualContractTelemetryEvent,
-} from './contract-telemetry.types';
+} from '@core/contracts/contract-telemetry.types';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 

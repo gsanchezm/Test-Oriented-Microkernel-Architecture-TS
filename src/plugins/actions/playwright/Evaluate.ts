@@ -1,5 +1,5 @@
-import { ActionHandler } from '../ActionHandler';
-import { PlaywrightActionContext } from './PlaywrightActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { PlaywrightActionContext } from '@plugins/actions/playwright/PlaywrightActionContext';
 
 export const EvaluateAction: ActionHandler<PlaywrightActionContext> = {
     name: 'EVALUATE',

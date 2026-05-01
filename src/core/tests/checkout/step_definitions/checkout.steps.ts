@@ -4,13 +4,13 @@ import { After, AfterAll, Given, Then, When, setDefaultTimeout } from '@cucumber
 // API roundtrip on Render free tier; subsequent scenarios reuse the session and
 // finish in well under a minute.
 setDefaultTimeout(600_000);
-import { UsersDataSource } from '../../../test-data/users.data-source';
-import { LoginDao } from '../dao/login.dao';
-import { OrderingDao } from '../dao/ordering.dao';
-import type { CheckoutWorld } from '../../support/world';
-import { sendIntent, closeClient } from '../../../../kernel/client';
-import { fillDeliveryDetails, choosePaymentMethod, enterCardDetails, verifyOrderAccepted } from '../usecases/checkout-delivery.usecase';
-import { logger } from '../../../../utils/logger';
+import { UsersDataSource } from '@core/test-data/users.data-source';
+import { LoginDao } from '@core/tests/checkout/dao/login.dao';
+import { OrderingDao } from '@core/tests/checkout/dao/ordering.dao';
+import type { CheckoutWorld } from '@core/tests/support/world';
+import { sendIntent, closeClient } from '@kernel/client';
+import { fillDeliveryDetails, choosePaymentMethod, enterCardDetails, verifyOrderAccepted } from '@core/tests/checkout/usecases/checkout-delivery.usecase';
+import { logger } from '@utils/logger';
 
 const log = logger.child({ layer: 'eco-system', domain: 'checkout' });
 

@@ -1,14 +1,14 @@
 import { remote, Browser } from 'webdriverio';
-import { logger } from '../../utils/logger';
+import { logger } from '@utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAppiumActionRegistry } from '../actions/appium/registerAppiumActions';
+import { getAppiumActionRegistry } from '@plugins/actions/appium/registerAppiumActions';
 import {
     PLATFORM,
     appiumHelpers,
     dismissAndroidSystemDialog,
     setCachedAppId,
-} from './appium-helpers';
+} from '@plugins/appium/appium-helpers';
 
 // --- Capability Profile Loader ---
 
@@ -135,6 +135,27 @@ async function teardown(sessionId: string): Promise<void> {
         sessions.delete(sessionId);
         logger.info(`[Appium] Session "${sessionId}" closed (remaining: ${sessions.size})`);
     }
+}
+
+// --- Read-only session accessors ---
+//
+// Used by the Visual plugin to capture screenshots from the *existing*
+// active driver without booting a new Appium session. Throws when no
+// session is active.
+
+export function getActiveDriver(sessionId: string = '0'): Browser {
+    const driver = sessions.get(sessionId);
+    if (!driver) {
+        throw new Error(
+            `[Appium] No active session for sessionId='${sessionId}'. ` +
+            `Visual oracle must run after a UI action that creates the session.`,
+        );
+    }
+    return driver;
+}
+
+export function hasActiveDriver(sessionId: string = '0'): boolean {
+    return sessions.has(sessionId);
 }
 
 // --- Public API ---

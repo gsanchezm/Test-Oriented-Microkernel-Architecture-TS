@@ -4,14 +4,14 @@
 //
 // Target syntax: `feature||endpointId[||{variables}]`.
 
-import { ActionHandler } from '../ActionHandler';
-import { ApiActionContext } from './ApiActionContext';
-import { parseContractTarget } from '../parseCompositeTarget';
-import { HttpMethod } from '../../api/http/http-method.enum';
-import { HttpError } from '../../api/http/http.error';
-import { ApiContractLoader } from '../../../core/contracts/api-contract-loader';
-import { ContractTelemetryWriter, sha256 } from '../../../core/contracts/contract-telemetry-writer';
-import { applyTemplate, applyTemplateBody, applyTemplateRecord } from './template';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { ApiActionContext } from '@plugins/actions/api/ApiActionContext';
+import { parseContractTarget } from '@plugins/actions/parseCompositeTarget';
+import { HttpMethod } from '@plugins/api/http/http-method.enum';
+import { HttpError } from '@plugins/api/http/http.error';
+import { ApiContractLoader } from '@core/contracts/api-contract-loader';
+import { ContractTelemetryWriter, sha256 } from '@core/contracts/contract-telemetry-writer';
+import { applyTemplate, applyTemplateBody, applyTemplateRecord } from '@plugins/actions/api/template';
 
 function statusMatches(expected: number | number[], actual: number): boolean {
     return Array.isArray(expected) ? expected.includes(actual) : expected === actual;

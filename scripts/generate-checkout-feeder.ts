@@ -9,7 +9,7 @@
 
 import * as fs   from 'fs';
 import * as path from 'path';
-import { featureToCheckoutRows } from '../src/core/tests/checkout/simulations/checkout-rows';
+import { featureToCheckoutRows } from '@core/tests/checkout/simulations/checkout-rows';
 
 const OUT_FILE = path.resolve(
     __dirname,
@@ -21,6 +21,7 @@ const rows = featureToCheckoutRows(['Credit Card', 'Cash']);
 const lines = [
     '// AUTO-GENERATED — do not edit by hand.',
     '// Re-generate with: ts-node scripts/generate-checkout-feeder.ts',
+    '// NOTE: keep relative import — bundled by @gatling.io/cli (esbuild, no tsconfig-paths support).',
     "import type { CheckoutRow } from './checkout-rows';",
     '',
     'export const checkoutRows: CheckoutRow[] = ' + JSON.stringify(rows, null, 4) + ';',

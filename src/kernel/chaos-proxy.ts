@@ -1,9 +1,9 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import * as path from 'path';
-import { logger } from '../utils/logger';
-import { resolveLocator } from './locator-resolver';
-import { ensurePortFree } from './port-guard';
+import { logger } from '@utils/logger';
+import { resolveLocator } from '@kernel/locator-resolver';
+import { ensurePortFree } from '@kernel/port-guard';
 
 // --- Constants ---
 
@@ -21,6 +21,7 @@ const PLUGIN_ADDRESSES: Readonly<Record<string, string>> = {
     appium:      process.env.APPIUM_ADDRESS       || 'localhost:50053',
     performance: process.env.GATLING_ADDRESS      || 'localhost:50054',
     api:         process.env.API_ADAPTER_ADDRESS  || 'localhost:50055',
+    visual:      process.env.VISUAL_ADDRESS       || 'localhost:50056',
 };
 
 // --- Types ---
@@ -150,7 +151,20 @@ async function suppressChaos(
 
 // --- 7. TYPE-Aware Locator Resolution ---
 
-const PASSTHROUGH_ACTIONS = new Set(['NAVIGATE', 'TEARDOWN', 'EVALUATE', 'HIDE_KEYBOARD']);
+const PASSTHROUGH_ACTIONS = new Set([
+    'NAVIGATE', 'TEARDOWN', 'EVALUATE', 'HIDE_KEYBOARD',
+    // Visual oracle: targets are `feature||snapshotId||{json}`, resolved
+    // internally via VisualContractLoader + locator-resolver. The proxy
+    // must not touch them.
+    'CAPTURE_SNAPSHOT', 'COMPARE_SNAPSHOT', 'VALIDATE_VISUAL_CONTRACT', 'UPDATE_BASELINE',
+    'VISUAL_CAPTURE', 'VISUAL_COMPARE', 'VISUAL_VALIDATE',
+    // API contract execution uses `feature||endpointId||{json}` for the
+    // same reason and must also bypass logical-key resolution.
+    'EXECUTE_CONTRACT_ENDPOINT', 'VALIDATE_CONTRACT_ENDPOINT', 'EXECUTE_API_CONTRACT',
+    'HTTP_GET', 'HTTP_POST', 'HTTP_PUT', 'HTTP_PATCH', 'HTTP_DELETE',
+    // Performance simulations use simulationName||{json}.
+    'RUN_SIMULATION', 'RUN_CHECKOUT_LOAD', 'PARSE_GATLING_STATS', 'VALIDATE_THRESHOLDS',
+]);
 
 // Actions that utilize the "logicalKey||payload" format.
 // TYPE:             logicalKey||text

@@ -1,6 +1,6 @@
 import { AfterStep, AfterAll, BeforeAll } from '@cucumber/cucumber';
-import { ensureTelemetryFile, logEvent, TelemetryEvent } from '../../../telemetry/logger';
-import { streamToMinio } from '../../../telemetry/minio-publisher';
+import { ensureTelemetryFile, logEvent, TelemetryEvent } from '@telemetry/logger';
+import { streamToMinio } from '@telemetry/minio-publisher';
 import { randomUUID } from 'crypto';
 
 let currentRunId: string;

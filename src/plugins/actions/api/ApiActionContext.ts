@@ -1,5 +1,5 @@
-import { ActionContext } from '../ActionHandler';
-import { HttpClient } from '../../api/http/http.client';
+import { ActionContext } from '@plugins/actions/ActionHandler';
+import { HttpClient } from '@plugins/api/http/http.client';
 
 export interface ApiActionContext extends ActionContext<HttpClient> {
     client: HttpClient;

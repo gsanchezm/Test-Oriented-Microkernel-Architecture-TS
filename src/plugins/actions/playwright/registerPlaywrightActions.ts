@@ -1,13 +1,13 @@
-import { ActionRegistry } from '../ActionRegistry';
-import { PlaywrightActionContext } from './PlaywrightActionContext';
-import { NavigateAction } from './Navigate';
-import { ClickAction } from './Click';
-import { TypeAction } from './Type';
-import { ReadTextAction } from './ReadText';
-import { WaitForElementAction } from './WaitForElement';
-import { AssertTextAction } from './AssertText';
-import { ScrollToAction } from './ScrollTo';
-import { EvaluateAction } from './Evaluate';
+import { ActionRegistry } from '@plugins/actions/ActionRegistry';
+import { PlaywrightActionContext } from '@plugins/actions/playwright/PlaywrightActionContext';
+import { NavigateAction } from '@plugins/actions/playwright/Navigate';
+import { ClickAction } from '@plugins/actions/playwright/Click';
+import { TypeAction } from '@plugins/actions/playwright/Type';
+import { ReadTextAction } from '@plugins/actions/playwright/ReadText';
+import { WaitForElementAction } from '@plugins/actions/playwright/WaitForElement';
+import { AssertTextAction } from '@plugins/actions/playwright/AssertText';
+import { ScrollToAction } from '@plugins/actions/playwright/ScrollTo';
+import { EvaluateAction } from '@plugins/actions/playwright/Evaluate';
 
 let cachedRegistry: ActionRegistry<PlaywrightActionContext> | null = null;
 

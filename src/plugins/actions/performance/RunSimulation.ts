@@ -10,12 +10,12 @@
 // is the open-end of the system — adding a new simulation no longer
 // requires a new switch arm in gatling.ts, just a config payload.
 
-import { ActionHandler } from '../ActionHandler';
-import { logger } from '../../../utils/logger';
-import { PerfProfile } from '../../gatling/support/types';
-import { parseSimulationTarget } from '../parseCompositeTarget';
-import { PerformanceActionContext } from './PerformanceActionContext';
-import { writePerformanceSummary } from './performance-telemetry-writer';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { logger } from '@utils/logger';
+import { PerfProfile } from '@plugins/gatling/support/types';
+import { parseSimulationTarget } from '@plugins/actions/parseCompositeTarget';
+import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
+import { writePerformanceSummary } from '@plugins/actions/performance/performance-telemetry-writer';
 
 const DEFAULT_SOURCES_FOLDER = 'src/core/tests/checkout/simulations';
 

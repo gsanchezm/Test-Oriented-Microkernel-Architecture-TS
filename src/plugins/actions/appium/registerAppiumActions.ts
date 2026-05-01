@@ -1,16 +1,16 @@
-import { ActionRegistry } from '../ActionRegistry';
-import { AppiumActionContext } from './AppiumActionContext';
-import { NavigateAction } from './Navigate';
-import { DeepLinkAction } from './DeepLink';
-import { SwitchContextAction } from './SwitchContext';
-import { HideKeyboardAction } from './HideKeyboard';
-import { ClickAction } from './Click';
-import { TypeAction } from './Type';
-import { ReadTextAction } from './ReadText';
-import { WaitForElementAction } from './WaitForElement';
-import { AssertTextAction } from './AssertText';
-import { ScrollToAction } from './ScrollTo';
-import { EvaluateAction } from './Evaluate';
+import { ActionRegistry } from '@plugins/actions/ActionRegistry';
+import { AppiumActionContext } from '@plugins/actions/appium/AppiumActionContext';
+import { NavigateAction } from '@plugins/actions/appium/Navigate';
+import { DeepLinkAction } from '@plugins/actions/appium/DeepLink';
+import { SwitchContextAction } from '@plugins/actions/appium/SwitchContext';
+import { HideKeyboardAction } from '@plugins/actions/appium/HideKeyboard';
+import { ClickAction } from '@plugins/actions/appium/Click';
+import { TypeAction } from '@plugins/actions/appium/Type';
+import { ReadTextAction } from '@plugins/actions/appium/ReadText';
+import { WaitForElementAction } from '@plugins/actions/appium/WaitForElement';
+import { AssertTextAction } from '@plugins/actions/appium/AssertText';
+import { ScrollToAction } from '@plugins/actions/appium/ScrollTo';
+import { EvaluateAction } from '@plugins/actions/appium/Evaluate';
 
 let cachedRegistry: ActionRegistry<AppiumActionContext> | null = null;
 

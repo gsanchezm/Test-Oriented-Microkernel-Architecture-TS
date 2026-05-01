@@ -1,4 +1,4 @@
-import { sendIntent } from '../../../../kernel/client';
+import { sendIntent } from '@kernel/client';
 
 export async function selectPaymentMethod(method: string): Promise<void> {
     const locatorKey = method.toLowerCase() === 'cash' ? 'paymentCashButton' : 'paymentCardButton';

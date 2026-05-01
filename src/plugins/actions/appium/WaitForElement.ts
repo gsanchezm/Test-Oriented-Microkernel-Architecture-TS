@@ -1,6 +1,6 @@
-import { ActionHandler } from '../ActionHandler';
-import { parseSelectorTimeout } from '../parseCompositeTarget';
-import { AppiumActionContext } from './AppiumActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { parseSelectorTimeout } from '@plugins/actions/parseCompositeTarget';
+import { AppiumActionContext } from '@plugins/actions/appium/AppiumActionContext';
 
 export const WaitForElementAction: ActionHandler<AppiumActionContext> = {
     name: 'WAIT_FOR_ELEMENT',

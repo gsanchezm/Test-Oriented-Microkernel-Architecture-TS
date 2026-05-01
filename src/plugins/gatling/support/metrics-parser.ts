@@ -1,6 +1,6 @@
 import * as fs   from 'fs';
 import * as path from 'path';
-import { SimulationMetrics, RequestStats } from './types';
+import { SimulationMetrics, RequestStats } from '@plugins/gatling/support/types';
 
 /**
  * Parses Gatling's stats.json from a completed simulation report directory

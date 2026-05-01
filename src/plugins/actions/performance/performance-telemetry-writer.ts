@@ -4,7 +4,7 @@
 
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
-import { resolveRunId } from '../../../core/contracts/contract-telemetry-writer';
+import { resolveRunId } from '@core/contracts/contract-telemetry-writer';
 
 const REPO_ROOT = resolve(__dirname, '../../../..');
 

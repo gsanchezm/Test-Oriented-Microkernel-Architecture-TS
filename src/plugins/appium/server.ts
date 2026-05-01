@@ -1,6 +1,6 @@
-import { startPluginServer } from '../../kernel/plugin-server.factory';
-import { execute, teardownAllSessions } from './appium';
-import { bootAppiumServer, shutdownAppiumServer } from './appium-lifecycle';
+import { startPluginServer } from '@kernel/plugin-server.factory';
+import { execute, teardownAllSessions } from '@plugins/appium/appium';
+import { bootAppiumServer, shutdownAppiumServer } from '@plugins/appium/appium-lifecycle';
 
 async function shutdown(pluginShutdown: () => Promise<void>): Promise<void> {
     await pluginShutdown();        // stop accepting new gRPC intents

@@ -1,11 +1,11 @@
-import { HttpError } from './http.error';
-import { HttpMethod } from './http-method.enum';
+import { HttpError } from '@plugins/api/http/http.error';
+import { HttpMethod } from '@plugins/api/http/http-method.enum';
 import {
     HttpClientOptions,
     HttpRequestOptions,
     HttpTransport,
     QueryParamValue,
-} from './http.types';
+} from '@plugins/api/http/http.types';
 
 // 60s covers Render free-tier cold starts (~30–45s after idle) that otherwise
 // abort the first login fetch of a scenario with AbortError.

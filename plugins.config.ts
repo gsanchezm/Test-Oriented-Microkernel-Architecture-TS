@@ -49,6 +49,12 @@ const plugins: PluginDefinition[] = [
         envVar: 'PLUGIN_GATLING',
         get enabled() { return isEnabled(this.envVar); },
     },
+    {
+        name: 'Visual',
+        script: 'plugin:visual',
+        envVar: 'PLUGIN_VISUAL',
+        get enabled() { return isEnabled(this.envVar); },
+    },
 ];
 
 export default plugins;

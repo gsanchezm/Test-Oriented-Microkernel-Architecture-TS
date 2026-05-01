@@ -2,11 +2,11 @@
 // and well-formed without dispatching the call. Useful as a sanity step
 // in feature suites that ship contract changes alongside scenarios.
 
-import { ActionHandler } from '../ActionHandler';
-import { ApiActionContext } from './ApiActionContext';
-import { parseContractTarget } from '../parseCompositeTarget';
-import { ApiContractLoader } from '../../../core/contracts/api-contract-loader';
-import { applyTemplate, applyTemplateBody, applyTemplateRecord } from './template';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { ApiActionContext } from '@plugins/actions/api/ApiActionContext';
+import { parseContractTarget } from '@plugins/actions/parseCompositeTarget';
+import { ApiContractLoader } from '@core/contracts/api-contract-loader';
+import { applyTemplate, applyTemplateBody, applyTemplateRecord } from '@plugins/actions/api/template';
 
 export const ValidateContractEndpointAction: ActionHandler<ApiActionContext> = {
     name: 'VALIDATE_CONTRACT_ENDPOINT',

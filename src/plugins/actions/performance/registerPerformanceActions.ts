@@ -1,9 +1,9 @@
-import { ActionRegistry } from '../ActionRegistry';
-import { PerformanceActionContext } from './PerformanceActionContext';
-import { RunSimulationAction } from './RunSimulation';
-import { RunCheckoutLoadAction } from './RunCheckoutLoad';
-import { ParseGatlingStatsAction } from './ParseGatlingStats';
-import { ValidateThresholdsAction } from './ValidateThresholds';
+import { ActionRegistry } from '@plugins/actions/ActionRegistry';
+import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
+import { RunSimulationAction } from '@plugins/actions/performance/RunSimulation';
+import { RunCheckoutLoadAction } from '@plugins/actions/performance/RunCheckoutLoad';
+import { ParseGatlingStatsAction } from '@plugins/actions/performance/ParseGatlingStats';
+import { ValidateThresholdsAction } from '@plugins/actions/performance/ValidateThresholds';
 
 const JVM_ONLY_MESSAGE =
     'This action requires the Gatling JVM context and cannot run inside the gRPC plugin server. ' +

@@ -1,7 +1,7 @@
 import * as net  from 'net';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
-import { logger } from '../utils/logger';
+import { logger } from '@utils/logger';
 
 const log = logger.child({ layer: 'kernel', component: 'port-guard' });
 

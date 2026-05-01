@@ -1,6 +1,6 @@
-import { ActionHandler } from '../ActionHandler';
-import { parseSelectorTimeout } from '../parseCompositeTarget';
-import { PlaywrightActionContext } from './PlaywrightActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { parseSelectorTimeout } from '@plugins/actions/parseCompositeTarget';
+import { PlaywrightActionContext } from '@plugins/actions/playwright/PlaywrightActionContext';
 
 export const WaitForElementAction: ActionHandler<PlaywrightActionContext> = {
     name: 'WAIT_FOR_ELEMENT',

@@ -5,7 +5,7 @@ import {
   ApiContract,
   ApiEndpointContract,
   ApiHttpMethod,
-} from './api-contract.types';
+} from '@core/contracts/api-contract.types';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 const cache = new Map<string, ApiContract>();

@@ -1,6 +1,6 @@
 import * as net from 'net';
 import { main as startAppium } from 'appium';
-import { logger } from '../../utils/logger';
+import { logger } from '@utils/logger';
 
 const log = logger.child({ layer: 'appium-lifecycle' });
 

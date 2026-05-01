@@ -1,8 +1,8 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import * as path from 'path';
-import { logger } from '../utils/logger';
-import { ensurePortFree } from './port-guard';
+import { logger } from '@utils/logger';
+import { ensurePortFree } from '@kernel/port-guard';
 
 const PROTO_PATH = path.resolve(__dirname, '../proto/ptom.proto');
 

@@ -1,5 +1,5 @@
-import { ActionHandler } from '../ActionHandler';
-import { AppiumActionContext } from './AppiumActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { AppiumActionContext } from '@plugins/actions/appium/AppiumActionContext';
 
 export const ScrollToAction: ActionHandler<AppiumActionContext> = {
     name: 'SCROLL_TO',

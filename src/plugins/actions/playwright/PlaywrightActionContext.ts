@@ -1,5 +1,5 @@
 import type { Browser, Page } from 'playwright';
-import { ActionContext } from '../ActionHandler';
+import { ActionContext } from '@plugins/actions/ActionHandler';
 
 export interface PlaywrightActionContext extends ActionContext<Page> {
     page: Page;

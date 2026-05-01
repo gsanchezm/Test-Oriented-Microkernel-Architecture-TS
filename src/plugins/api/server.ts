@@ -1,5 +1,5 @@
-import { startPluginServer } from '../../kernel/plugin-server.factory';
-import { execute } from './api';
+import { startPluginServer } from '@kernel/plugin-server.factory';
+import { execute } from '@plugins/api/api';
 
 const { shutdown } = startPluginServer('API', process.env.API_PLUGIN_PORT || '50055', execute);
 

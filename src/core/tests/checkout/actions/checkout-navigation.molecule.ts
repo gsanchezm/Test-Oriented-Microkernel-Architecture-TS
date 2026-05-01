@@ -1,5 +1,5 @@
-import { sendIntent } from '../../../../kernel/client';
-import { logger } from '../../../../utils/logger';
+import { sendIntent } from '@kernel/client';
+import { logger } from '@utils/logger';
 
 const log = logger.child({ layer: 'molecule', action: 'navigation' });
 const CHECKOUT_PATH = '/checkout';

@@ -3,9 +3,9 @@
 //
 // Target syntax: `reportDir||{simulation,profile?}`.
 
-import { ActionHandler } from '../ActionHandler';
-import { parseSimulationTarget } from '../parseCompositeTarget';
-import { PerformanceActionContext } from './PerformanceActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { parseSimulationTarget } from '@plugins/actions/parseCompositeTarget';
+import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
 
 export const ParseGatlingStatsAction: ActionHandler<PerformanceActionContext> = {
     name: 'PARSE_GATLING_STATS',

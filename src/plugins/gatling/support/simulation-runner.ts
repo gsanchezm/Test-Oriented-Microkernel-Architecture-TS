@@ -1,7 +1,7 @@
 import { spawn }  from 'child_process';
 import * as path   from 'path';
-import { logger }  from '../../../utils/logger';
-import { RunnerOptions, PerfProfile } from './types';
+import { logger }  from '@utils/logger';
+import { RunnerOptions, PerfProfile } from '@plugins/gatling/support/types';
 
 export interface RunnerResult {
     exitCode:  number;

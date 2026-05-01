@@ -2,11 +2,11 @@
 // point exactly: same target syntax, same env-var pass-through, same
 // metrics shape. Adds an opportunistic write of metrics/raw/gatling/<runId>/summary.json.
 
-import { ActionHandler } from '../ActionHandler';
-import { logger } from '../../../utils/logger';
-import { PerfProfile } from '../../gatling/support/types';
-import { PerformanceActionContext } from './PerformanceActionContext';
-import { writePerformanceSummary } from './performance-telemetry-writer';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { logger } from '@utils/logger';
+import { PerfProfile } from '@plugins/gatling/support/types';
+import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
+import { writePerformanceSummary } from '@plugins/actions/performance/performance-telemetry-writer';
 
 export const RunCheckoutLoadAction: ActionHandler<PerformanceActionContext> = {
     name: 'RUN_CHECKOUT_LOAD',

@@ -1,4 +1,4 @@
-import { HttpClient } from '../../../../plugins/api/http';
+import { HttpClient } from '@plugins/api/http';
 
 const LOGIN_PATH = '/api/auth/login';
 // Overrides HttpClient's default. Must stay ≥45s — Render free tier cold

@@ -1,4 +1,4 @@
-import { HttpMethod } from './http-method.enum';
+import { HttpMethod } from '@plugins/api/http/http-method.enum';
 
 export interface HttpErrorDetails {
     status: number;

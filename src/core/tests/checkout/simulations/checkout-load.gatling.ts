@@ -1,3 +1,4 @@
+// NOTE: keep relative imports — bundled by @gatling.io/cli (esbuild, no tsconfig-paths support).
 /**
  * Checkout Load Simulation
  *

@@ -1,6 +1,6 @@
-import { ActionHandler } from '../ActionHandler';
-import { logger } from '../../../utils/logger';
-import { AppiumActionContext } from './AppiumActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { logger } from '@utils/logger';
+import { AppiumActionContext } from '@plugins/actions/appium/AppiumActionContext';
 
 /**
  * DEEP_LINK — navigate directly to a screen via the omnipizza:// URI scheme.

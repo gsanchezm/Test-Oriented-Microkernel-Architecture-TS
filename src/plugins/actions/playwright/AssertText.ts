@@ -1,6 +1,6 @@
-import { ActionHandler } from '../ActionHandler';
-import { parseSelectorValue } from '../parseCompositeTarget';
-import { PlaywrightActionContext } from './PlaywrightActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { parseSelectorValue } from '@plugins/actions/parseCompositeTarget';
+import { PlaywrightActionContext } from '@plugins/actions/playwright/PlaywrightActionContext';
 
 export const AssertTextAction: ActionHandler<PlaywrightActionContext> = {
     name: 'ASSERT_TEXT',

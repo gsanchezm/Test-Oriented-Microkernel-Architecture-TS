@@ -5,9 +5,9 @@
 // a two-step change: write a handler class, register it. The plugin file
 // itself does not need to be touched — Open/Closed in practice.
 
-import { logger } from '../../utils/logger';
-import { ActionContext, ActionHandler } from './ActionHandler';
-import { maskActionTarget } from './maskActionTarget';
+import { logger } from '@utils/logger';
+import { ActionContext, ActionHandler } from '@plugins/actions/ActionHandler';
+import { maskActionTarget } from '@plugins/actions/maskActionTarget';
 
 export interface ActionRegistryOptions {
     /** Plugin tag used in log lines. */

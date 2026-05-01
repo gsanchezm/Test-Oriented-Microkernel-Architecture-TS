@@ -1,6 +1,6 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { logger } from '../../utils/logger';
-import { getPlaywrightActionRegistry } from '../actions/playwright/registerPlaywrightActions';
+import { logger } from '@utils/logger';
+import { getPlaywrightActionRegistry } from '@plugins/actions/playwright/registerPlaywrightActions';
 
 // --- Viewport Profiles ---
 // desktop: null viewport + --start-maximized lets the OS control window size
@@ -55,6 +55,28 @@ async function teardown(sessionId: string): Promise<void> {
         browser = null;
         logger.info('[Playwright Adapter] Browser closed — all sessions complete');
     }
+}
+
+// --- Read-only session accessors ---
+//
+// Used by the Visual plugin to capture screenshots from the *existing*
+// active page without booting a new browser context. Throws when no
+// session is active so the Visual oracle can return a precise error
+// instead of silently creating UI state.
+
+export function getActivePage(sessionId: string = '0'): Page {
+    const s = sessions.get(sessionId);
+    if (!s) {
+        throw new Error(
+            `[Playwright] No active session for sessionId='${sessionId}'. ` +
+            `Visual oracle must run after a UI action that creates the session.`,
+        );
+    }
+    return s.page;
+}
+
+export function hasActivePage(sessionId: string = '0'): boolean {
+    return sessions.has(sessionId);
 }
 
 // --- Public API ---

@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { hasLocatorKey } from '../../kernel/locator-resolver';
-import { VisualContract, VisualSnapshot } from './visual-contract.types';
+import { hasLocatorKey } from '@kernel/locator-resolver';
+import { VisualContract, VisualSnapshot } from '@core/contracts/visual-contract.types';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 const cache = new Map<string, VisualContract>();

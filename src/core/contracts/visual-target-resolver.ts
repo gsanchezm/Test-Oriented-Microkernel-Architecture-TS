@@ -1,5 +1,5 @@
-import { hasLocatorKey, resolveLocator } from '../../kernel/locator-resolver';
-import { VisualSnapshot } from './visual-contract.types';
+import { hasLocatorKey, resolveLocator } from '@kernel/locator-resolver';
+import { VisualSnapshot } from '@core/contracts/visual-contract.types';
 
 export interface ResolvedVisualTarget {
   snapshotId: string;

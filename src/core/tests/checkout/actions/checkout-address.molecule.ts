@@ -1,4 +1,4 @@
-import { sendIntent } from '../../../../kernel/client';
+import { sendIntent } from '@kernel/client';
 
 export interface SecondaryAddressField {
     locatorKey: string;

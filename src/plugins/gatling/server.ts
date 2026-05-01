@@ -1,5 +1,5 @@
-import { startPluginServer } from '../../kernel/plugin-server.factory';
-import { execute } from './gatling';
+import { startPluginServer } from '@kernel/plugin-server.factory';
+import { execute } from '@plugins/gatling/gatling';
 
 const { shutdown } = startPluginServer('Gatling', process.env.GATLING_PLUGIN_PORT || '50054', execute);
 

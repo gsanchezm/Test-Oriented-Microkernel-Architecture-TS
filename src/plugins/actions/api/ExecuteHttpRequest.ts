@@ -5,10 +5,10 @@
 // Authorization headers and request bodies are never logged in raw form;
 // the registry already masks the right side of the composite target.
 
-import { ActionHandler } from '../ActionHandler';
-import { HttpMethod } from '../../api/http/http-method.enum';
-import { ApiActionContext } from './ApiActionContext';
-import { ACTION_TYPE_SEPARATOR } from '../parseCompositeTarget';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { HttpMethod } from '@plugins/api/http/http-method.enum';
+import { ApiActionContext } from '@plugins/actions/api/ApiActionContext';
+import { ACTION_TYPE_SEPARATOR } from '@plugins/actions/parseCompositeTarget';
 
 interface ParsedHttpTarget {
     path: string;

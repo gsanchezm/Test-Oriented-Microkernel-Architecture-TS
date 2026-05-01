@@ -1,6 +1,6 @@
 import type { Browser } from 'webdriverio';
-import { ActionContext } from '../ActionHandler';
-import type { AppiumHelpers } from '../../appium/appium-helpers';
+import { ActionContext } from '@plugins/actions/ActionHandler';
+import type { AppiumHelpers } from '@plugins/appium/appium-helpers';
 
 export interface AppiumActionContext extends ActionContext<Browser> {
     driver: Browser;

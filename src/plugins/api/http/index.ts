@@ -1,10 +1,10 @@
-export { HttpClient } from './http.client';
-export { CountryCode } from './country-code.enum';
-export { HttpError } from './http.error';
-export { HttpMethod } from './http-method.enum';
+export { HttpClient } from '@plugins/api/http/http.client';
+export { CountryCode } from '@plugins/api/http/country-code.enum';
+export { HttpError } from '@plugins/api/http/http.error';
+export { HttpMethod } from '@plugins/api/http/http-method.enum';
 export type {
     HttpClientOptions,
     HttpRequestOptions,
     HttpTransport,
     QueryParamValue,
-} from './http.types';
+} from '@plugins/api/http/http.types';

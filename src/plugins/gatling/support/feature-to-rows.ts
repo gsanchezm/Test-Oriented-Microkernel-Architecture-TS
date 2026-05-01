@@ -1,5 +1,5 @@
-import { parseScenarioOutline } from './gherkin-parser';
-import { FeatureToRowsOptions }  from './types';
+import { parseScenarioOutline } from '@plugins/gatling/support/gherkin-parser';
+import { FeatureToRowsOptions }  from '@plugins/gatling/support/types';
 
 /**
  * Generic Gherkin Examples → Gatling feeder rows.

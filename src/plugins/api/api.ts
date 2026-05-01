@@ -1,5 +1,5 @@
-import { HttpClient } from './http/http.client';
-import { getApiActionRegistry } from '../actions/api/registerApiActions';
+import { HttpClient } from '@plugins/api/http/http.client';
+import { getApiActionRegistry } from '@plugins/actions/api/registerApiActions';
 
 // HTTP_BASE_URL is consumed by every contract action; configurable per-env.
 const baseUrl = process.env.API_BASE_URL || process.env.HTTP_BASE_URL;

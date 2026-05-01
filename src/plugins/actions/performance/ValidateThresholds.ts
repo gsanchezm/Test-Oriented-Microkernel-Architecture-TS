@@ -2,9 +2,9 @@
 //
 // Target syntax: `reportDir||{simulation,profile?,maxKoRate?,maxP95Ms?,minThroughput?}`.
 
-import { ActionHandler } from '../ActionHandler';
-import { parseSimulationTarget } from '../parseCompositeTarget';
-import { PerformanceActionContext } from './PerformanceActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { parseSimulationTarget } from '@plugins/actions/parseCompositeTarget';
+import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
 
 interface Thresholds {
     maxKoRate?: number;

@@ -1,6 +1,6 @@
-import { sendIntent } from '../../../../kernel/client';
-import { logger } from '../../../../utils/logger';
-import type { CartItemResponse, CountryInfo } from '../dao/ordering.dao';
+import { sendIntent } from '@kernel/client';
+import { logger } from '@utils/logger';
+import type { CartItemResponse, CountryInfo } from '@core/tests/checkout/dao/ordering.dao';
 
 const log = logger.child({ layer: 'molecule', action: 'auth' });
 

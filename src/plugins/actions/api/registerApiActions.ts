@@ -1,14 +1,14 @@
-import { ActionRegistry } from '../ActionRegistry';
-import { ApiActionContext } from './ApiActionContext';
+import { ActionRegistry } from '@plugins/actions/ActionRegistry';
+import { ApiActionContext } from '@plugins/actions/api/ApiActionContext';
 import {
     HttpDeleteAction,
     HttpGetAction,
     HttpPatchAction,
     HttpPostAction,
     HttpPutAction,
-} from './ExecuteHttpRequest';
-import { ExecuteContractEndpointAction } from './ExecuteContractEndpoint';
-import { ValidateContractEndpointAction } from './ValidateContractEndpoint';
+} from '@plugins/actions/api/ExecuteHttpRequest';
+import { ExecuteContractEndpointAction } from '@plugins/actions/api/ExecuteContractEndpoint';
+import { ValidateContractEndpointAction } from '@plugins/actions/api/ValidateContractEndpoint';
 
 let cachedRegistry: ActionRegistry<ApiActionContext> | null = null;
 

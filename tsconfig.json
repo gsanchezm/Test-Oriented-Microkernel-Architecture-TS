@@ -9,7 +9,12 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "*": ["node_modules/*"]
+      "@kernel/*":    ["src/kernel/*"],
+      "@plugins/*":   ["src/plugins/*"],
+      "@core/*":      ["src/core/*"],
+      "@proto/*":     ["src/proto/*"],
+      "@telemetry/*": ["src/telemetry/*"],
+      "@utils/*":     ["src/utils/*"]
     }
   },
   "include": ["src/**/*"]

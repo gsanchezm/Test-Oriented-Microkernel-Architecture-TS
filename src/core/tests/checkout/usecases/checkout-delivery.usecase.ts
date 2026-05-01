@@ -1,9 +1,9 @@
-import { injectBrowserSession, BrowserSessionState } from '../actions/checkout-auth.molecule';
-import { navigateToCheckout } from '../actions/checkout-navigation.molecule';
-import { fillDeliveryAddress, fillContactInfo, SecondaryAddressField } from '../actions/checkout-address.molecule';
-import { selectPaymentMethod, fillCardDetails } from '../actions/checkout-payment.molecule';
-import { placeOrder, verifyOrderAccepted as verifyOrderOnUI } from '../actions/checkout-order.molecule';
-import type { CartItemResponse, CountryInfo } from '../dao/ordering.dao';
+import { injectBrowserSession, BrowserSessionState } from '@core/tests/checkout/actions/checkout-auth.molecule';
+import { navigateToCheckout } from '@core/tests/checkout/actions/checkout-navigation.molecule';
+import { fillDeliveryAddress, fillContactInfo, SecondaryAddressField } from '@core/tests/checkout/actions/checkout-address.molecule';
+import { selectPaymentMethod, fillCardDetails } from '@core/tests/checkout/actions/checkout-payment.molecule';
+import { placeOrder, verifyOrderAccepted as verifyOrderOnUI } from '@core/tests/checkout/actions/checkout-order.molecule';
+import type { CartItemResponse, CountryInfo } from '@core/tests/checkout/dao/ordering.dao';
 
 // Fields rendered alongside the zipcode slot in the checkout form.
 // Today only MX's `colonia` lives there; JP's `prefectura` is NOT a secondary

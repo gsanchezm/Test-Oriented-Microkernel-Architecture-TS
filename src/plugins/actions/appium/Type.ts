@@ -1,6 +1,6 @@
-import { ActionHandler } from '../ActionHandler';
-import { parseSelectorValue } from '../parseCompositeTarget';
-import { AppiumActionContext } from './AppiumActionContext';
+import { ActionHandler } from '@plugins/actions/ActionHandler';
+import { parseSelectorValue } from '@plugins/actions/parseCompositeTarget';
+import { AppiumActionContext } from '@plugins/actions/appium/AppiumActionContext';
 
 export const TypeAction: ActionHandler<AppiumActionContext> = {
     name: 'TYPE',

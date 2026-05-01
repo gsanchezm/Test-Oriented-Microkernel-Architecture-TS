@@ -6,7 +6,7 @@
 // reintroduces bugs we already paid for.
 
 import type { Browser } from 'webdriverio';
-import { logger } from '../../utils/logger';
+import { logger } from '@utils/logger';
 
 export const PLATFORM = (process.env.PLATFORM || 'android').toLowerCase();
 
