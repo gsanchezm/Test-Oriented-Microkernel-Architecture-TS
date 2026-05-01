@@ -5,10 +5,10 @@
   "scripts": {
     "proxy": "ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts",
     "plugins": "ts-node -r tsconfig-paths/register src/kernel/start-plugins.ts",
-    "plugin:playwright": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts",
-    "plugin:appium": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/appium/server.ts",
+    "plugin:web-ui": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/web-ui/server.ts",
+    "plugin:mobile-ui": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/mobile-ui/server.ts",
     "plugin:api": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts",
-    "plugin:gatling": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/gatling/server.ts",
+    "plugin:performance": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/performance/server.ts",
     "plugin:visual": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/visual/server.ts",
     "test": "cucumber-js",
     "perf:generate": "node -r tsconfig-paths/register node_modules/ts-node/dist/bin.js scripts/generate-checkout-feeder.ts",

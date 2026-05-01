@@ -5,13 +5,13 @@ const log = logger.child({ layer: 'molecule', action: 'navigation' });
 const CHECKOUT_PATH = '/checkout';
 
 export async function navigateToCheckout(market?: string, accessToken?: string): Promise<void> {
-    const driver = process.env.DRIVER ?? 'playwright';
+    const driver = process.env.DRIVER ?? 'web-ui';
 
     // Atomic mobile path: deep link directly to the checkout screen, bypassing the
     // full user journey (Login → Catalog → PizzaBuilder). The app hydrates the cart
     // from the backend via hydrateCart=true; market sets the country context;
     // accessToken seeds the Zustand auth store via useDeepLinkParams.
-    if (driver === 'appium') {
+    if (driver === 'mobile-ui') {
         const params = new URLSearchParams({ hydrateCart: 'true' });
         if (market) params.set('market', market);
         if (accessToken) params.set('accessToken', accessToken);

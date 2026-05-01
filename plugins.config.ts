@@ -14,7 +14,7 @@ export interface PluginDefinition {
     name: string;
     /** npm script to run (must exist in package.json) */
     script: string;
-    /** Env var that controls whether this plugin is enabled (e.g. PLUGIN_PLAYWRIGHT) */
+    /** Env var that controls whether this plugin is enabled (e.g. PLUGIN_WEB_UI) */
     envVar: string;
     /** Whether to start this plugin on launch — resolved from process.env at runtime */
     readonly enabled: boolean;
@@ -26,15 +26,15 @@ function isEnabled(envVar: string): boolean {
 
 const plugins: PluginDefinition[] = [
     {
-        name: 'Playwright',
-        script: 'plugin:playwright',
-        envVar: 'PLUGIN_PLAYWRIGHT',
+        name: 'Web-UI',
+        script: 'plugin:web-ui',
+        envVar: 'PLUGIN_WEB_UI',
         get enabled() { return isEnabled(this.envVar); },
     },
     {
-        name: 'Appium',
-        script: 'plugin:appium',
-        envVar: 'PLUGIN_APPIUM',
+        name: 'Mobile-UI',
+        script: 'plugin:mobile-ui',
+        envVar: 'PLUGIN_MOBILE_UI',
         get enabled() { return isEnabled(this.envVar); },
     },
     {
@@ -44,9 +44,9 @@ const plugins: PluginDefinition[] = [
         get enabled() { return isEnabled(this.envVar); },
     },
     {
-        name: 'Gatling',
-        script: 'plugin:gatling',
-        envVar: 'PLUGIN_GATLING',
+        name: 'Performance',
+        script: 'plugin:performance',
+        envVar: 'PLUGIN_PERFORMANCE',
         get enabled() { return isEnabled(this.envVar); },
     },
     {

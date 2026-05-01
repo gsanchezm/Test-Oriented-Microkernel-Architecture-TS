@@ -12,7 +12,7 @@
 
 import { ActionHandler } from '@plugins/actions/ActionHandler';
 import { logger } from '@utils/logger';
-import { PerfProfile } from '@plugins/gatling/support/types';
+import { PerfProfile } from '@plugins/performance/support/types';
 import { parseSimulationTarget } from '@plugins/actions/parseCompositeTarget';
 import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
 import { writePerformanceSummary } from '@plugins/actions/performance/performance-telemetry-writer';
@@ -36,7 +36,7 @@ export const RunSimulationAction: ActionHandler<PerformanceActionContext> = {
             ? config.env as Record<string, string>
             : {}) as Record<string, string>;
 
-        logger.info(`[Gatling] RUN_SIMULATION simulation="${simulation}" profile="${profile}"`);
+        logger.info(`[Performance] RUN_SIMULATION simulation="${simulation}" profile="${profile}"`);
 
         const startedAt = Date.now();
         const { exitCode, reportDir } = await runner.run({

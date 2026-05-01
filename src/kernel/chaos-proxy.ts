@@ -17,9 +17,9 @@ const ACTION_TYPE_SEPARATOR = '||';
 // --- Plugin Address Configuration (Environment-driven) ---
 
 const PLUGIN_ADDRESSES: Readonly<Record<string, string>> = {
-    playwright:  process.env.PLAYWRIGHT_ADDRESS  || 'localhost:50052',
-    appium:      process.env.APPIUM_ADDRESS       || 'localhost:50053',
-    performance: process.env.GATLING_ADDRESS      || 'localhost:50054',
+    playwright:  process.env.WEB_UI_ADDRESS  || 'localhost:50052',
+    appium:      process.env.MOBILE_UI_ADDRESS       || 'localhost:50053',
+    performance: process.env.PERFORMANCE_ADDRESS      || 'localhost:50054',
     api:         process.env.API_ADAPTER_ADDRESS  || 'localhost:50055',
     visual:      process.env.VISUAL_ADDRESS       || 'localhost:50056',
 };

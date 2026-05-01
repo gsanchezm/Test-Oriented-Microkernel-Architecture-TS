@@ -223,8 +223,8 @@ Then('the order is accepted', async function () {
 
 After(async function () {
   try {
-    const driver = process.env.DRIVER ?? 'playwright';
-    if (driver === 'appium') {
+    const driver = process.env.DRIVER ?? 'web-ui';
+    if (driver === 'mobile-ui') {
       // Reset app auth state between scenarios — clears Zustand store and returns to Login screen
       await sendIntent('DEEP_LINK', 'omnipizza://login?resetSession=true');
     } else {

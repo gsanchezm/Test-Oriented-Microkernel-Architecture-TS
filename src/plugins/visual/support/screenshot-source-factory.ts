@@ -3,8 +3,8 @@
 // replace this map with stubs by reassigning `screenshotSourceRegistry`.
 
 import { ScreenshotSource } from '@plugins/visual/support/screenshot-source';
-import { PlaywrightScreenshotSource } from '@plugins/visual/support/playwright-screenshot-source';
-import { AppiumScreenshotSource } from '@plugins/visual/support/appium-screenshot-source';
+import { PlaywrightScreenshotSource } from '@plugins/visual/support/web-ui-screenshot-source';
+import { AppiumScreenshotSource } from '@plugins/visual/support/mobile-ui-screenshot-source';
 
 export const screenshotSourceRegistry: Record<string, () => ScreenshotSource> = {
     web: () => new PlaywrightScreenshotSource(),

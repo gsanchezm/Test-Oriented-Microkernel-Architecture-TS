@@ -19,7 +19,7 @@ export async function injectBrowserSession(session: BrowserSessionState): Promis
     // useDeepLinkParams in OmniPizza), so no UI login or localStorage manipulation needed.
     // On API driver, there is no browser to inject into — the gRPC plugin talks straight to the backend.
     const driver = process.env.DRIVER;
-    if (driver === 'appium' || driver === 'api') {
+    if (driver === 'mobile-ui' || driver === 'api') {
         log.info({ countryCode: session.countryCode, driver }, 'Skipping session injection — no browser to seed');
         return;
     }

@@ -1,7 +1,7 @@
 import { ActionContext } from '@plugins/actions/ActionHandler';
-import { runSimulation, RunnerResult } from '@plugins/gatling/support/simulation-runner';
-import { parseGatlingStats } from '@plugins/gatling/support/metrics-parser';
-import { RunnerOptions, SimulationMetrics } from '@plugins/gatling/support/types';
+import { runSimulation, RunnerResult } from '@plugins/performance/support/simulation-runner';
+import { parseGatlingStats } from '@plugins/performance/support/metrics-parser';
+import { RunnerOptions, SimulationMetrics } from '@plugins/performance/support/types';
 
 export interface PerformanceRunner {
     run(options: RunnerOptions): Promise<RunnerResult>;

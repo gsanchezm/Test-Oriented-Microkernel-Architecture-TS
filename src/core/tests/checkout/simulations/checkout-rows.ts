@@ -1,5 +1,5 @@
 // NOTE: keep relative imports — bundled by @gatling.io/cli (esbuild, no tsconfig-paths support).
-import { featureToRows } from '../../../../plugins/gatling/support/feature-to-rows';
+import { featureToRows } from '../../../../plugins/performance/support/feature-to-rows';
 
 export type CheckoutRow = Record<string, unknown> & {
     market:   string;

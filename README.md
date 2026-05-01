@@ -13,9 +13,9 @@ The model is realised through the **Test-Oriented Microkernel (TOM)** — a plug
 
 ```
 Cucumber Steps --> client.ts --> chaos-proxy (:50051) --> plugin servers
-                                    |                       |-- playwright (:50052)
-                                    |                       |-- appium     (:50053)
-                                    |                       |-- gatling    (:50054)  <-- TOM-driven perf
+                                    |                       |-- web-ui      (:50052)  <-- Playwright
+                                    |                       |-- mobile-ui   (:50053)  <-- Appium
+                                    |                       |-- performance (:50054)  <-- Gatling, TOM-driven
                                     |                       |-- api        (:50055)
                                     |
                                     +-- locator resolution
@@ -91,9 +91,9 @@ src/
   proto/                   # gRPC service definitions (ptom.proto)
   kernel/                  # Microkernel: proxy, client, locator resolver, plugin factory, launcher
   plugins/                 # Isolated gRPC plugin servers
-    playwright/            #   Web automation (Chromium)
-    appium/                #   Mobile automation (Android / iOS)
-    gatling/               #   Performance plugin (gRPC server + subprocess runner)
+    web-ui/                #   Web automation (Playwright + Chromium)
+    mobile-ui/             #   Mobile automation (Appium — Android / iOS)
+    performance/           #   Performance plugin (gRPC server + Gatling subprocess runner)
       support/
         types.ts           #     Shared types: FeatureToRowsOptions, RunnerOptions, PerfProfile, SimulationMetrics
         gherkin-parser.ts  #     Reads .feature files and returns Examples tables
@@ -152,10 +152,10 @@ pnpm test
 Plugins are toggled in `.env`:
 
 ```env
-PLUGIN_PLAYWRIGHT=true
-PLUGIN_APPIUM=false
+PLUGIN_WEB_UI=true
+PLUGIN_MOBILE_UI=false
 PLUGIN_API=true
-PLUGIN_GATLING=false
+PLUGIN_PERFORMANCE=false
 ```
 
 > **Hot reload:** editing `.env` while `pnpm run plugins` is running automatically restarts affected plugins — no manual restart needed. See [Plugin Hot Reload](#plugin-hot-reload).
@@ -163,10 +163,10 @@ PLUGIN_GATLING=false
 ### Option B — Start plugins individually
 
 ```bash
-pnpm run plugin:playwright   # Web
-pnpm run plugin:appium       # Mobile
+pnpm run plugin:web-ui   # Web
+pnpm run plugin:mobile-ui       # Mobile
 pnpm run plugin:api          # API
-pnpm run plugin:gatling      # Performance
+pnpm run plugin:performance      # Performance
 ```
 
 ### With Docker
@@ -215,7 +215,7 @@ The plugin launcher (`pnpm run plugins`) watches `.env` for changes. When you sa
 3. Stops plugins that were disabled, starts plugins that were enabled, restarts all others so they pick up the new env values
 
 ```
-[you edit PLATFORM=ios or toggle PLUGIN_GATLING=true]
+[you edit PLATFORM=ios or toggle PLUGIN_PERFORMANCE=true]
   → 300 ms debounce
   → diff: { toStop: [], toRestart: ['API'], toStart: ['Gatling'] }
   → kills / spawns as needed
@@ -230,7 +230,7 @@ Performance tests have two modes that serve different purposes:
 
 | Mode | Entry point | When to use |
 |------|-------------|-------------|
-| **TOM-driven** | `PLUGIN_GATLING=true` + `sendIntent('RUN_CHECKOUT_LOAD', profile)` | Trigger load from a Cucumber scenario, get `SimulationMetrics` back in the gRPC payload |
+| **TOM-driven** | `PLUGIN_PERFORMANCE=true` + `sendIntent('RUN_CHECKOUT_LOAD', profile)` | Trigger load from a Cucumber scenario, get `SimulationMetrics` back in the gRPC payload |
 | **Standalone** | `pnpm perf:smoke \| perf:load \| perf:stress` | CI load gates, HTML reports, direct injection control |
 
 Both modes run the same `checkout-load.gatling.ts` simulation. The difference is who invokes it.
@@ -287,7 +287,7 @@ PERF_DURATION=60 pnpm perf:load      # override ramp duration (seconds)
 
 ### TOM-driven mode
 
-When `PLUGIN_GATLING=true`, the Gatling gRPC plugin accepts `RUN_CHECKOUT_LOAD` intents from Cucumber steps:
+When `PLUGIN_PERFORMANCE=true`, the Gatling gRPC plugin accepts `RUN_CHECKOUT_LOAD` intents from Cucumber steps:
 
 ```ts
 sendIntent('RUN_CHECKOUT_LOAD', 'smoke')
@@ -313,11 +313,11 @@ The plugin spawns `checkout-load.gatling.ts` as a subprocess, waits for it to fi
 
 ### Adding simulations for other features
 
-The Gatling support in `plugins/gatling/support/` is fully generic. To add load tests for a new feature slice:
+The Gatling support in `plugins/performance/support/` is fully generic. To add load tests for a new feature slice:
 
 1. Create `tests/<domain>/simulations/<domain>-rows.ts` — implement a mapper calling `featureToRows<YourRow>(options, mapper)`
 2. Create `tests/<domain>/simulations/<domain>-load.gatling.ts` — import your rows, build the HTTP chain
-3. Add a `RUN_<DOMAIN>_LOAD` handler in `plugins/gatling/gatling.ts` pointing `sourcesFolder` at the new simulation
+3. Add a `RUN_<DOMAIN>_LOAD` handler in `plugins/performance/performance.ts` pointing `sourcesFolder` at the new simulation
 
 ## Environment Configuration
 
@@ -333,7 +333,7 @@ cp .env.example .env
 |----------|---------|-------------|
 | `PLATFORM` | `web` `android` `ios` `api` | Target platform |
 | `VIEWPORT` | `desktop` `responsive` | Web viewport (only when `PLATFORM=web`) |
-| `DRIVER` | `playwright` `appium` `api` | Automation driver |
+| `DRIVER` | `web-ui` `mobile-ui` `api` | Automation driver (test-type identifier) |
 | `BASE_URL` | URL | Web application under test |
 | `API_BASE_URL` | URL | Backend API for state injection |
 | `HEADLESS` | `true` `false` | Browser visibility |
@@ -343,19 +343,19 @@ cp .env.example .env
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PLUGIN_PLAYWRIGHT` | `false` | Enable the Playwright gRPC plugin |
-| `PLUGIN_APPIUM` | `false` | Enable the Appium gRPC plugin |
+| `PLUGIN_WEB_UI` | `false` | Enable the Playwright gRPC plugin |
+| `PLUGIN_MOBILE_UI` | `false` | Enable the Appium gRPC plugin |
 | `PLUGIN_API` | `false` | Enable the API gRPC plugin |
-| `PLUGIN_GATLING` | `false` | Enable the Gatling gRPC plugin |
+| `PLUGIN_PERFORMANCE` | `false` | Enable the Gatling gRPC plugin |
 
 ### Plugin addresses (proxy → plugins)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PROXY_ADDRESS` | `localhost:50051` | Used by `client.ts` to reach the proxy |
-| `PLAYWRIGHT_ADDRESS` | `localhost:50052` | Used by proxy to reach Playwright plugin |
-| `APPIUM_ADDRESS` | `localhost:50053` | Used by proxy to reach Appium plugin |
-| `GATLING_ADDRESS` | `localhost:50054` | Used by proxy to reach Gatling plugin |
+| `WEB_UI_ADDRESS` | `localhost:50052` | Used by proxy to reach Playwright plugin |
+| `MOBILE_UI_ADDRESS` | `localhost:50053` | Used by proxy to reach Appium plugin |
+| `PERFORMANCE_ADDRESS` | `localhost:50054` | Used by proxy to reach Gatling plugin |
 | `API_ADAPTER_ADDRESS` | `localhost:50055` | Used by proxy to reach API plugin |
 
 ### Plugin listen ports (each plugin server)
@@ -381,7 +381,7 @@ cp .env.example .env
 |----------|---------|-------------|
 | `APPIUM_HOST` | `localhost` | Appium server host |
 | `APPIUM_PORT` | `4723` | Appium server port |
-| `CAP_PROFILE` | — | Capability JSON filename under `src/plugins/appium/capabilities/{platform}` |
+| `CAP_PROFILE` | — | Capability JSON filename under `src/plugins/mobile-ui/capabilities/{platform}` |
 | `ANDROID_APP_PATH` | — | Path to `.apk` under test |
 | `IOS_APP_PATH` | — | Path to `.zip` under test |
 | `IOS_UDID` | `auto` | iOS device UDID |

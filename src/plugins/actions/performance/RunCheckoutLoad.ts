@@ -4,7 +4,7 @@
 
 import { ActionHandler } from '@plugins/actions/ActionHandler';
 import { logger } from '@utils/logger';
-import { PerfProfile } from '@plugins/gatling/support/types';
+import { PerfProfile } from '@plugins/performance/support/types';
 import { PerformanceActionContext } from '@plugins/actions/performance/PerformanceActionContext';
 import { writePerformanceSummary } from '@plugins/actions/performance/performance-telemetry-writer';
 
@@ -28,7 +28,7 @@ export const RunCheckoutLoadAction: ActionHandler<PerformanceActionContext> = {
                 .filter(([k]) => k?.length > 0),
         );
 
-        logger.info(`[Gatling] RUN_CHECKOUT_LOAD profile="${profile}" env=${JSON.stringify(extraEnv)}`);
+        logger.info(`[Performance] RUN_CHECKOUT_LOAD profile="${profile}" env=${JSON.stringify(extraEnv)}`);
 
         const startedAt = Date.now();
         const { exitCode, reportDir } = await runner.run({
@@ -42,7 +42,7 @@ export const RunCheckoutLoadAction: ActionHandler<PerformanceActionContext> = {
         const durationMs = Date.now() - startedAt;
 
         logger.info(
-            `[Gatling] checkout-load complete — ` +
+            `[Performance] checkout-load complete — ` +
             `${metrics.requests.ok}/${metrics.requests.total} OK, ` +
             `p95=${metrics.responseTime.p95}ms, ` +
             `status=${metrics.status}`,
