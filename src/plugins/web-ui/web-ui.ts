@@ -1,6 +1,6 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import { logger } from '@utils/logger';
-import { getWebUiActionRegistry } from '@plugins/actions/web-ui/registerWebUiActions';
+import { getWebUiActionRegistry } from '@plugins/web-ui/actions/registerWebUiActions';
 
 // --- Viewport Profiles ---
 // desktop: null viewport + --start-maximized lets the OS control window size

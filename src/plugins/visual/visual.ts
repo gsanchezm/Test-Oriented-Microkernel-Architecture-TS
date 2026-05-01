@@ -3,7 +3,7 @@
 // Playwright/Appium session (via session getters) or runs in pure
 // validation mode for VALIDATE_VISUAL_CONTRACT.
 
-import { getVisualActionRegistry } from '@plugins/actions/visual/registerVisualActions';
+import { getVisualActionRegistry } from '@plugins/visual/actions/registerVisualActions';
 
 const registry = getVisualActionRegistry();
 

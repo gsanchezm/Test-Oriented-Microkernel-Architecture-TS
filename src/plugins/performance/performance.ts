@@ -6,8 +6,8 @@
 import {
     defaultPerformanceParser,
     defaultPerformanceRunner,
-} from '@plugins/actions/performance/PerformanceActionContext';
-import { getPerformanceActionRegistry } from '@plugins/actions/performance/registerPerformanceActions';
+} from '@plugins/performance/actions/PerformanceActionContext';
+import { getPerformanceActionRegistry } from '@plugins/performance/actions/registerPerformanceActions';
 
 const registry = getPerformanceActionRegistry();
 

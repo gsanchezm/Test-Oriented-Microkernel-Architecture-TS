@@ -2,7 +2,7 @@ import { remote, Browser } from 'webdriverio';
 import { logger } from '@utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getMobileUiActionRegistry } from '@plugins/actions/mobile-ui/registerMobileUiActions';
+import { getMobileUiActionRegistry } from '@plugins/mobile-ui/actions/registerMobileUiActions';
 import {
     PLATFORM,
     appiumHelpers,
