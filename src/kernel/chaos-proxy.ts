@@ -17,12 +17,14 @@ const ACTION_TYPE_SEPARATOR = '||';
 
 // --- Plugin Address Configuration (Environment-driven) ---
 
+// Keys must match the DRIVER values that client.ts puts into the platform string
+// (e.g. 'web-ui:0', 'mobile-ui:0'). The proxy strips ':<workerId>' before lookup.
 const PLUGIN_ADDRESSES: Readonly<Record<string, string>> = {
-    playwright:  process.env.WEB_UI_ADDRESS  || 'localhost:50052',
-    appium:      process.env.MOBILE_UI_ADDRESS       || 'localhost:50053',
-    performance: process.env.PERFORMANCE_ADDRESS      || 'localhost:50054',
-    api:         process.env.API_ADAPTER_ADDRESS  || 'localhost:50055',
-    visual:      process.env.VISUAL_ADDRESS       || 'localhost:50056',
+    'web-ui':      process.env.WEB_UI_ADDRESS       || 'localhost:50052',
+    'mobile-ui':   process.env.MOBILE_UI_ADDRESS    || 'localhost:50053',
+    'performance': process.env.PERFORMANCE_ADDRESS  || 'localhost:50054',
+    'api':         process.env.API_ADAPTER_ADDRESS  || 'localhost:50055',
+    'visual':      process.env.VISUAL_ADDRESS       || 'localhost:50056',
 };
 
 // --- Types ---
