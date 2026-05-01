@@ -11,7 +11,7 @@ async function shutdown(pluginShutdown: () => Promise<void>): Promise<void> {
 
 async function main(): Promise<void> {
     await bootAppiumServer();
-    const { shutdown: pluginShutdown } = startPluginServer('Mobile-UI', process.env.APPIUM_PORT_GRPC || '50053', execute);
+    const { shutdown: pluginShutdown } = startPluginServer('Mobile-UI', process.env.MOBILE_UI_PORT || '50053', execute);
 
     process.on('SIGTERM', () => shutdown(pluginShutdown));
     process.on('SIGINT', () => shutdown(pluginShutdown));

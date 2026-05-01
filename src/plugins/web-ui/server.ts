@@ -1,7 +1,7 @@
 import { startPluginServer } from '@kernel/plugin-server.factory';
 import { execute } from '@plugins/web-ui/web-ui';
 
-const { shutdown } = startPluginServer('Web-UI', process.env.PLAYWRIGHT_PORT || '50052', execute);
+const { shutdown } = startPluginServer('Web-UI', process.env.WEB_UI_PORT || '50052', execute);
 
 async function gracefulShutdown(): Promise<void> {
     await shutdown();
