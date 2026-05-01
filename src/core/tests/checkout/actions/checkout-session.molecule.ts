@@ -1,8 +1,9 @@
 import { sendIntent } from '@kernel/client';
 import { logger } from '@utils/logger';
 import type { CartItemResponse, CountryInfo } from '@core/tests/checkout/dao/checkout.types';
+import { INTENT } from '@kernel/intents';
 
-const log = logger.child({ layer: 'molecule', action: 'auth' });
+const log = logger.child({ layer: 'molecule', action: 'session' });
 
 export interface BrowserSessionState {
     token: string;
@@ -30,7 +31,7 @@ export async function injectBrowserSession(session: BrowserSessionState): Promis
     }
 
     // Navigate to the domain first to establish the origin for localStorage
-    await sendIntent('NAVIGATE', baseUrl);
+    await sendIntent(INTENT.NAVIGATE, baseUrl);
 
     // Build Zustand omnipizza-country payload
     const lang = session.countryInfo.languages[0] ?? 'en';
@@ -60,7 +61,7 @@ export async function injectBrowserSession(session: BrowserSessionState): Promis
         `localStorage.removeItem('omnipizza-order')`,
     ];
 
-    await sendIntent('EVALUATE', setters.join('; '));
+    await sendIntent(INTENT.EVALUATE, setters.join('; '));
 
     log.info(
         { cartItemCount: session.cartItems.length, countryCode: session.countryCode, locale },

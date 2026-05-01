@@ -7,7 +7,7 @@ import type { CartItemResponse, CountryCode, CountryInfo } from '@core/tests/che
 import {
     injectBrowserSession,
     BrowserSessionState,
-} from '@core/tests/checkout/actions/checkout-auth.molecule';
+} from '@core/tests/checkout/actions/checkout-session.molecule';
 import { navigateToCheckout } from '@core/tests/checkout/actions/checkout-navigation.molecule';
 import {
     fillDeliveryAddress,
@@ -23,6 +23,7 @@ import {
     verifyOrderAccepted as verifyOrderOnUI,
 } from '@core/tests/checkout/actions/checkout-order.molecule';
 import type { CheckoutWorld } from '@core/tests/support/world';
+import { INTENT } from '@kernel/intents';
 
 const log = logger.child({ layer: 'route', domain: 'checkout' });
 
@@ -232,13 +233,13 @@ export class CheckoutRoute {
     private readonly resetStrategies: Record<Driver, () => Promise<void>> = {
         // App auth state lives in Zustand — clear via deep link, which returns to Login.
         'mobile-ui': async () => {
-            await sendIntent('DEEP_LINK', 'omnipizza://login?resetSession=true');
+            await sendIntent(INTENT.DEEP_LINK, 'omnipizza://login?resetSession=true');
         },
         'web-ui': async () => {
             const baseUrl = process.env.BASE_URL;
             if (!baseUrl) return; // nothing to navigate to; safe no-op
-            await sendIntent('EVALUATE', 'localStorage.clear(); sessionStorage.clear()');
-            await sendIntent('NAVIGATE', baseUrl);
+            await sendIntent(INTENT.EVALUATE, 'localStorage.clear(); sessionStorage.clear()');
+            await sendIntent(INTENT.NAVIGATE, baseUrl);
         },
         // No client state to clear for pure API runs.
         'api': async () => { /* noop */ },

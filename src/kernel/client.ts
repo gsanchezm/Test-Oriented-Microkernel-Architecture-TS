@@ -1,6 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import * as path from 'path';
+import type { IntentAction } from '@kernel/intents';
 
 const PROTO_PATH = path.resolve(__dirname, '../proto/ptom.proto');
 
@@ -33,7 +34,7 @@ const client = new ptomProto.ActionService(
 // --- Public API ---
 
 export function sendIntent(
-    actionId: string,
+    actionId: IntentAction,
     targetSelector: string,
     platform?: string,
 ): Promise<IntentResult> {

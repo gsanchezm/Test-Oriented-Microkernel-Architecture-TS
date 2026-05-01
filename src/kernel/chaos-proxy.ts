@@ -4,6 +4,7 @@ import * as path from 'path';
 import { logger } from '@utils/logger';
 import { resolveLocator } from '@kernel/locator-resolver';
 import { ensurePortFree } from '@kernel/port-guard';
+import { INTENT, LEGACY_INTENT_ALIASES } from '@kernel/intents';
 
 // --- Constants ---
 
@@ -151,26 +152,26 @@ async function suppressChaos(
 
 // --- 7. TYPE-Aware Locator Resolution ---
 
-const PASSTHROUGH_ACTIONS = new Set([
-    'NAVIGATE', 'TEARDOWN', 'EVALUATE', 'HIDE_KEYBOARD',
+const PASSTHROUGH_ACTIONS = new Set<string>([
+    INTENT.NAVIGATE, INTENT.TEARDOWN, INTENT.EVALUATE, INTENT.HIDE_KEYBOARD,
     // Visual oracle: targets are `feature||snapshotId||{json}`, resolved
     // internally via VisualContractLoader + locator-resolver. The proxy
     // must not touch them.
-    'CAPTURE_SNAPSHOT', 'COMPARE_SNAPSHOT', 'VALIDATE_VISUAL_CONTRACT', 'UPDATE_BASELINE',
-    'VISUAL_CAPTURE', 'VISUAL_COMPARE', 'VISUAL_VALIDATE',
+    INTENT.CAPTURE_SNAPSHOT, INTENT.COMPARE_SNAPSHOT, INTENT.VALIDATE_VISUAL_CONTRACT, INTENT.UPDATE_BASELINE,
     // API contract execution uses `feature||endpointId||{json}` for the
     // same reason and must also bypass logical-key resolution.
-    'EXECUTE_CONTRACT_ENDPOINT', 'VALIDATE_CONTRACT_ENDPOINT', 'EXECUTE_API_CONTRACT',
-    'HTTP_GET', 'HTTP_POST', 'HTTP_PUT', 'HTTP_PATCH', 'HTTP_DELETE',
+    INTENT.EXECUTE_CONTRACT_ENDPOINT, INTENT.VALIDATE_CONTRACT_ENDPOINT,
     // Performance simulations use simulationName||{json}.
-    'RUN_SIMULATION', 'RUN_CHECKOUT_LOAD', 'PARSE_GATLING_STATS', 'VALIDATE_THRESHOLDS',
+    INTENT.RUN_SIMULATION, INTENT.RUN_CHECKOUT_LOAD, INTENT.PARSE_GATLING_STATS, INTENT.VALIDATE_THRESHOLDS,
+    // Legacy aliases the proxy still recognizes for external callers.
+    ...LEGACY_INTENT_ALIASES,
 ]);
 
 // Actions that utilize the "logicalKey||payload" format.
 // TYPE:             logicalKey||text
 // WAIT_FOR_ELEMENT: logicalKey||timeoutMs
 // ASSERT_TEXT:      logicalKey||expectedText
-const COMPOSITE_ACTIONS = new Set(['TYPE', 'WAIT_FOR_ELEMENT', 'ASSERT_TEXT']);
+const COMPOSITE_ACTIONS = new Set<string>([INTENT.TYPE, INTENT.WAIT_FOR_ELEMENT, INTENT.ASSERT_TEXT]);
 
 function resolveSelector(actionId: string, rawSelector: string): string {
     const normalized = actionId.toUpperCase();

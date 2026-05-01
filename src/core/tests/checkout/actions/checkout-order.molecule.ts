@@ -1,11 +1,12 @@
 import { sendIntent } from '@kernel/client';
 import type { CartItemResponse, CountryInfo } from '@core/tests/checkout/dao/checkout.types';
 import { logger } from '@utils/logger';
+import { INTENT } from '@kernel/intents';
 
 const log = logger.child({ layer: 'molecule', action: 'order' });
 
 export async function placeOrder(): Promise<void> {
-    await sendIntent('CLICK', 'placeOrderButton');
+    await sendIntent(INTENT.CLICK, 'placeOrderButton');
 }
 
 export async function verifyOrderAccepted(
@@ -24,7 +25,7 @@ export async function verifyOrderAccepted(
     // cross-checked against the cart data we already fetched from the API.
     // 30 s covers the place-order API roundtrip (Render free-tier warm-ups can
     // exceed 10 s) plus React Navigation's fade transition to the success route.
-    await sendIntent('WAIT_FOR_ELEMENT', 'orderSuccessScreen||30000');
+    await sendIntent(INTENT.WAIT_FOR_ELEMENT, 'orderSuccessScreen||30000');
 
     const subtotal = round(
         cartItems.reduce((sum, item) => sum + unitPriceOf(item) * item.quantity, 0),

@@ -2,6 +2,7 @@ import { After, AfterAll, Given, Then, When, setDefaultTimeout } from '@cucumber
 import { closeClient, sendIntent } from '@kernel/client';
 import { CheckoutRoute } from '@core/tests/checkout/routes/checkout.route';
 import type { CheckoutWorld } from '@core/tests/support/world';
+import { INTENT } from '@kernel/intents';
 
 // 10 min covers a cold WDA build on first scenario (~5 min) plus the place-order
 // API roundtrip on Render free tier; subsequent scenarios reuse the session.
@@ -61,7 +62,7 @@ After(async function () {
 
 AfterAll(async function () {
     try {
-        await sendIntent('TEARDOWN', '');
+        await sendIntent(INTENT.TEARDOWN, '');
     } catch {
         // no-op
     }

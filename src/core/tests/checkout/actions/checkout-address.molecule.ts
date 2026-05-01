@@ -1,4 +1,5 @@
 import { sendIntent } from '@kernel/client';
+import { INTENT } from '@kernel/intents';
 
 export interface SecondaryAddressField {
     locatorKey: string;
@@ -10,16 +11,16 @@ export async function fillDeliveryAddress(
     zip: string | undefined,
     secondary?: SecondaryAddressField,
 ): Promise<void> {
-    await sendIntent('TYPE', `streetInput||${street}`);
+    await sendIntent(INTENT.TYPE, `streetInput||${street}`);
     if (zip) {
-        await sendIntent('TYPE', `zipCodeInput||${zip}`);
+        await sendIntent(INTENT.TYPE, `zipCodeInput||${zip}`);
     }
     if (secondary) {
-        await sendIntent('TYPE', `${secondary.locatorKey}||${secondary.value}`);
+        await sendIntent(INTENT.TYPE, `${secondary.locatorKey}||${secondary.value}`);
     }
 }
 
 export async function fillContactInfo(name: string, phone: string): Promise<void> {
-    await sendIntent('TYPE', `fullNameInput||${name}`);
-    await sendIntent('TYPE', `phoneNumberInput||${phone}`);
+    await sendIntent(INTENT.TYPE, `fullNameInput||${name}`);
+    await sendIntent(INTENT.TYPE, `phoneNumberInput||${phone}`);
 }
