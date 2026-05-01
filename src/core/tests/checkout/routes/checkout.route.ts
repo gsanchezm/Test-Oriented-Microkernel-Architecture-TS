@@ -1,9 +1,9 @@
 import { sendIntent } from '@kernel/client';
 import { logger } from '@utils/logger';
 import { UsersDataSource } from '@core/test-data/users.data-source';
-import { LoginDao } from '@core/tests/checkout/dao/login.dao';
-import { OrderingDao, CartItemResponse, CountryInfo } from '@core/tests/checkout/dao/ordering.dao';
-import type { CountryCode } from '@plugins/api/http';
+import { LoginDao } from '@core/tests/login/dao/login.dao';
+import { CheckoutDao } from '@core/tests/checkout/dao/checkout.dao';
+import type { CartItemResponse, CountryCode, CountryInfo } from '@core/tests/checkout/dao/checkout.types';
 import {
     injectBrowserSession,
     BrowserSessionState,
@@ -61,12 +61,12 @@ const SECONDARY_ADDRESS_FIELDS = new Set(['colonia']);
 export class CheckoutRoute {
     private readonly users: UsersDataSource;
     private readonly login: LoginDao;
-    private readonly ordering: OrderingDao;
+    private readonly checkout: CheckoutDao;
 
     constructor(private readonly world: CheckoutWorld) {
         this.users = new UsersDataSource();
         this.login = new LoginDao();
-        this.ordering = new OrderingDao();
+        this.checkout = new CheckoutDao();
     }
 
     // -- step intents --
@@ -98,7 +98,7 @@ export class CheckoutRoute {
 
     async setMarket(market: string): Promise<void> {
         log.info({ market }, 'Selecting market');
-        const countries = await this.ordering.getCountries();
+        const countries = await this.checkout.getCountries();
         if (!countries?.length) {
             throw new Error('Countries API returned empty response. Verify API_BASE_URL and /api/countries.');
         }
@@ -135,7 +135,7 @@ export class CheckoutRoute {
         const { token, market } = this.requireAuthAndMarket('order setup');
 
         log.info({ market, item, size, qty }, 'Fetching pizzas');
-        const pizzas = await this.ordering.getPizzas({ token, countryCode: market });
+        const pizzas = await this.checkout.getPizzas({ token, countryCode: market });
         if (!pizzas?.length) {
             throw new Error(`Pizzas API empty for market "${market}". Verify /api/pizzas.`);
         }
@@ -152,14 +152,14 @@ export class CheckoutRoute {
         log.info({ pizzaId: pizza.id, pizzaName: pizza.name, price: pizza.price }, 'Pizza selected');
 
         // $S_0$ state injection via API (faster than UI cart manipulation).
-        await this.ordering.addToCart({
+        await this.checkout.addToCart({
             token,
             countryCode: market,
             items: [{ pizza_id: pizza.id, size, quantity: qty }],
         });
 
         // POST only stores IDs; GET enriches with unit_price and pizza object.
-        const enriched = await this.ordering.getCart({ token, countryCode: market });
+        const enriched = await this.checkout.getCart({ token, countryCode: market });
         const enrichedItems = enriched.cart_items;
 
         const ctx = this.world.orderContext!;

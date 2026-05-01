@@ -1,32 +1,14 @@
 import { HttpClient } from '@plugins/api/http';
+import type {
+    LoginDaoOptions,
+    LoginRequest,
+    LoginResponse,
+} from '@core/tests/login/dao/login.types';
 
 const LOGIN_PATH = '/api/auth/login';
 // Overrides HttpClient's default. Must stay ≥45s — Render free tier cold
 // starts take 30–45s when the instance has been idle.
 const DEFAULT_TIMEOUT_MS = 60_000;
-
-export interface LoginRequest {
-    email?: string;
-    username?: string;
-    password: string;
-    [key: string]: unknown;
-}
-
-export interface LoginResponse {
-    token?: string;
-    accessToken?: string;
-    access_token?: string;
-    refreshToken?: string;
-    user?: unknown;
-    [key: string]: unknown;
-}
-
-export interface LoginDaoOptions {
-    url?: string;
-    timeoutMs?: number;
-    headers?: Record<string, string>;
-    fetchImpl?: typeof fetch;
-}
 
 export class LoginDao {
     private readonly loginEndpoint: string;
@@ -60,27 +42,24 @@ export class LoginDao {
     }
 
     extractToken(response: LoginResponse): string | undefined {
-        if (typeof response.token === 'string' && response.token.length > 0) {
-            return response.token;
-        }
+        const direct =
+            this.firstNonEmptyString(response.token) ??
+            this.firstNonEmptyString(response.accessToken) ??
+            this.firstNonEmptyString(response.access_token);
+        if (direct) return direct;
 
-        if (typeof response.accessToken === 'string' && response.accessToken.length > 0) {
-            return response.accessToken;
-        }
+        const data = response.data;
+        if (!data || typeof data !== 'object') return undefined;
 
-        if (typeof response.access_token === 'string' && response.access_token.length > 0) {
-            return response.access_token;
-        }
+        const nested = data as Record<string, unknown>;
+        return (
+            this.firstNonEmptyString(nested.token) ??
+            this.firstNonEmptyString(nested.accessToken) ??
+            this.firstNonEmptyString(nested.access_token)
+        );
+    }
 
-        const responseData = response.data;
-        if (responseData && typeof responseData === 'object') {
-            const data = responseData as Record<string, unknown>;
-            const nestedToken = data.token ?? data.accessToken ?? data.access_token;
-            if (typeof nestedToken === 'string' && nestedToken.length > 0) {
-                return nestedToken;
-            }
-        }
-
-        return undefined;
+    private firstNonEmptyString(value: unknown): string | undefined {
+        return typeof value === 'string' && value.length > 0 ? value : undefined;
     }
 }

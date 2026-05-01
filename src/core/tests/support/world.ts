@@ -1,5 +1,5 @@
-import type { LoginResponse } from '@core/tests/checkout/dao/login.dao';
-import type { CartItemResponse, CountryInfo, CountryCode } from '@core/tests/checkout/dao/ordering.dao';
+import type { LoginResponse } from '@core/tests/login/dao/login.types';
+import type { CartItemResponse, CountryInfo, CountryCode } from '@core/tests/checkout/dao/checkout.types';
 
 export interface CheckoutWorld {
     auth?: {
