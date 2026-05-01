@@ -440,7 +440,7 @@
     <li><a href="#cicd">CI/CD</a></li>
     <li><a href="#laws">Laws</a></li>
   </ul>
-  <a class="nav-cta" href="https://github.com/gilbertosanchez/ahm-poc" target="_blank" rel="noopener">GitHub →</a>
+  <a class="nav-cta" href="https://github.com/gsanchezm/Test-Oriented-Microkernel-Architecture-TS" target="_blank" rel="noopener">GitHub →</a>
 </nav>
 
 <!-- ── Hero ────────────────────────────────────────────────────────────────── -->
@@ -456,7 +456,7 @@
         </p>
         <div class="hero-ctas">
           <a class="btn-primary" href="#architecture">View Architecture</a>
-          <a class="btn-secondary" href="https://github.com/gilbertosanchez/ahm-poc" target="_blank" rel="noopener">Explore Code</a>
+          <a class="btn-secondary" href="https://github.com/gsanchezm/Test-Oriented-Microkernel-Architecture-TS" target="_blank" rel="noopener">Explore Code</a>
         </div>
       </div>
 
@@ -491,7 +491,7 @@
       <div class="feature-card">
         <div class="feature-icon">🌐</div>
         <h3>Cross-Platform Unity</h3>
-        <p>Unified Gherkin scenarios execute across Web (Playwright) and Mobile (Appium). One locator JSON, zero test rewrites when switching platforms.</p>
+        <p>Unified Gherkin scenarios execute across Web-UI (Playwright) and Mobile-UI (Appium). One locator JSON, zero test rewrites when switching platforms.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">💉</div>
@@ -535,7 +535,7 @@
       <div class="arch-card" style="background: var(--surface-1); padding: 24px; border-radius: 12px; border: 1px solid var(--border);">
         <h4 style="color: var(--accent); margin-bottom: 8px;">Performance Convergence</h4>
         <p style="font-size: .88rem; color: var(--text-muted);">
-          Gatling integration is bidirectional: standalone CLI execution for heavy load profiles and TOM-driven intents that return SimulationMetrics direct to the BDD layer in real-time.
+          The Performance plugin (Gatling under the hood) is bidirectional: standalone CLI execution for heavy load profiles and TOM-driven intents that return SimulationMetrics direct to the BDD layer in real-time.
         </p>
       </div>
     </div>
@@ -601,13 +601,13 @@ graph TD
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #4ade80;">Organisms</td>
-              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/usecases/</td>
-              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Orchestrate actions into business flows</td>
+              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/routes/</td>
+              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Orchestrate actions + pick the plugin (web-ui / mobile-ui / api)</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #facc15;">Eco-Systems</td>
               <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/features/ + step_def/</td>
-              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">BDD scenarios composing use cases + DAOs</td>
+              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">BDD scenarios; thin steps that delegate to routes</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #fb923c;">Resonance</td>
@@ -642,8 +642,8 @@ graph TD
             <th style="padding: 18px; font-size: .9rem;">Trigger Event</th>
             <th style="padding: 18px; font-size: .9rem;">API Smoke</th>
             <th style="padding: 18px; font-size: .9rem;">Web E2E</th>
-            <th style="padding: 18px; font-size: .9rem;">Perf Gatling</th>
-            <th style="padding: 18px; font-size: .9rem;">Android Appium</th>
+            <th style="padding: 18px; font-size: .9rem;">Performance</th>
+            <th style="padding: 18px; font-size: .9rem;">Mobile (Android)</th>
           </tr>
         </thead>
         <tbody>
@@ -693,7 +693,7 @@ graph TD
 <span class="c-key">message</span> <span class="c-accent">IntentRequest</span> {
   <span class="c-key">string</span> actionId       = <span class="c-num">1</span>; <span class="c-muted">// NAVIGATE · CLICK · TYPE …</span>
   <span class="c-key">string</span> targetSelector = <span class="c-num">2</span>; <span class="c-muted">// logical key or raw selector</span>
-  <span class="c-key">string</span> platform       = <span class="c-num">3</span>; <span class="c-muted">// playwright:0 · appium:1</span>
+  <span class="c-key">string</span> platform       = <span class="c-num">3</span>; <span class="c-muted">// web-ui:0 · mobile-ui:1</span>
 }
 
 <span class="c-key">message</span> <span class="c-accent">IntentResponse</span> {
@@ -780,7 +780,7 @@ graph TD
 
 <!-- ── Footer ─────────────────────────────────────────────────────────────────── -->
 <footer>
-  <p>AHM — Atomic Helix Model &nbsp;·&nbsp; <a href="https://github.com/gilbertosanchez/ahm-poc" target="_blank" rel="noopener">github.com/gilbertosanchez/ahm-poc</a></p>
+  <p>AHM — Atomic Helix Model &nbsp;·&nbsp; <a href="https://github.com/gsanchezm/Test-Oriented-Microkernel-Architecture-TS" target="_blank" rel="noopener">github.com/gsanchezm/Test-Oriented-Microkernel-Architecture-TS</a></p>
   <p style="margin-top:8px;font-size:.8rem;opacity:.5">Testing-Oriented Microkernel · Chaos-resilient E2E automation</p>
 </footer>
 
