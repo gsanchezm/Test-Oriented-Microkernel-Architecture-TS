@@ -67,8 +67,8 @@ graph TD
 |-----------|--------|---------|
 | Atoms | `kernel/client.ts` | `sendIntent()` — indivisible gRPC primitives |
 | Molecules | `[domain]/actions/` | Grouped atomic intents (cross-platform reusable) |
-| Organisms | `[domain]/usecases/` | Orchestrate actions into business flows |
-| Eco-Systems | `[domain]/features/` + `step_definitions/` | BDD scenarios composing use cases + DAOs |
+| Organisms | `[domain]/routes/` | Orchestrate actions into business flows; each route knows which plugin to call (web-ui / mobile-ui / api) |
+| Eco-Systems | `[domain]/features/` + `step_definitions/` | BDD scenarios; steps delegate to routes (no inline orchestration logic) |
 | Resonance | `[domain]/simulations/` | Gatling simulations co-located with their feature, driven by the same Examples data |
 | Execution Helix | `.github/workflows/` | CI/CD pipelines uniting all layers into parallel, isolated orbits governed by mathematical constraints |
 
@@ -106,7 +106,7 @@ src/
     tests/
       [domain]/            # e.g. 'checkout'
         actions/           # Molecules: reusable cross-platform action wrappers
-        usecases/          # Organisms: business flow orchestration
+        routes/            # Organisms: business flow + plugin selection (web-ui / mobile-ui / api)
         features/          # Eco-Systems: BDD scenarios (.feature files)
         simulations/       # Resonance: Gatling simulation + feature-specific support
           *.gatling.ts     #   Simulation entry point (runs under Gatling JVM)
