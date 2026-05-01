@@ -227,23 +227,26 @@ export class CheckoutRoute {
 
     // -- lifecycle --
 
+    // Reset strategies dispatched by DRIVER env. Adding a new driver = add an entry,
+    // no conditional to extend (Open/Closed).
+    private readonly resetStrategies: Record<Driver, () => Promise<void>> = {
+        // App auth state lives in Zustand — clear via deep link, which returns to Login.
+        'mobile-ui': async () => {
+            await sendIntent('DEEP_LINK', 'omnipizza://login?resetSession=true');
+        },
+        'web-ui': async () => {
+            const baseUrl = process.env.BASE_URL;
+            if (!baseUrl) return; // nothing to navigate to; safe no-op
+            await sendIntent('EVALUATE', 'localStorage.clear(); sessionStorage.clear()');
+            await sendIntent('NAVIGATE', baseUrl);
+        },
+        // No client state to clear for pure API runs.
+        'api': async () => { /* noop */ },
+    };
+
     /** Reset client-side state between scenarios. Plugin chosen by DRIVER env. */
     async resetClientState(): Promise<void> {
-        switch (this.driver) {
-            case 'mobile-ui':
-                // App auth state lives in Zustand — clear via deep link, which returns to Login.
-                await sendIntent('DEEP_LINK', 'omnipizza://login?resetSession=true');
-                return;
-            case 'web-ui': {
-                const baseUrl = process.env.BASE_URL;
-                if (!baseUrl) return; // nothing to navigate to; safe no-op
-                await sendIntent('EVALUATE', 'localStorage.clear(); sessionStorage.clear()');
-                await sendIntent('NAVIGATE', baseUrl);
-                return;
-            }
-            case 'api':
-                return; // no client state to clear
-        }
+        await this.resetStrategies[this.driver]();
     }
 
     // -- internals --
