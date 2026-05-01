@@ -1,476 +1,303 @@
-# AHM-POC: Atomic Helix Model — Proof of Concept
+# Test-Oriented Microkernel Architecture (TOM)
 
-The **Atomic Helix Model (AHM)** is a deterministic testing model that replaces heuristic test-strategy metaphors — the Test Pyramid, Testing Trophy, Testing Honeycomb — with a mathematically grounded framework. Where those models prescribe *how much* to test at each layer, AHM defines *how tests execute* through formal constraints: Set Theory isolation ($S_{A1} \cap S_{A2} = \emptyset$), π-Calculus message passing (gRPC intents, no shared memory), and Chaos Suppression (Lyapunov exponent $\lambda < 0$ — transient noise is absorbed, not propagated).
+> **One Gherkin scenario, every layer.** Run the same `.feature` against Web (Playwright), Mobile (Appium), API, Visual snapshots and Gatling load tests through a single gRPC microkernel.
 
-The model is realised through the **Test-Oriented Microkernel (TOM)** — a pluggable architecture where tests are written once in Gherkin and executed across Web (Playwright), Mobile (Appium), API, and Performance (Gatling) through isolated gRPC plugin servers. TOM implements the microkernel layer of AHM: the `chaos-proxy` handles locator resolution, chaos suppression, and intent routing, while each plugin is a pure execution engine with no knowledge of test logic.
+[![Node](https://img.shields.io/badge/node-22-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/typescript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 
-## Architecture
+---
 
-![AHM — TOM Microkernel Flow & Performance Testing](web/images/ahm-architecture.png)
+## TL;DR
 
-<details>
-<summary>Text diagram</summary>
+TOM is a test execution microkernel. Tests are written **once** in Gherkin and dispatched as `ExecuteIntent` gRPC calls to **isolated plugin servers** (`web-ui`, `mobile-ui`, `api`, `visual`, `performance`). The kernel (`chaos-proxy`) handles locator resolution, transient-failure retries, and telemetry — plugins are pure execution engines that don't know about test logic.
 
-```
-Cucumber Steps --> client.ts --> chaos-proxy (:50051) --> plugin servers
-                                    |                       |-- web-ui      (:50052)  <-- Playwright
-                                    |                       |-- mobile-ui   (:50053)  <-- Appium
-                                    |                       |-- performance (:50054)  <-- Gatling, TOM-driven
-                                    |                       |-- api        (:50055)
-                                    |
-                                    +-- locator resolution
-                                    +-- chaos suppression (Lyapunov stabilizer)
-                                    +-- telemetry emission
+**Why care:** the same `Then the order is accepted` step runs against a Playwright browser, an Appium iOS device, or a Gatling load simulation **without modification**. Adding a new tool = a new plugin, not rewriting the suite.
 
-Gatling CLI ----------------------> [domain]/simulations/   <-- standalone load tests
-                                    (feature-driven feeder, HTML reports)
+The theoretical model behind it (Atomic Helix Model, π-Calculus, $\lambda < 0$ chaos suppression) lives at the bottom of this README — read it if you want, skip it if you just want the suite running.
 
-Gatling plugin (TOM-driven) ------> RUN_CHECKOUT_LOAD intent
-                                    → subprocess (checkout-load.gatling.ts)
-                                    → parseGatlingStats() → SimulationMetrics in gRPC payload
+## Quickstart (≤ 60 s)
+
+```bash
+nvm use && pnpm install                              # Node 22, see .nvmrc
+
+# 3 terminals
+pnpm run proxy                                       # microkernel  :50051
+pnpm run plugins                                     # plugin servers from .env
+pnpm test                                            # cucumber-js
 ```
 
-</details>
+Filter scenarios:
 
-The **Microkernel** (`chaos-proxy`) receives generic `ExecuteIntent` gRPC calls, resolves logical locator keys to platform-specific selectors, applies exponential backoff for transient failures, and forwards the intent to the appropriate plugin server.
-
-Performance testing operates in two modes: **TOM-driven** (Gatling gRPC plugin triggers a subprocess from Cucumber, returns `SimulationMetrics` in the gRPC payload) and **standalone** (Gatling CLI runs simulations directly from the terminal).
-
-## Atomic Design Layers
-
-```mermaid
-graph TD
-    %% Define Styles
-    classDef atom fill:#f3e8ff,stroke:#a855f7,stroke-width:2px,color:#4c1d95;
-    classDef molecule fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#3730a3;
-    classDef organism fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#166534;
-    classDef ecosystem fill:#fef08a,stroke:#eab308,stroke-width:2px,color:#854d0e;
-    classDef resonance fill:#ffedd5,stroke:#f97316,stroke-width:2px,color:#9a3412;
-    classDef helix fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b;
-
-    Atom["⚛️ Atoms (gRPC Intents / Primitives)"]:::atom
-    Molecule["🧬 Molecules (Cross-platform Actions)"]:::molecule
-    Organism["🦠 Organisms (Business Flow Use Cases)"]:::organism
-    EcoSystem["🌍 Eco-Systems (BDD Features / Scenarios)"]:::ecosystem
-    Resonance["🌊 Resonance (DAST / Performance Gatling)"]:::resonance
-    Helix["🌀 Execution Helix (CI/CD / Microkernel Workflows)"]:::helix
-
-    Atom --> Molecule
-    Molecule --> Organism
-    Organism --> EcoSystem
-    EcoSystem -.-> Resonance
-    EcoSystem --> Helix
-    Resonance --> Helix
+```bash
+./node_modules/.bin/cucumber-js --tags "@smoke and not @wip"
+./node_modules/.bin/cucumber-js src/core/tests/checkout/features/place-delivery-order.feature
 ```
 
-| AHM Layer | Folder | Purpose |
-|-----------|--------|---------|
-| Atoms | `kernel/client.ts` | `sendIntent()` — indivisible gRPC primitives |
-| Molecules | `[domain]/actions/` | Grouped atomic intents (cross-platform reusable) |
-| Organisms | `[domain]/routes/` | Orchestrate actions into business flows; each route knows which plugin to call (web-ui / mobile-ui / api) |
-| Eco-Systems | `[domain]/features/` + `step_definitions/` | BDD scenarios; steps delegate to routes (no inline orchestration logic) |
-| Resonance | `[domain]/simulations/` | Gatling simulations co-located with their feature, driven by the same Examples data |
-| Execution Helix | `.github/workflows/` | CI/CD pipelines uniting all layers into parallel, isolated orbits governed by mathematical constraints |
+> `pnpm test -- --name X` silently runs the **full** suite. Drop the `--` or call `cucumber-js` directly.
 
-### Adapting other Test Categories
+## How it flows
 
-Since AHM explicitly focuses on orchestrating dynamic end-to-end and process boundary verifications via the Microkernel, adapting other tests follows strict architectural mapping:
+```
+Cucumber step
+  └─→ CheckoutRoute (orchestration + plugin selection)
+        └─→ molecule (UI action wrapper)
+              └─→ sendIntent(INTENT.CLICK, "loginButton")
+                    └─→ chaos-proxy :50051
+                          ├─ resolves logical key → platform selector
+                          ├─ retries transient failures (StaleElement, Timeout, …)
+                          └─ forwards to the right plugin server
+                                ├─ web-ui      :50052   Playwright
+                                ├─ mobile-ui   :50053   Appium
+                                ├─ performance :50054   Gatling
+                                ├─ api         :50055   fetch + HttpClient
+                                └─ visual      :50056   pixelmatch
+```
 
-*   **Dynamic UI Assessments (Visual Testing, Accessibility):**
-    These map directly onto the architecture. An accessibility check or visual snapshot is treated as a new **Molecule** (e.g., `actions/ui-validators.ts`) which triggers a specific **Atom** intent (e.g., `COMPARE_VISUAL_SNAPSHOT`) via gRPC. The validation is invoked by the **Eco-System** (`Then it matches the visual baseline`).
-*   **Security Testing (DAST vs SAST):**
-    *   **DAST (Dynamic Application Security Testing):** Fits into the **Resonance** layer. Like load-testing, dynamic vulnerability scanning can utilize the feature's usecase and flow definitions to inject payloads during a running E2E automation session.
-    *   **SAST (Static Application Security Testing):** Excluded from the AHM Microkernel ecosystem. As it analyzes static code rather than runtime states, it operates purely as an antecedent CI pipeline job.
-*   **Unit Tests (White-box / Component):**
-    Unit tests mathematically evaluate code locally, lacking stochastic noise or network jitter, meaning they **do not require** the $\lambda < 0$ (Chaos Suppression) proxy. Therefore, they fall completely **outside** the AHM Microkernel boundary and should reside strictly at the repository level alongside the source code.
+Five things to know:
+1. **Steps are thin** — they just call route methods.
+2. **Routes pick the plugin** — `DRIVER` env (`web-ui` / `mobile-ui` / `api`) decides whether `fillDelivery` runs in the browser or skips to API state injection.
+3. **Action IDs are typed** — `INTENT.CLICK`, not raw strings. See [`src/kernel/intents.ts`](src/kernel/intents.ts).
+4. **Each plugin owns its actions** — `src/plugins/<plugin>/actions/`. Adding an action = registering it; never touch the orchestrator.
+5. **Locators are logical** — `streetInput`, not `[data-testid='street']`. Platform-specific selectors live in `*.locators.json` and are resolved by the proxy.
 
-## Project Structure
+## Plugins
+
+Plugins are named after the **type of test** they run, not the SDK they wrap:
+
+| Plugin        | Tool          | Port   | What it does                                  |
+|---------------|---------------|--------|-----------------------------------------------|
+| `web-ui`      | Playwright    | 50052  | Browser automation, desktop + responsive       |
+| `mobile-ui`   | Appium        | 50053  | iOS / Android via WebDriverIO                 |
+| `performance` | Gatling       | 50054  | Load tests; subprocess runner + stats parser  |
+| `api`         | fetch         | 50055  | Contract tests, $S_0$ state injection         |
+| `visual`      | pixelmatch    | 50056  | Snapshot regression                           |
+
+Toggle plugins with `PLUGIN_<NAME>=true|false` in `.env` and they hot-reload.
+
+## Layers (Atomic-Helix)
+
+| Layer     | Folder                        | Responsibility                                                             |
+|-----------|-------------------------------|----------------------------------------------------------------------------|
+| Atom      | `kernel/client.ts`            | `sendIntent()` — single gRPC primitive                                     |
+| Molecule  | `[domain]/actions/*.molecule` | One UI action wrapped over `sendIntent`                                    |
+| Route     | `[domain]/routes/*.route`     | Orchestrates molecules + DAOs; chooses plugin per intent                   |
+| Step      | `[domain]/step_definitions/`  | Thin Gherkin binding — one line, calls a route method                      |
+| DAO       | `[domain]/dao/`               | Direct API calls for `Given` state injection ($S_0$)                       |
+| Resonance | `[domain]/simulations/`       | Gatling simulations co-located with the feature, driven by Examples table  |
+
+Steps look like this:
+
+```ts
+Given('the OmniPizza user is logged in as {string}', async function (alias) {
+    await route(this).loginAs(alias);
+});
+```
+
+…all orchestration lives in [`CheckoutRoute`](src/core/tests/checkout/routes/checkout.route.ts).
+
+## How to extend
+
+| Goal                              | Where                                                              |
+|-----------------------------------|--------------------------------------------------------------------|
+| New action for an existing plugin | `src/plugins/<plugin>/actions/MyAction.ts` + register in `register<Plugin>Actions.ts` |
+| New step                           | Add Gherkin in `*.feature`, bind in `step_definitions/`, delegate to a route method |
+| New plugin                         | `src/plugins/<name>/{server.ts, <name>.ts, actions/}` + entry in `plugins.config.ts` |
+| New intent ID                      | Add to `src/kernel/intents.ts` `INTENT` map; consumers use `INTENT.YOUR_ID` |
+
+## Layout
 
 ```
 src/
-  proto/                   # gRPC service definitions (ptom.proto)
-  kernel/                  # Microkernel: proxy, client, locator resolver, plugin factory, launcher
-  plugins/                 # Isolated gRPC plugin servers
-    web-ui/                #   Web automation (Playwright + Chromium)
-    mobile-ui/             #   Mobile automation (Appium — Android / iOS)
-    performance/           #   Performance plugin (gRPC server + Gatling subprocess runner)
-      support/
-        types.ts           #     Shared types: FeatureToRowsOptions, RunnerOptions, PerfProfile, SimulationMetrics
-        gherkin-parser.ts  #     Reads .feature files and returns Examples tables
-        feature-to-rows.ts #     Generic featureToRows<T>() — reusable across all features
-        simulation-runner.ts #   Spawns the Gatling CLI as a child process
-        metrics-parser.ts  #     Parses stats.json → SimulationMetrics
-    api/                   #   API testing (HttpClient)
+  proto/                           # gRPC service definition (ptom.proto)
+  kernel/
+    chaos-proxy.ts                 # microkernel — :50051
+    client.ts                      # sendIntent() — typed by IntentAction
+    intents.ts                     # INTENT catalog (single source of truth)
+    locator-resolver.ts            # logical key → platform selector
+    plugin-server.factory.ts       # gRPC boilerplate for plugins
+  plugins/
+    shared/                        # cross-plugin: ActionRegistry, ActionHandler, …
+    web-ui/                        # Playwright; web-ui.ts + actions/
+    mobile-ui/                     # Appium;     mobile-ui.ts + actions/ + appium-helpers.ts
+    performance/                   # Gatling;    performance.ts + actions/ + support/
+    api/                           # fetch HttpClient + actions/
+    visual/                        # pixelmatch oracle + actions/
   core/
-    test-data/             # Data sources (users.json, etc.)
+    test-data/                     # users.json, fixtures
     tests/
-      [domain]/            # e.g. 'checkout'
-        actions/           # Molecules: reusable cross-platform action wrappers
-        routes/            # Organisms: business flow + plugin selection (web-ui / mobile-ui / api)
-        features/          # Eco-Systems: BDD scenarios (.feature files)
-        simulations/       # Resonance: Gatling simulation + feature-specific support
-          *.gatling.ts     #   Simulation entry point (runs under Gatling JVM)
-          *-rows.ts        #   Feature-specific row mapper (CheckoutRow, etc.)
-          money.ts         #   Feature-specific currency parser
-        step_definitions/  # Thin Gherkin bindings → use cases + DAOs
-        locators/          # JSON mapping logical keys to platform selectors
-        dao/               # API state injection ($S_0$)
-  utils/                   # Shared utilities (pino logger)
-
-plugins.config.ts          # Plugin registry — enable/disable plugins
-.env                       # Local environment configuration (gitignored)
-.env.example               # Template for environment configuration
+      login/dao/                   # login slice — currently API-only
+      checkout/
+        actions/                   # *.molecule.ts
+        dao/                       # checkout.dao + checkout.types
+        routes/                    # *.route.ts (Organisms)
+        step_definitions/          # thin Gherkin bindings
+        features/                  # *.feature
+        contracts/                 # *.locators.json, api/visual contracts
+        simulations/               # *.gatling.ts (JVM bundle, isolated)
+  telemetry/                       # JSONL → MinIO
+  utils/                           # pino logger
 ```
 
-## Prerequisites
+## Performance testing
 
-- Node.js 22 LTS (see `.nvmrc`)
-- pnpm 10.29.x
+Two modes that share the same simulation:
+
+| Mode            | Trigger                                                    | When                                          |
+|-----------------|------------------------------------------------------------|-----------------------------------------------|
+| **Standalone**  | `pnpm perf:smoke|load|stress`                              | CI gates, HTML reports, manual investigation  |
+| **TOM-driven**  | `sendIntent(INTENT.RUN_CHECKOUT_LOAD, 'smoke')`            | Triggering load from a Cucumber scenario      |
+
+The feeder is **feature-driven** — `featureToCheckoutRows()` parses `place-delivery-order.feature` Examples at bundle time, so adding a row to the feature file automatically appears in the load run.
 
 ```bash
-nvm use        # switches to Node 22 from .nvmrc
-pnpm install
+PERF_USERS=30 PERF_DURATION=60 pnpm perf:load
 ```
 
-## Running Tests (Local)
+> First run downloads the Gatling JRE bundle (~200 MB). HTML reports land in `target/gatling/`.
 
-### Option A — Plugin launcher (recommended)
+The plugin returns a `SimulationMetrics` JSON in the gRPC payload — TOM-driven mode also fails the Cucumber step when the KO rate exceeds 1%.
 
-Enable the plugins you need in `.env`, then start everything with two terminals:
-
-```bash
-# Terminal 1: Start the microkernel proxy
-pnpm run proxy
-
-# Terminal 2: Start all enabled plugins (controlled by .env)
-pnpm run plugins
-
-# Terminal 3: Run tests
-pnpm test
-```
-
-Plugins are toggled in `.env`:
-
-```env
-PLUGIN_WEB_UI=true
-PLUGIN_MOBILE_UI=false
-PLUGIN_API=true
-PLUGIN_PERFORMANCE=false
-```
-
-> **Hot reload:** editing `.env` while `pnpm run plugins` is running automatically restarts affected plugins — no manual restart needed. See [Plugin Hot Reload](#plugin-hot-reload).
-
-### Option B — Start plugins individually
-
-```bash
-pnpm run plugin:web-ui   # Web
-pnpm run plugin:mobile-ui       # Mobile
-pnpm run plugin:api          # API
-pnpm run plugin:performance      # Performance
-```
-
-### With Docker
-
-```bash
-# Web + API (default)
-docker compose up
-
-# Android (emulator via docker-android + Appium server)
-docker compose --profile mobile up
-
-# Performance testing
-docker compose --profile performance up
-```
-
-### Android emulator (docker-android)
-
-The `mobile` profile starts three services in order:
-
-```
-android-emulator  →  appium-server  →  appium-plugin
-(docker-android)     (Appium 2.x)      (gRPC plugin)
-```
-
-`android-emulator` uses [`halimqarroum/docker-android`](https://github.com/HQarroum/docker-android) and requires KVM on Linux. On macOS you can run the emulator natively instead and point `APPIUM_HOST=localhost`.
-
-**Required env vars for mobile:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ANDROID_API_LEVEL` | `34` | Android API level (`28`–`34`) |
-| `ANDROID_IMG_TYPE` | `google_apis` | `google_apis` or `google_apis_playstore` |
-| `ANDROID_DEVICE_ID` | `pixel` | AVD device profile |
-| `ANDROID_EMULATOR_MEMORY` | `4096` | RAM in MB |
-| `ANDROID_EMULATOR_CORES` | `2` | vCPU count |
-| `ANDROID_APP_PATH` | — | Path to `.apk` under test |
-| `CAP_PROFILE` | `docker_android` | Appium capabilities profile for the Docker emulator |
-| `ANDROID_UDID` | — | ADB device id; GitHub Actions uses `localhost:5555` |
-
-## Plugin Hot Reload
-
-The plugin launcher (`pnpm run plugins`) watches `.env` for changes. When you save the file it automatically:
-
-1. Re-parses `.env` (using `dotenv` with `override: true`)
-2. Diffs the enabled plugin set against what is currently running
-3. Stops plugins that were disabled, starts plugins that were enabled, restarts all others so they pick up the new env values
-
-```
-[you edit PLATFORM=ios or toggle PLUGIN_PERFORMANCE=true]
-  → 300 ms debounce
-  → diff: { toStop: [], toRestart: ['API'], toStart: ['Gatling'] }
-  → kills / spawns as needed
-  → "Hot-reload complete. Running: [API, Gatling]"
-```
-
-No terminal restart required — just save `.env`.
-
-## Performance Testing
-
-Performance tests have two modes that serve different purposes:
-
-| Mode | Entry point | When to use |
-|------|-------------|-------------|
-| **TOM-driven** | `PLUGIN_PERFORMANCE=true` + `sendIntent('RUN_CHECKOUT_LOAD', profile)` | Trigger load from a Cucumber scenario, get `SimulationMetrics` back in the gRPC payload |
-| **Standalone** | `pnpm perf:smoke \| perf:load \| perf:stress` | CI load gates, HTML reports, direct injection control |
-
-Both modes run the same `checkout-load.gatling.ts` simulation. The difference is who invokes it.
-
-### Feature-driven feeder
-
-The feeder is no longer hardcoded. `featureToCheckoutRows()` reads `place-delivery-order.feature` at bundle time and returns all Examples rows as typed `CheckoutRow` objects:
-
-```
-place-delivery-order.feature (Examples: Credit Card + Cash)
-  └─→ featureToCheckoutRows(['Credit Card', 'Cash'])
-        └─→ arrayFeeder([...8 rows...]).circular()
-```
-
-The `.feature` file is the single source of truth — add a row there and it appears in the load test automatically.
-
-| Row | Market | Item | Size | Qty | Payment |
-|-----|--------|------|------|-----|---------|
-| 1 | US | Pepperoni | Large | 1 | Credit Card |
-| 2 | MX | Margarita | Medium | 3 | Credit Card |
-| 3 | CH | Marinara | Small | 1 | Credit Card |
-| 4 | JP | Pepperoni | Family | 2 | Credit Card |
-| 5 | US | Pepperoni | Large | 1 | Cash |
-| 6 | MX | Margarita | Medium | 3 | Cash |
-| 7 | CH | Marinara | Small | 1 | Cash |
-| 8 | JP | Pepperoni | Family | 2 | Cash |
-
-### Simulation flow
-
-```
-Login (/api/auth/login)
-  └─→ Get Pizzas (/api/pizzas, x-country-code: <market>)
-        └─→ Add to Cart (/api/cart)
-              └─→ Checkout (/api/checkout, delivery + contact + payment)
-```
-
-### Standalone profiles
-
-| Profile | Command | Users | Injection |
-|---------|---------|-------|-----------|
-| Smoke | `pnpm perf:smoke` | 1 | at once — validates the chain end-to-end |
-| Load | `pnpm perf:load` | 20 | ramp over 2 min — realistic sustained traffic |
-| Stress | `pnpm perf:stress` | 50 | at once — peak burst |
-
-**Env overrides:**
-
-```bash
-PERF_USERS=30 pnpm perf:load         # override user count
-PERF_DURATION=60 pnpm perf:load      # override ramp duration (seconds)
-```
-
-> **First run** downloads the Gatling JRE bundle (~200 MB). Subsequent runs are instant.
-> HTML reports are written to `target/gatling/`.
-
-### TOM-driven mode
-
-When `PLUGIN_PERFORMANCE=true`, the Gatling gRPC plugin accepts `RUN_CHECKOUT_LOAD` intents from Cucumber steps:
-
-```ts
-sendIntent('RUN_CHECKOUT_LOAD', 'smoke')
-sendIntent('RUN_CHECKOUT_LOAD', 'load')
-sendIntent('RUN_CHECKOUT_LOAD', 'load||PERF_USERS=30||PERF_DURATION=90')
-```
-
-The plugin spawns `checkout-load.gatling.ts` as a subprocess, waits for it to finish, then parses `target/gatling/<report>/js/stats.json` and returns a `SimulationMetrics` JSON in the gRPC `payload` field:
-
-```json
-{
-  "simulation": "checkout-load",
-  "profile": "smoke",
-  "requests": { "total": 4, "ok": 4, "ko": 0 },
-  "responseTime": { "min": 120, "mean": 340, "p95": 810, "max": 950 },
-  "throughput": 1.2,
-  "status": "PASS",
-  "reportDir": "target/gatling/checkout-load-20260406..."
-}
-```
-
-`status` is `PASS` when the KO rate is below 1%, `FAIL` otherwise. A `FAIL` result also causes the gRPC call to return an error, which the proxy propagates to the Cucumber step.
-
-### Adding simulations for other features
-
-The Gatling support in `plugins/performance/support/` is fully generic. To add load tests for a new feature slice:
-
-1. Create `tests/<domain>/simulations/<domain>-rows.ts` — implement a mapper calling `featureToRows<YourRow>(options, mapper)`
-2. Create `tests/<domain>/simulations/<domain>-load.gatling.ts` — import your rows, build the HTTP chain
-3. Add a `RUN_<DOMAIN>_LOAD` handler in `plugins/performance/performance.ts` pointing `sourcesFolder` at the new simulation
-
-## Environment Configuration
-
-Copy `.env.example` to `.env` and fill in the values:
+## Environment
 
 ```bash
 cp .env.example .env
 ```
 
-### Key variables
+### Core
 
-| Variable | Options | Description |
-|----------|---------|-------------|
-| `PLATFORM` | `web` `android` `ios` `api` | Target platform |
-| `VIEWPORT` | `desktop` `responsive` | Web viewport (only when `PLATFORM=web`) |
-| `DRIVER` | `web-ui` `mobile-ui` `api` | Automation driver (test-type identifier) |
-| `BASE_URL` | URL | Web application under test |
-| `API_BASE_URL` | URL | Backend API for state injection |
-| `HEADLESS` | `true` `false` | Browser visibility |
-| `LOG_LEVEL` | `fatal` `error` `warn` `info` `debug` `trace` | Pino log level |
+| Variable        | Options                                       | Description                                       |
+|-----------------|-----------------------------------------------|---------------------------------------------------|
+| `PLATFORM`      | `web` `android` `ios` `api`                   | Target platform (drives locator resolution)       |
+| `DRIVER`        | `web-ui` `mobile-ui` `api`                    | Picks which plugin runs UI intents                |
+| `VIEWPORT`      | `desktop` `responsive`                        | Web only                                          |
+| `BASE_URL`      | URL                                           | Web app under test                                |
+| `API_BASE_URL`  | URL                                           | Backend for $S_0$ injection                       |
+| `HEADLESS`      | `true` `false`                                |                                                   |
+| `LOG_LEVEL`     | `fatal` `error` `warn` `info` `debug` `trace` | Pino level                                        |
 
-### Plugin registry
+### Plugin enable / addresses / ports
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PLUGIN_WEB_UI` | `false` | Enable the Playwright gRPC plugin |
-| `PLUGIN_MOBILE_UI` | `false` | Enable the Appium gRPC plugin |
-| `PLUGIN_API` | `false` | Enable the API gRPC plugin |
-| `PLUGIN_PERFORMANCE` | `false` | Enable the Gatling gRPC plugin |
+| Plugin enable          | Default | Address                                     | Listen port               |
+|------------------------|---------|---------------------------------------------|---------------------------|
+| `PLUGIN_WEB_UI`        | false   | `WEB_UI_ADDRESS=localhost:50052`            | `WEB_UI_PORT=50052`       |
+| `PLUGIN_MOBILE_UI`     | false   | `MOBILE_UI_ADDRESS=localhost:50053`         | `MOBILE_UI_PORT=50053`    |
+| `PLUGIN_PERFORMANCE`   | false   | `PERFORMANCE_ADDRESS=localhost:50054`       | `PERFORMANCE_PORT=50054`  |
+| `PLUGIN_API`           | false   | `API_ADAPTER_ADDRESS=localhost:50055`       | `API_PLUGIN_PORT=50055`   |
+| `PLUGIN_VISUAL`        | false   | `VISUAL_ADDRESS=localhost:50056`            | `VISUAL_PORT=50056`       |
 
-### Plugin addresses (proxy → plugins)
+`PROXY_ADDRESS=localhost:50051` is what `kernel/client.ts` uses to reach the proxy.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PROXY_ADDRESS` | `localhost:50051` | Used by `client.ts` to reach the proxy |
-| `WEB_UI_ADDRESS` | `localhost:50052` | Used by proxy to reach Playwright plugin |
-| `MOBILE_UI_ADDRESS` | `localhost:50053` | Used by proxy to reach Appium plugin |
-| `PERFORMANCE_ADDRESS` | `localhost:50054` | Used by proxy to reach Gatling plugin |
-| `API_ADAPTER_ADDRESS` | `localhost:50055` | Used by proxy to reach API plugin |
+### Mobile (Appium HTTP server)
 
-### Plugin listen ports (each plugin server)
+| Variable         | Default     | Description                                                                  |
+|------------------|-------------|------------------------------------------------------------------------------|
+| `APPIUM_HOST`    | `localhost` | Appium server host (the SDK, not the plugin)                                 |
+| `APPIUM_PORT`    | `4723`      | Appium server port                                                           |
+| `CAP_PROFILE`    | —           | JSON filename under `src/plugins/mobile-ui/capabilities/{android|ios}/`      |
+| `ANDROID_APP_PATH` / `IOS_APP_PATH` | — | Path to APK / app bundle                                          |
+| `IOS_UDID_<n>`   | `auto`      | Per-worker UDID for parallel iOS sims (`IOS_UDID_0`, `IOS_UDID_1`, …)        |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PLAYWRIGHT_PORT` | `50052` | Port the Playwright plugin binds to |
-| `APPIUM_PORT_GRPC` | `50053` | Port the Appium plugin binds to |
-| `API_PLUGIN_PORT` | `50055` | Port the API plugin binds to |
-| `GATLING_PLUGIN_PORT` | `50054` | Port the Gatling plugin binds to |
+### Performance overrides
 
-### Performance
+| Variable        | Default | Description                                            |
+|-----------------|---------|--------------------------------------------------------|
+| `PERF_PROFILE`  | smoke   | `smoke` / `load` / `stress`                            |
+| `PERF_USERS`    | 20      | Ramp target (load) or burst size (stress)              |
+| `PERF_DURATION` | 120     | Ramp duration in seconds (load only)                   |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PERF_PROFILE` | `smoke` | Injection profile: `smoke` / `load` / `stress` (overridden by perf scripts) |
-| `PERF_USERS` | `20` | Virtual user count (ramp target for `load`, burst size for `stress`) |
-| `PERF_DURATION` | `120` | Ramp duration in seconds (`load` profile only) |
-
-### Appium (mobile only)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `APPIUM_HOST` | `localhost` | Appium server host |
-| `APPIUM_PORT` | `4723` | Appium server port |
-| `CAP_PROFILE` | — | Capability JSON filename under `src/plugins/mobile-ui/capabilities/{platform}` |
-| `ANDROID_APP_PATH` | — | Path to `.apk` under test |
-| `IOS_APP_PATH` | — | Path to `.zip` under test |
-| `IOS_UDID` | `auto` | iOS device UDID |
-
-## Cross-Platform Locators
-
-Locator JSON files map logical keys to platform-specific selectors. The proxy resolves them at runtime based on `PLATFORM` and `VIEWPORT`:
+## Cross-platform locators
 
 ```json
 {
   "streetInput": {
-    "web": {
-      "responsive": "[data-testid='address-responsive']",
-      "desktop": "[data-testid='address-desktop']"
-    },
-    "mobile": {
-      "android": "android=new UiSelector().description(\"input-address\")",
-      "ios": "~input-address"
-    }
+    "web":    { "responsive": "[data-testid='address-responsive']", "desktop": "[data-testid='address-desktop']" },
+    "mobile": { "android":    "android=new UiSelector().description(\"input-address\")", "ios": "~input-address" }
   }
 }
 ```
 
-Actions always use logical keys (`streetInput`), never raw selectors. The same test code runs across all platforms without modification.
+Steps and molecules use logical keys (`streetInput`); the proxy resolves them based on `PLATFORM` + `VIEWPORT`. The same suite runs across all surfaces unchanged.
 
-## Key Concepts
+> **Restart the proxy** after editing `*.locators.json` — locators are cached at startup.
 
-### Chaos Suppression
-The proxy detects transient failures (stale elements, timeouts, detached nodes) and automatically retries with exponential backoff. Deterministic failures fail immediately without retrying.
+## Docker
 
-### API State Injection ($S_0$)
-`Given` steps inject test state directly via API calls using DAOs, bypassing flaky UI setup flows. Login, cart creation, and market selection happen through `HttpClient`. `When`/`Then` steps then attach to this pre-built state via the UI.
+```bash
+docker compose up                              # web + api
+docker compose --profile mobile up             # android emulator + appium + mobile-ui
+docker compose --profile performance up        # standalone Gatling
+```
 
-### Browser Session Isolation
-Each Cucumber worker gets its own `BrowserContext` in Playwright. `localStorage` is cleared between scenarios so state never leaks across scenario outlines.
+The `mobile` profile chains: `android-emulator (docker-android)` → `appium-server` → `mobile-ui` plugin.
 
-### Plugin Isolation
-Each plugin runs as an independent gRPC server. The proxy handles locator resolution, chaos suppression, and telemetry — plugins are pure execution engines with no knowledge of test logic.
+## CI / CD
 
-### Gatling JVM boundary
-`@gatling.io/core` and `@gatling.io/http` call `Java.type()` at load time and only work inside the Gatling JVM bundle. They must never be imported in the gRPC plugin server (plain Node.js). All simulations are executed as **subprocesses** by `simulation-runner.ts` — the plugin server only orchestrates and reads results.
+| Workflow                    | Purpose                                                                  |
+|-----------------------------|--------------------------------------------------------------------------|
+| `ahm-execution-helix.yml`   | Unified test execution: api, web (desktop + responsive), android, ios, perf. Manual dispatch via `platform: all\|api\|web\|mobile\|android\|ios\|perf`. |
+| `deploy-pages.yml`          | Static site deploy when `web/**` changes (GitHub Pages).                 |
 
-## CI / CD (GitHub Actions)
+The Helix workflow gates jobs by input — Android/iOS are manual-only because they need KVM + docker-android.
 
-Two workflow files live in `.github/workflows/`:
+## Stack
 
-| File | Purpose |
-|------|---------|
-| `ahm-execution-helix.yml` | Unified test execution — API, Web, Android, and Perf |
-| `deploy-pages.yml` | Static site deployment to GitHub Pages (independent) |
+| Concern             | Library                                            |
+|---------------------|----------------------------------------------------|
+| BDD framework        | @cucumber/cucumber                                |
+| Language             | TypeScript (no build step — `ts-node` everywhere) |
+| Aliases              | `tsconfig-paths` (`@kernel/*`, `@plugins/*`, …)   |
+| Web automation       | playwright                                         |
+| Mobile automation    | webdriverio + appium (UiAutomator2 / XCUITest)     |
+| Performance          | @gatling.io/{core,http,cli}                        |
+| Visual oracle        | pixelmatch + pngjs                                 |
+| RPC                  | @grpc/grpc-js + @grpc/proto-loader                 |
+| Logging              | pino + pino-pretty                                 |
+| Telemetry storage    | minio                                              |
+| Container            | docker + docker compose                            |
 
-### `ahm-execution-helix.yml` — Trigger Matrix
+---
 
-| Trigger | `api-smoke` | `e2e-web` | `e2e-android` | `perf-gatling` |
-|---------|:-----------:|:---------:|:-------------:|:--------------:|
-| **Push → `main`** | ✅ | ✅ | — | ✅ (smoke) |
-| **PR → `main`** | ✅ | ✅ | — | — |
-| **Manual → `all`** | ✅ | ✅ | ✅ | ✅ |
-| **Manual → `api`** | ✅ | — | — | — |
-| **Manual → `web`** | — | ✅ | — | — |
-| **Manual → `android`** | — | — | ✅ | — |
-| **Manual → `perf`** | — | — | — | ✅ |
+## Appendix: theoretical foundations
 
-> Android is **manual-only** because it requires KVM + docker-android, making it too heavy for every push.
+The architecture is grounded in three formal constraints that distinguish it from heuristic test-strategy metaphors (Test Pyramid, Trophy, Honeycomb). You don't need any of this to use the suite — but it explains *why* the suite is shaped the way it is.
 
-**Manual dispatch inputs:**
+### Atomic Helix Model (AHM)
 
-| Input | Default | Description |
-|-------|---------|-------------|
-| `platform` | `all` | `all` · `api` · `web` · `android` · `perf` |
-| `perf_profile` | `smoke` | Gatling injection profile: `smoke` · `load` · `stress` |
-| `perf_users` | `20` | Virtual user count (load/stress) |
-| `perf_duration` | `120` | Ramp duration in seconds (load only) |
-| `android_api_level` | `34` | Android API level (`28`–`34`) |
+AHM defines *how tests execute* through formal constraints rather than prescribing *how much* to test at each layer:
 
-### `deploy-pages.yml`
+- **Set Theory isolation** — $S_{A1} \cap S_{A2} = \emptyset$. Each scenario operates on a disjoint state set; cross-test contamination is a definitional impossibility, not a discipline problem.
+- **π-Calculus message passing** — every cross-process communication is a typed gRPC intent. No shared memory, no global state mutation between layers.
+- **Chaos Suppression** — Lyapunov exponent $\lambda < 0$. The proxy detects transient failures (stale elements, network jitter, detached nodes) and absorbs them via exponential backoff. Deterministic failures fail immediately without retry.
 
-Triggers on pushes to `main` that touch `web/**`. Deploys the static site using GitHub Pages with `actions/deploy-pages@v4`.
+### Layer mapping
 
-## Tech Stack
+| AHM layer          | Implementation                                                                                                                |
+|--------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| ⚛️ Atoms           | `kernel/client.ts` — `sendIntent()` indivisible primitives                                                                    |
+| 🧬 Molecules       | `[domain]/actions/` — grouped intents, cross-platform                                                                         |
+| 🦠 Organisms       | `[domain]/routes/` — orchestrate molecules, decide which plugin to call                                                       |
+| 🌍 Eco-Systems     | `[domain]/features/` + `step_definitions/` — BDD scenarios, thin bindings                                                     |
+| 🌊 Resonance       | `[domain]/simulations/` — Gatling load simulations driven by the same Examples table                                          |
+| 🌀 Execution Helix | `.github/workflows/` — CI/CD pipelines uniting all layers into parallel, isolated orbits governed by mathematical constraints |
 
-| Concern | Library |
-|---------|---------|
-| Test framework | Cucumber (BDD) |
-| Language | TypeScript |
-| Web automation | Playwright |
-| Mobile automation | WebDriverIO + Appium (UiAutomator2 / XCUITest) |
-| Performance | @gatling.io/core + @gatling.io/http + @gatling.io/cli |
-| Communication | gRPC (@grpc/grpc-js) |
-| Logging | Pino |
-| Containerization | Docker + Docker Compose |
-| Package manager | pnpm |
+### Adapting other test categories
+
+- **Visual / accessibility** — map onto Molecules: a snapshot check is a `COMPARE_SNAPSHOT` intent. The visual plugin owns the oracle.
+- **DAST** — fits into Resonance. Same feeder mechanics as load tests, payload becomes the attack surface.
+- **SAST** — outside the AHM kernel. Static analysis doesn't carry stochastic noise, so $\lambda < 0$ doesn't apply. Runs as a regular CI job.
+- **Unit tests** — outside the kernel. They evaluate code locally, no network jitter; should live alongside source code.
+
+### Performance: TOM-driven vs standalone
+
+Both modes run the same `checkout-load.gatling.ts` simulation. The difference is provenance:
+
+- **Standalone** — Gatling CLI invokes the simulation directly. Used for CI gates, HTML reports, and manual capacity planning.
+- **TOM-driven** — a Cucumber step issues `INTENT.RUN_CHECKOUT_LOAD`; the `performance` plugin spawns Gatling as a subprocess, parses `target/gatling/<report>/js/stats.json`, and returns `SimulationMetrics` in the gRPC `payload`. PASS when KO rate < 1%, FAIL otherwise (which propagates to the Cucumber step).
+
+### JVM boundary
+
+`@gatling.io/core` and `@gatling.io/http` call `Java.type()` at module load and only work inside the Gatling JVM bundle. They must **never** be imported from `src/plugins/performance/performance.ts` or any handler running in the Node plugin server. Simulations are spawned as subprocesses; the plugin server only orchestrates and parses results.
+
+Files under `src/core/tests/checkout/simulations/**` keep relative imports — `@gatling.io/cli` bundles them with esbuild, which doesn't honor `tsconfig.paths`.
