@@ -11,9 +11,9 @@
 
 ## TL;DR
 
-TOM is a test execution microkernel. Tests are written **once** in Gherkin and dispatched as `ExecuteIntent` gRPC calls to **isolated plugin servers** (`playwright`, `appium`, `api`, `visual`, `gatling`). The kernel (`chaos-proxy`) handles locator resolution, transient-failure retries, and telemetry — plugins are pure execution engines that don't know about test logic.
+TOM is a test execution microkernel. Tests are written **once** in Gherkin and dispatched as `ExecuteIntent` gRPC calls to **isolated plugin servers** (`playwright`, `appium`, `mobilewright`, `gatling`, `api`, `pixelmatch`). The kernel (`chaos-proxy`) handles locator resolution, transient-failure retries, and telemetry — plugins are pure execution engines that don't know about test logic.
 
-**Why care:** the same `Then the order is accepted` step runs against a Playwright browser, an Appium iOS device, or a Gatling load simulation **without modification**. Adding a new tool = a new plugin, not rewriting the suite.
+**Why care:** the same `Then the order is accepted` step runs against a Playwright browser, an Appium iOS device, or a Gatling load simulation **without modification**. Adding a new tool = a new plugin, not rewriting the suite — and because plugin identity = the tool, you can run a legacy plugin (`appium`) side-by-side with a migration target (`mobilewright`) and switch by toggling one env var.
 
 The theoretical model behind it (Atomic Helix Model, π-Calculus, $\lambda < 0$ chaos suppression) lives at the bottom of this README — read it if you want, skip it if you just want the suite running.
 
@@ -48,11 +48,12 @@ Cucumber step
                           ├─ resolves logical key → platform selector
                           ├─ retries transient failures (StaleElement, Timeout, …)
                           └─ forwards to the right plugin server
-                                ├─ web-ui      :50052   Playwright
-                                ├─ mobile-ui   :50053   Appium
-                                ├─ performance :50054   Gatling
+                                ├─ playwright  :50052   Web UI
+                                ├─ appium      :50053   Mobile UI (legacy)
+                                ├─ gatling     :50054   Load / performance
                                 ├─ api         :50055   fetch + HttpClient
-                                └─ visual      :50056   pixelmatch
+                                ├─ pixelmatch  :50056   Visual oracle
+                                └─ mobilewright:50057   Mobile UI (Playwright)
 ```
 
 Five things to know:
@@ -64,17 +65,18 @@ Five things to know:
 
 ## Plugins
 
-Plugins are named after the **type of test** they run, not the SDK they wrap:
+Plugin identity = **the tool under the hood**. Two plugins can serve the same test type (`appium` and `mobilewright` both run mobile intents), so a project migrates between tools by toggling `PLUGIN_*` — features, routes, and action handlers don't change.
 
-| Plugin        | Tool          | Port   | What it does                                  |
-|---------------|---------------|--------|-----------------------------------------------|
-| `playwright`      | Playwright    | 50052  | Browser automation, desktop + responsive       |
-| `appium`   | Appium        | 50053  | iOS / Android via WebDriverIO                 |
-| `gatling` | Gatling       | 50054  | Load tests; subprocess runner + stats parser  |
-| `api`         | fetch         | 50055  | Contract tests, $S_0$ state injection         |
-| `visual`      | pixelmatch    | 50056  | Snapshot regression                           |
+| Plugin         | Wraps            | Port   | What it does                                       |
+|----------------|------------------|--------|----------------------------------------------------|
+| `playwright`   | Playwright       | 50052  | Web UI: desktop + responsive                       |
+| `appium`       | Appium + WdIO    | 50053  | Mobile UI on iOS / Android (legacy path)           |
+| `mobilewright` | Playwright       | 50057  | Mobile UI via Playwright (migration target)        |
+| `gatling`      | Gatling          | 50054  | Load tests; subprocess runner + stats parser       |
+| `api`          | fetch            | 50055  | Contract tests, $S_0$ state injection              |
+| `pixelmatch`   | pixelmatch+pngjs | 50056  | Visual oracle / snapshot regression                |
 
-Toggle plugins with `PLUGIN_<NAME>=true|false` in `.env` and they hot-reload.
+Toggle plugins with `PLUGIN_<TOOL>=true|false` in `.env` and they hot-reload.
 
 ## Layers (Atomic-Helix)
 
@@ -119,11 +121,12 @@ src/
     plugin-server.factory.ts       # gRPC boilerplate for plugins
   plugins/
     shared/                        # cross-plugin: ActionRegistry, ActionHandler, …
-    web-ui/                        # Playwright; web-ui.ts + actions/
-    mobile-ui/                     # Appium;     mobile-ui.ts + actions/ + appium-helpers.ts
-    performance/                   # Gatling;    performance.ts + actions/ + support/
+    playwright/                    # Playwright (web UI)
+    appium/                        # Appium + WebdriverIO (mobile UI, legacy)
+    mobilewright/                  # Playwright on mobile (migration target)
+    gatling/                       # Gatling subprocess runner + actions/ + support/
     api/                           # fetch HttpClient + actions/
-    visual/                        # pixelmatch oracle + actions/
+    pixelmatch/                    # Visual oracle (pixelmatch + pngjs)
   core/
     test-data/                     # users.json, fixtures
     tests/
@@ -226,7 +229,7 @@ Steps and molecules use logical keys (`streetInput`); the proxy resolves them ba
 
 ```bash
 docker compose up                              # web + api
-docker compose --profile mobile up             # android emulator + appium + mobile-ui
+docker compose --profile mobile up             # android emulator + appium daemon + appium plugin
 docker compose --profile performance up        # standalone Gatling
 ```
 
@@ -284,7 +287,7 @@ AHM defines *how tests execute* through formal constraints rather than prescribi
 
 ### Adapting other test categories
 
-- **Visual / accessibility** — map onto Molecules: a snapshot check is a `COMPARE_SNAPSHOT` intent. The visual plugin owns the oracle.
+- **Visual / accessibility** — map onto Molecules: a snapshot check is a `COMPARE_SNAPSHOT` intent. The `pixelmatch` plugin owns the oracle.
 - **DAST** — fits into Resonance. Same feeder mechanics as load tests, payload becomes the attack surface.
 - **SAST** — outside the AHM kernel. Static analysis doesn't carry stochastic noise, so $\lambda < 0$ doesn't apply. Runs as a regular CI job.
 - **Unit tests** — outside the kernel. They evaluate code locally, no network jitter; should live alongside source code.

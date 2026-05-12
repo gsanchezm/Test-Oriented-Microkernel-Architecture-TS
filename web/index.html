@@ -491,7 +491,7 @@
       <div class="feature-card">
         <div class="feature-icon">🌐</div>
         <h3>Cross-Platform Unity</h3>
-        <p>Unified Gherkin scenarios execute across Web-UI (Playwright) and Mobile-UI (Appium). One locator JSON, zero test rewrites when switching platforms.</p>
+        <p>Unified Gherkin scenarios execute across <code>playwright</code> (web), <code>appium</code> / <code>mobilewright</code> (mobile), and <code>api</code> plugins. One locator JSON, zero test rewrites when switching tools — flip <code>DRIVER</code> to migrate.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">💉</div>
@@ -535,7 +535,7 @@
       <div class="arch-card" style="background: var(--surface-1); padding: 24px; border-radius: 12px; border: 1px solid var(--border);">
         <h4 style="color: var(--accent); margin-bottom: 8px;">Performance Convergence</h4>
         <p style="font-size: .88rem; color: var(--text-muted);">
-          The Performance plugin (Gatling under the hood) is bidirectional: standalone CLI execution for heavy load profiles and TOM-driven intents that return SimulationMetrics direct to the BDD layer in real-time.
+          The <code>gatling</code> plugin is bidirectional: standalone CLI execution for heavy load profiles and TOM-driven intents that return SimulationMetrics direct to the BDD layer in real-time.
         </p>
       </div>
     </div>
@@ -602,7 +602,7 @@ graph TD
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #4ade80;">Organisms</td>
               <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/routes/</td>
-              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Orchestrate actions + pick the plugin (web-ui / mobile-ui / api)</td>
+              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Orchestrate actions + pick the plugin (playwright / appium / mobilewright / api)</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #facc15;">Eco-Systems</td>
@@ -693,7 +693,7 @@ graph TD
 <span class="c-key">message</span> <span class="c-accent">IntentRequest</span> {
   <span class="c-key">string</span> actionId       = <span class="c-num">1</span>; <span class="c-muted">// NAVIGATE · CLICK · TYPE …</span>
   <span class="c-key">string</span> targetSelector = <span class="c-num">2</span>; <span class="c-muted">// logical key or raw selector</span>
-  <span class="c-key">string</span> platform       = <span class="c-num">3</span>; <span class="c-muted">// web-ui:0 · mobile-ui:1</span>
+  <span class="c-key">string</span> platform       = <span class="c-num">3</span>; <span class="c-muted">// playwright:0 · appium:1</span>
 }
 
 <span class="c-key">message</span> <span class="c-accent">IntentResponse</span> {
