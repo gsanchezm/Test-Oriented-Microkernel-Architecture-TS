@@ -1,0 +1,22 @@
+{
+  "id": "ci_ios_headless",
+  "platform": "ios",
+  "osVersion": null,
+  "udid": null,
+  "model": "iPhone 16 Pro",
+  "screen": null,
+  "compatibleDrivers": ["appium"],
+  "app": {
+    "bundleId": "com.omnipizza.app"
+  },
+  "appium": {
+    "automationName": "XCUITest",
+    "noReset": true,
+    "newCommandTimeout": 12000,
+    "wdaLocalPort": 8101,
+    "wdaLaunchTimeout": 240000,
+    "wdaConnectionTimeout": 240000,
+    "showXcodeLog": true,
+    "isHeadless": true
+  }
+}

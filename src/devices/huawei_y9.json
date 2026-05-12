@@ -1,0 +1,31 @@
+{
+  "id": "huawei_y9",
+  "platform": "android",
+  "osVersion": "9",
+  "udid": "7MLNW18B29004501",
+  "model": "Huawei Y9 (JKM-LX3)",
+  "screen": { "width": 1080, "height": 2340, "density": 480 },
+  "compatibleDrivers": ["appium"],
+  "app": {
+    "package": "com.omnipizza.app",
+    "waitActivity": "com.omnipizza.app.MainActivity",
+    "binaryPath": "assets/apps/android/omnipizza-release.apk"
+  },
+  "appium": {
+    "automationName": "UiAutomator2",
+    "noReset": true,
+    "fullReset": false,
+    "autoGrantPermissions": true,
+    "disableWindowAnimation": true,
+    "skipUnlock": true,
+    "unicodeKeyboard": true,
+    "resetKeyboard": true,
+    "newCommandTimeout": 12000,
+    "appWaitDuration": 60000,
+    "adbExecTimeout": 120000,
+    "appWaitForLaunch": true,
+    "autoLaunch": true,
+    "uiautomator2ServerLaunchTimeout": 120000,
+    "uiautomator2ServerInstallTimeout": 120000
+  }
+}

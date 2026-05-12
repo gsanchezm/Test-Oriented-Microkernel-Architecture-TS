@@ -1,0 +1,25 @@
+{
+  "id": "iphone_17_pro",
+  "platform": "ios",
+  "osVersion": "26.2",
+  "udid": null,
+  "model": "iPhone 17 Pro",
+  "screen": null,
+  "compatibleDrivers": ["appium", "mobilewright"],
+  "app": {
+    "bundleId": "com.omnipizza.app",
+    "binaryPath": "assets/apps/ios/OmniPizza.app"
+  },
+  "appium": {
+    "automationName": "XCUITest",
+    "noReset": true,
+    "fullReset": false,
+    "usePrebuiltWDA": false,
+    "newCommandTimeout": 12000,
+    "wdaLocalPort": 8101,
+    "wdaLaunchTimeout": 360000,
+    "wdaConnectionTimeout": 360000,
+    "showXcodeLog": true,
+    "autoAcceptAlerts": true
+  }
+}

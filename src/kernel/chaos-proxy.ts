@@ -18,13 +18,16 @@ const ACTION_TYPE_SEPARATOR = '||';
 // --- Plugin Address Configuration (Environment-driven) ---
 
 // Keys must match the DRIVER values that client.ts puts into the platform string
-// (e.g. 'web-ui:0', 'mobile-ui:0'). The proxy strips ':<workerId>' before lookup.
+// (e.g. 'playwright:0', 'appium:0'). The proxy strips ':<workerId>' before lookup.
+// Plugin identity = the tool under the hood, so legacy and new tools can coexist
+// (e.g. an `appium` plugin and a `mobilewright` plugin both serve mobile tests).
 const PLUGIN_ADDRESSES: Readonly<Record<string, string>> = {
-    'web-ui':      process.env.WEB_UI_ADDRESS       || 'localhost:50052',
-    'mobile-ui':   process.env.MOBILE_UI_ADDRESS    || 'localhost:50053',
-    'performance': process.env.PERFORMANCE_ADDRESS  || 'localhost:50054',
-    'api':         process.env.API_ADAPTER_ADDRESS  || 'localhost:50055',
-    'visual':      process.env.VISUAL_ADDRESS       || 'localhost:50056',
+    'playwright':   process.env.PLAYWRIGHT_ADDRESS   || 'localhost:50052',
+    'appium':       process.env.APPIUM_ADDRESS       || 'localhost:50053',
+    'gatling':      process.env.GATLING_ADDRESS      || 'localhost:50054',
+    'api':          process.env.API_ADAPTER_ADDRESS  || 'localhost:50055',
+    'pixelmatch':   process.env.PIXELMATCH_ADDRESS   || 'localhost:50056',
+    'mobilewright': process.env.MOBILEWRIGHT_ADDRESS || 'localhost:50057',
 };
 
 // --- Types ---
@@ -175,11 +178,23 @@ const PASSTHROUGH_ACTIONS = new Set<string>([
 // ASSERT_TEXT:      logicalKey||expectedText
 const COMPOSITE_ACTIONS = new Set<string>([INTENT.TYPE, INTENT.WAIT_FOR_ELEMENT, INTENT.ASSERT_TEXT]);
 
-function resolveSelector(actionId: string, rawSelector: string): string {
+function isMobilewrightPlatform(platform: string): boolean {
+    return platform.split(':')[0].toLowerCase() === 'mobilewright';
+}
+
+function resolveSelector(actionId: string, rawSelector: string, platform: string): string {
     const normalized = actionId.toUpperCase();
 
     // NAVIGATE, TEARDOWN, EVALUATE pass raw values — bypassing locator resolution.
     if (PASSTHROUGH_ACTIONS.has(normalized)) {
+        return rawSelector;
+    }
+
+    // Mobilewright resolves locators inside its own plugin (parseLocator +
+    // Locator.root().getByTestId()/getByLabel()/...). The proxy must pass
+    // through both halves of composite targets unchanged so the plugin sees
+    // the logical key (treated as testId by default) plus the payload.
+    if (isMobilewrightPlatform(platform)) {
         return rawSelector;
     }
 
@@ -237,7 +252,7 @@ async function handleExecuteIntent(call: any, callback: any): Promise<void> {
     try {
         // --- THE INDIRECTION BOUNDARY (PROXY PATTERN) ---
         // Intercept the logical key and resolve it to a platform/viewport-specific concrete selector.
-        const concreteSelector = resolveSelector(actionId, targetSelector);
+        const concreteSelector = resolveSelector(actionId, targetSelector, platform);
 
         // Measure strictly the temporal cost of the driver (Playwright/Appium) execution.
         pluginStartMark = performance.now();

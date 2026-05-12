@@ -29,7 +29,7 @@ const log = logger.child({ layer: 'route', domain: 'checkout' });
 
 // -- types --
 
-export type Driver = 'web-ui' | 'mobile-ui' | 'api';
+export type Driver = 'playwright' | 'appium' | 'mobilewright' | 'api';
 
 export interface DeliveryAddress {
     street: string;
@@ -193,8 +193,8 @@ export class CheckoutRoute {
         };
 
         // Routes know which plugin runs each leg:
-        // - injectBrowserSession: web-ui only (mobile/api skip via DRIVER check inside the molecule)
-        // - navigateToCheckout / fill*: web-ui or mobile-ui (chosen by chaos-proxy from DRIVER)
+        // - injectBrowserSession: playwright only (mobile/api skip via DRIVER check inside the molecule)
+        // - navigateToCheckout / fill*: playwright or appium (chosen by chaos-proxy from DRIVER)
         await injectBrowserSession(session);
         await navigateToCheckout(market, token);
 
@@ -232,10 +232,13 @@ export class CheckoutRoute {
     // no conditional to extend (Open/Closed).
     private readonly resetStrategies: Record<Driver, () => Promise<void>> = {
         // App auth state lives in Zustand — clear via deep link, which returns to Login.
-        'mobile-ui': async () => {
+        'appium': async () => {
             await sendIntent(INTENT.DEEP_LINK, 'omnipizza://login?resetSession=true');
         },
-        'web-ui': async () => {
+        'mobilewright': async () => {
+            await sendIntent(INTENT.DEEP_LINK, 'omnipizza://login?resetSession=true');
+        },
+        'playwright': async () => {
             const baseUrl = process.env.BASE_URL;
             if (!baseUrl) return; // nothing to navigate to; safe no-op
             await sendIntent(INTENT.EVALUATE, 'localStorage.clear(); sessionStorage.clear()');
@@ -253,7 +256,7 @@ export class CheckoutRoute {
     // -- internals --
 
     private get driver(): Driver {
-        return (process.env.DRIVER ?? 'web-ui') as Driver;
+        return (process.env.DRIVER ?? 'playwright') as Driver;
     }
 
     private requireAuthAndMarket(stage: string): { token: string; market: CountryCode } {

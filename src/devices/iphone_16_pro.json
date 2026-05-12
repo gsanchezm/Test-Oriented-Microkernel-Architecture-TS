@@ -1,0 +1,22 @@
+{
+  "id": "iphone_16_pro",
+  "platform": "ios",
+  "osVersion": null,
+  "udid": null,
+  "model": "iPhone 16 Pro",
+  "screen": null,
+  "compatibleDrivers": ["appium", "mobilewright"],
+  "app": {
+    "bundleId": "com.omnipizza.app",
+    "binaryPath": "assets/apps/ios/OmniPizza.app"
+  },
+  "appium": {
+    "automationName": "XCUITest",
+    "noReset": true,
+    "newCommandTimeout": 12000,
+    "wdaLaunchTimeout": 240000,
+    "wdaConnectionTimeout": 240000,
+    "usePrebuiltWDA": true,
+    "showXcodeLog": true
+  }
+}

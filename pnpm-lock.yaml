@@ -26,6 +26,9 @@ importers:
       minio:
         specifier: ^8.0.6
         version: 8.0.6
+      mobilewright:
+        specifier: ^0.0.31
+        version: 0.0.31
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -564,6 +567,22 @@ packages:
 
   '@jspm/core@2.1.0':
     resolution: {integrity: sha512-3sRl+pkyFY/kLmHl0cgHiFp2xEqErA8N3ECjMs7serSUBmoJ70lBa0PG5t0IM6WJgdZNyyI0R8YFfi5wM8+mzg==}
+
+  '@mobilewright/core@0.0.31':
+    resolution: {integrity: sha512-+4OdqIuDsvaQuLy2ukgmjAPPx0D2NHcF/xUEdPgHAu5iYSBcSeqmWUol3RVpOyyVyFLf/Tt3V+a79B27JOA4Fw==}
+    engines: {node: '>=18'}
+
+  '@mobilewright/driver-mobile-use@0.0.31':
+    resolution: {integrity: sha512-ufJ6XBkl5lGoJqBNXmLIkuVz2/LspaBaVVvjLn/busy7aRDfD1OfThcpf4XX5NC4BBxSzVAJWz/dbZO10sO8TQ==}
+    engines: {node: '>=18'}
+
+  '@mobilewright/driver-mobilecli@0.0.31':
+    resolution: {integrity: sha512-wZOUTOPS7tE6F1lVOBHI4aAYvFUiaOfo53JLQXQLyvrTJCRuiA6OeoGfQlY0R+xK6y3I6BBRzavdbW3mHO2bcQ==}
+    engines: {node: '>=18'}
+
+  '@mobilewright/protocol@0.0.31':
+    resolution: {integrity: sha512-HgGsxh5a8mPhIasfOjRCxMEM/JNBQ2JyyP1JlT39lc7QaCiE37lxM2jdCP5PXQVympb3I75CIZzrHPLW6hJLQg==}
+    engines: {node: '>=18'}
 
   '@npmcli/agent@4.0.0':
     resolution: {integrity: sha512-kAQTcEN9E8ERLVg5AsGwLNoFb+oEG6engbqAU2P43gD4JEIkNGMHdVQ096FsOAAYpZPB0RSt0zgInKIAS1l5QA==}
@@ -2075,6 +2094,15 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  mobilecli@0.3.70:
+    resolution: {integrity: sha512-DhYHenuQPK0GxpcOv2hxdLVhzf+yxHnC+kwSB1mtL7W7XPnJxITPj4U5DZS1JTEybBeZN+IS2qsE0Jp6UkLong==}
+    hasBin: true
+
+  mobilewright@0.0.31:
+    resolution: {integrity: sha512-FImad4Jyl7EppnQXXdleIpHMcErWG9RGLPom+NKn2Ido2/ckGnLFsLfSA/D1WyLesjJw8aDmZ5nUbyt98P82FQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   modern-tar@0.7.5:
     resolution: {integrity: sha512-YTefgdpKKFgoTDbEUqXqgUJct2OG6/4hs4XWLsxcHkDLj/x/V8WmKIRppPnXP5feQ7d1vuYWSp3qKkxfwaFaxA==}
     engines: {node: '>=18.0.0'}
@@ -3494,8 +3522,7 @@ snapshots:
       protobufjs: 7.5.4
       yargs: 17.7.2
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.34.5':
     optionalDependencies:
@@ -3612,6 +3639,34 @@ snapshots:
   '@js-sdsl/ordered-map@4.4.2': {}
 
   '@jspm/core@2.1.0': {}
+
+  '@mobilewright/core@0.0.31':
+    dependencies:
+      '@mobilewright/protocol': 0.0.31
+      sharp: 0.34.5
+
+  '@mobilewright/driver-mobile-use@0.0.31':
+    dependencies:
+      '@mobilewright/protocol': 0.0.31
+      debug: 4.4.3(supports-color@8.1.1)
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  '@mobilewright/driver-mobilecli@0.0.31':
+    dependencies:
+      '@mobilewright/protocol': 0.0.31
+      debug: 4.4.3(supports-color@8.1.1)
+      mobilecli: 0.3.70
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  '@mobilewright/protocol@0.0.31': {}
 
   '@npmcli/agent@4.0.0':
     dependencies:
@@ -4548,8 +4603,7 @@ snapshots:
 
   depd@2.0.0: {}
 
-  detect-libc@2.1.2:
-    optional: true
+  detect-libc@2.1.2: {}
 
   detect-node@2.1.0:
     optional: true
@@ -5368,6 +5422,23 @@ snapshots:
 
   mkdirp@3.0.1: {}
 
+  mobilecli@0.3.70: {}
+
+  mobilewright@0.0.31:
+    dependencies:
+      '@mobilewright/core': 0.0.31
+      '@mobilewright/driver-mobile-use': 0.0.31
+      '@mobilewright/driver-mobilecli': 0.0.31
+      '@mobilewright/protocol': 0.0.31
+      commander: 14.0.3
+      debug: 4.4.3(supports-color@8.1.1)
+      playwright: 1.58.2
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   modern-tar@0.7.5: {}
 
   moment-timezone@0.6.1:
@@ -5960,7 +6031,6 @@ snapshots:
       '@img/sharp-win32-arm64': 0.34.5
       '@img/sharp-win32-ia32': 0.34.5
       '@img/sharp-win32-x64': 0.34.5
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:

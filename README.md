@@ -11,7 +11,7 @@
 
 ## TL;DR
 
-TOM is a test execution microkernel. Tests are written **once** in Gherkin and dispatched as `ExecuteIntent` gRPC calls to **isolated plugin servers** (`web-ui`, `mobile-ui`, `api`, `visual`, `performance`). The kernel (`chaos-proxy`) handles locator resolution, transient-failure retries, and telemetry — plugins are pure execution engines that don't know about test logic.
+TOM is a test execution microkernel. Tests are written **once** in Gherkin and dispatched as `ExecuteIntent` gRPC calls to **isolated plugin servers** (`playwright`, `appium`, `api`, `visual`, `gatling`). The kernel (`chaos-proxy`) handles locator resolution, transient-failure retries, and telemetry — plugins are pure execution engines that don't know about test logic.
 
 **Why care:** the same `Then the order is accepted` step runs against a Playwright browser, an Appium iOS device, or a Gatling load simulation **without modification**. Adding a new tool = a new plugin, not rewriting the suite.
 
@@ -57,7 +57,7 @@ Cucumber step
 
 Five things to know:
 1. **Steps are thin** — they just call route methods.
-2. **Routes pick the plugin** — `DRIVER` env (`web-ui` / `mobile-ui` / `api`) decides whether `fillDelivery` runs in the browser or skips to API state injection.
+2. **Routes pick the plugin** — `DRIVER` env (`playwright` / `appium` / `api`) decides whether `fillDelivery` runs in the browser or skips to API state injection.
 3. **Action IDs are typed** — `INTENT.CLICK`, not raw strings. See [`src/kernel/intents.ts`](src/kernel/intents.ts).
 4. **Each plugin owns its actions** — `src/plugins/<plugin>/actions/`. Adding an action = registering it; never touch the orchestrator.
 5. **Locators are logical** — `streetInput`, not `[data-testid='street']`. Platform-specific selectors live in `*.locators.json` and are resolved by the proxy.
@@ -68,9 +68,9 @@ Plugins are named after the **type of test** they run, not the SDK they wrap:
 
 | Plugin        | Tool          | Port   | What it does                                  |
 |---------------|---------------|--------|-----------------------------------------------|
-| `web-ui`      | Playwright    | 50052  | Browser automation, desktop + responsive       |
-| `mobile-ui`   | Appium        | 50053  | iOS / Android via WebDriverIO                 |
-| `performance` | Gatling       | 50054  | Load tests; subprocess runner + stats parser  |
+| `playwright`      | Playwright    | 50052  | Browser automation, desktop + responsive       |
+| `appium`   | Appium        | 50053  | iOS / Android via WebDriverIO                 |
+| `gatling` | Gatling       | 50054  | Load tests; subprocess runner + stats parser  |
 | `api`         | fetch         | 50055  | Contract tests, $S_0$ state injection         |
 | `visual`      | pixelmatch    | 50056  | Snapshot regression                           |
 
@@ -170,7 +170,7 @@ cp .env.example .env
 | Variable        | Options                                       | Description                                       |
 |-----------------|-----------------------------------------------|---------------------------------------------------|
 | `PLATFORM`      | `web` `android` `ios` `api`                   | Target platform (drives locator resolution)       |
-| `DRIVER`        | `web-ui` `mobile-ui` `api`                    | Picks which plugin runs UI intents                |
+| `DRIVER`        | `playwright` `appium` `api`                    | Picks which plugin runs UI intents                |
 | `VIEWPORT`      | `desktop` `responsive`                        | Web only                                          |
 | `BASE_URL`      | URL                                           | Web app under test                                |
 | `API_BASE_URL`  | URL                                           | Backend for $S_0$ injection                       |
@@ -181,11 +181,11 @@ cp .env.example .env
 
 | Plugin enable          | Default | Address                                     | Listen port               |
 |------------------------|---------|---------------------------------------------|---------------------------|
-| `PLUGIN_WEB_UI`        | false   | `WEB_UI_ADDRESS=localhost:50052`            | `WEB_UI_PORT=50052`       |
-| `PLUGIN_MOBILE_UI`     | false   | `MOBILE_UI_ADDRESS=localhost:50053`         | `MOBILE_UI_PORT=50053`    |
-| `PLUGIN_PERFORMANCE`   | false   | `PERFORMANCE_ADDRESS=localhost:50054`       | `PERFORMANCE_PORT=50054`  |
+| `PLUGIN_PLAYWRIGHT`        | false   | `PLAYWRIGHT_ADDRESS=localhost:50052`            | `PLAYWRIGHT_PLUGIN_PORT=50052`       |
+| `PLUGIN_APPIUM`     | false   | `APPIUM_ADDRESS=localhost:50053`         | `APPIUM_PLUGIN_PORT=50053`    |
+| `PLUGIN_GATLING`   | false   | `GATLING_ADDRESS=localhost:50054`       | `GATLING_PLUGIN_PORT=50054`  |
 | `PLUGIN_API`           | false   | `API_ADAPTER_ADDRESS=localhost:50055`       | `API_PLUGIN_PORT=50055`   |
-| `PLUGIN_VISUAL`        | false   | `VISUAL_ADDRESS=localhost:50056`            | `VISUAL_PORT=50056`       |
+| `PLUGIN_PIXELMATCH`        | false   | `PIXELMATCH_ADDRESS=localhost:50056`            | `PIXELMATCH_PLUGIN_PORT=50056`       |
 
 `PROXY_ADDRESS=localhost:50051` is what `kernel/client.ts` uses to reach the proxy.
 
@@ -195,7 +195,7 @@ cp .env.example .env
 |------------------|-------------|------------------------------------------------------------------------------|
 | `APPIUM_HOST`    | `localhost` | Appium server host (the SDK, not the plugin)                                 |
 | `APPIUM_PORT`    | `4723`      | Appium server port                                                           |
-| `CAP_PROFILE`    | —           | JSON filename under `src/plugins/mobile-ui/capabilities/{android|ios}/`      |
+| `CAP_PROFILE`    | —           | JSON filename under `src/plugins/appium/capabilities/{android|ios}/`      |
 | `ANDROID_APP_PATH` / `IOS_APP_PATH` | — | Path to APK / app bundle                                          |
 | `IOS_UDID_<n>`   | `auto`      | Per-worker UDID for parallel iOS sims (`IOS_UDID_0`, `IOS_UDID_1`, …)        |
 
@@ -230,7 +230,7 @@ docker compose --profile mobile up             # android emulator + appium + mob
 docker compose --profile performance up        # standalone Gatling
 ```
 
-The `mobile` profile chains: `android-emulator (docker-android)` → `appium-server` → `mobile-ui` plugin.
+The `mobile` profile chains: `android-emulator (docker-android)` → `appium-server` → `appium` plugin.
 
 ## CI / CD
 
@@ -294,10 +294,10 @@ AHM defines *how tests execute* through formal constraints rather than prescribi
 Both modes run the same `checkout-load.gatling.ts` simulation. The difference is provenance:
 
 - **Standalone** — Gatling CLI invokes the simulation directly. Used for CI gates, HTML reports, and manual capacity planning.
-- **TOM-driven** — a Cucumber step issues `INTENT.RUN_CHECKOUT_LOAD`; the `performance` plugin spawns Gatling as a subprocess, parses `target/gatling/<report>/js/stats.json`, and returns `SimulationMetrics` in the gRPC `payload`. PASS when KO rate < 1%, FAIL otherwise (which propagates to the Cucumber step).
+- **TOM-driven** — a Cucumber step issues `INTENT.RUN_CHECKOUT_LOAD`; the `gatling` plugin spawns Gatling as a subprocess, parses `target/gatling/<report>/js/stats.json`, and returns `SimulationMetrics` in the gRPC `payload`. PASS when KO rate < 1%, FAIL otherwise (which propagates to the Cucumber step).
 
 ### JVM boundary
 
-`@gatling.io/core` and `@gatling.io/http` call `Java.type()` at module load and only work inside the Gatling JVM bundle. They must **never** be imported from `src/plugins/performance/performance.ts` or any handler running in the Node plugin server. Simulations are spawned as subprocesses; the plugin server only orchestrates and parses results.
+`@gatling.io/core` and `@gatling.io/http` call `Java.type()` at module load and only work inside the Gatling JVM bundle. They must **never** be imported from `src/plugins/gatling/gatling.ts` or any handler running in the Node plugin server. Simulations are spawned as subprocesses; the plugin server only orchestrates and parses results.
 
 Files under `src/core/tests/checkout/simulations/**` keep relative imports — `@gatling.io/cli` bundles them with esbuild, which doesn't honor `tsconfig.paths`.

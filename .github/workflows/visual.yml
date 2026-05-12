@@ -1,0 +1,85 @@
+name: Visual contract tests
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'visual-baselines/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/visual.yml'
+  push:
+    branches: [main]
+
+# Cancel in-flight visual jobs on the same ref when a new commit arrives.
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Compare against committed baselines
+    runs-on: ubuntu-latest
+
+    # Pin Chromium + system fonts. Bumping this image is a deliberate
+    # baseline-refresh event — see update-visual-baselines.yml.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+
+    env:
+      DRIVER: playwright
+      PLUGIN_PLAYWRIGHT: 'true'
+      PLUGIN_PIXELMATCH: 'true'
+      PLUGIN_API: 'true'
+      BASE_URL: ${{ vars.VISUAL_BASE_URL }}
+      TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start TOM stack
+        run: |
+          mkdir -p logs
+          pnpm run proxy   > logs/proxy.log   2>&1 &
+          pnpm run plugins > logs/plugins.log 2>&1 &
+          # Wait for the proxy port to bind before launching cucumber.
+          for _ in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/50051) >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          echo "::error::TOM proxy never bound on :50051"
+          tail -n 200 logs/proxy.log logs/plugins.log
+          exit 1
+
+      - name: Run visual scenarios
+        run: ./node_modules/.bin/cucumber-js --tags "@visual"
+
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs-${{ github.run_id }}
+          path: |
+            visual-results/
+            metrics/raw/visual/
+            logs/
+
+      - name: Upload visual telemetry on success
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-telemetry-${{ github.run_id }}
+          path: metrics/raw/visual/
+          retention-days: 14

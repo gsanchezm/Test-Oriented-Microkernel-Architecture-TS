@@ -1,5 +1,6 @@
 onlyBuiltDependencies:
   - appium
+  - appium-ios-tuntap
   - edgedriver
   - esbuild
   - geckodriver

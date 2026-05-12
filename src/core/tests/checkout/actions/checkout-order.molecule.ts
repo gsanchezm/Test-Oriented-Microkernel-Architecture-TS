@@ -23,9 +23,11 @@ export async function verifyOrderAccepted(
     // the UI because the app sets `accessibilityLabel = testID` on Text nodes
     // (so iOS returns the id instead of the rendered amount); totals are
     // cross-checked against the cart data we already fetched from the API.
-    // 30 s covers the place-order API roundtrip (Render free-tier warm-ups can
-    // exceed 10 s) plus React Navigation's fade transition to the success route.
-    await sendIntent(INTENT.WAIT_FOR_ELEMENT, 'orderSuccessScreen||30000');
+    // 90 s covers the place-order API roundtrip plus React Navigation's
+    // fade transition. Older Android devices (Huawei Y9 / Android 9) on
+    // a cold Render free-tier backend can exceed 30 s before the success
+    // screen renders; 90 s absorbs both without masking real regressions.
+    await sendIntent(INTENT.WAIT_FOR_ELEMENT, 'orderSuccessScreen||90000');
 
     const subtotal = round(
         cartItems.reduce((sum, item) => sum + unitPriceOf(item) * item.quantity, 0),

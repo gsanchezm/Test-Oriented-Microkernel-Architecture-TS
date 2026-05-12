@@ -66,7 +66,7 @@ export function resolveLocator(logicalKey: string): string {
     const platform = getPlatform();
 
     // 1. Guard Clause: Bypass Resolution for Network Rings
-    if (platform === 'api' || platform === 'performance') return logicalKey;
+    if (platform === 'api' || platform === 'gatling') return logicalKey;
 
     // 2. Load Artifact
     const locators = loadLocators();

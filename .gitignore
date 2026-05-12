@@ -56,3 +56,17 @@ run-and-download.sh
 analyze_telemetry.py
 figures/
 *.csv
+visual-results/
+visual-baselines/
+
+# Metrics pipeline output — schemas/summary stay tracked, runs are local
+metrics/raw/**
+!metrics/raw/
+!metrics/raw/*/
+!metrics/raw/**/.gitkeep
+metrics/processed/**
+!metrics/processed/
+!metrics/processed/.gitkeep
+metrics/figures/**
+!metrics/figures/
+!metrics/figures/.gitkeep

@@ -1,0 +1,30 @@
+{
+  "id": "galaxy_s25_ultra",
+  "platform": "android",
+  "osVersion": "15",
+  "udid": null,
+  "model": "Galaxy S25 Ultra",
+  "screen": null,
+  "compatibleDrivers": ["appium", "mobilewright"],
+  "app": {
+    "package": "com.omnipizza.app",
+    "waitActivity": "com.omnipizza.app.MainActivity"
+  },
+  "appium": {
+    "automationName": "UiAutomator2",
+    "noReset": true,
+    "fullReset": false,
+    "autoGrantPermissions": true,
+    "disableWindowAnimation": true,
+    "skipUnlock": true,
+    "unicodeKeyboard": true,
+    "resetKeyboard": true,
+    "newCommandTimeout": 12000,
+    "appWaitDuration": 60000,
+    "adbExecTimeout": 120000,
+    "appWaitForLaunch": true,
+    "autoLaunch": true,
+    "uiautomator2ServerLaunchTimeout": 120000,
+    "uiautomator2ServerInstallTimeout": 120000
+  }
+}

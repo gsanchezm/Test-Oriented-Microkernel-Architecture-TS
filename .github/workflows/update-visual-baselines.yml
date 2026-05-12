@@ -1,0 +1,112 @@
+name: Update visual baselines
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are baselines being refreshed? (Required — recorded in commit message and PR body.)'
+        required: true
+      target_branch:
+        description: 'Branch to update baselines on (defaults to the branch this workflow runs on).'
+        required: false
+
+# Only one refresh in flight at a time per target branch — concurrent
+# regenerations would race on the same files.
+concurrency:
+  group: update-visual-baselines-${{ github.event.inputs.target_branch || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Regenerate baselines & open PR
+    runs-on: ubuntu-latest
+
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    env:
+      DRIVER: playwright
+      PLUGIN_PLAYWRIGHT: 'true'
+      PLUGIN_PIXELMATCH: 'true'
+      PLUGIN_API: 'true'
+      VISUAL_UPDATE_BASELINE: 'true'
+      BASE_URL: ${{ vars.VISUAL_BASE_URL }}
+      TOM_RUN_ID: gh-refresh-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start TOM stack
+        run: |
+          mkdir -p logs
+          pnpm run proxy   > logs/proxy.log   2>&1 &
+          pnpm run plugins > logs/plugins.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/50051) >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          echo "::error::TOM proxy never bound on :50051"
+          tail -n 200 logs/proxy.log logs/plugins.log
+          exit 1
+
+      - name: Wipe existing baselines so the refresh is total
+        run: |
+          # Keep the directory, drop the PNGs. Stale baselines from removed
+          # snapshot ids should not survive a refresh.
+          find visual-baselines -type f -name '*.png' -delete
+
+      - name: Regenerate baselines
+        run: ./node_modules/.bin/cucumber-js --tags "@visual"
+
+      - name: Open refresh PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          add-paths: visual-baselines/
+          branch: visual-baselines/refresh-${{ github.run_id }}
+          base: ${{ github.event.inputs.target_branch || github.ref_name }}
+          commit-message: |
+            chore(visual): refresh baselines
+
+            Reason: ${{ github.event.inputs.reason }}
+            Triggered by: @${{ github.actor }}
+            Workflow run: ${{ github.run_id }}
+          title: 'chore(visual): refresh baselines (run ${{ github.run_id }})'
+          body: |
+            Automated refresh of `visual-baselines/`.
+
+            **Reason:** ${{ github.event.inputs.reason }}
+            **Triggered by:** @${{ github.actor }}
+            **Source run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Review the PNG diffs in this PR before merging — every checked-in
+            baseline becomes the new source of truth for the `visual.yml`
+            workflow.
+
+      - name: Upload refresh artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-refresh-${{ github.run_id }}
+          path: |
+            visual-baselines/
+            metrics/raw/visual/
+            logs/

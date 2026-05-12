@@ -12,6 +12,7 @@
       "@kernel/*":    ["src/kernel/*"],
       "@plugins/*":   ["src/plugins/*"],
       "@core/*":      ["src/core/*"],
+      "@devices/*":   ["src/devices/*"],
       "@proto/*":     ["src/proto/*"],
       "@telemetry/*": ["src/telemetry/*"],
       "@utils/*":     ["src/utils/*"]

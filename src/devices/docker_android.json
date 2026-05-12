@@ -1,0 +1,32 @@
+{
+  "id": "docker_android",
+  "platform": "android",
+  "osVersion": null,
+  "udid": null,
+  "model": "docker-android",
+  "screen": null,
+  "compatibleDrivers": ["appium"],
+  "app": {
+    "package": "com.omnipizza.app",
+    "waitActivity": "com.omnipizza.app.MainActivity,com.omnipizza.app.*"
+  },
+  "appium": {
+    "automationName": "UiAutomator2",
+    "noReset": false,
+    "fullReset": false,
+    "autoGrantPermissions": true,
+    "disableWindowAnimation": true,
+    "ignoreHiddenApiPolicyError": true,
+    "skipUnlock": true,
+    "unicodeKeyboard": true,
+    "resetKeyboard": true,
+    "newCommandTimeout": 12000,
+    "appWaitDuration": 120000,
+    "adbExecTimeout": 180000,
+    "androidInstallTimeout": 180000,
+    "appWaitForLaunch": true,
+    "autoLaunch": true,
+    "uiautomator2ServerLaunchTimeout": 180000,
+    "uiautomator2ServerInstallTimeout": 180000
+  }
+}

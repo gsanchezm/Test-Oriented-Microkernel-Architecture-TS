@@ -4,6 +4,12 @@
  * Enable or disable each plugin server here.
  * When enabled, the launcher will start that plugin as a child process.
  *
+ * Plugin identity = the tool under the hood (Playwright, Appium, Gatling, …).
+ * Two plugins can serve the same test type — e.g. `appium` and `mobilewright`
+ * both run mobile-UI intents — which lets a project migrate between tools by
+ * disabling the legacy plugin and enabling the new one without touching any
+ * feature, route, or action handler.
+ *
  * Format:
  *   enabled  → plugin process starts automatically
  *   disabled → plugin is skipped (proxy will error if a test targets it)
@@ -14,7 +20,7 @@ export interface PluginDefinition {
     name: string;
     /** npm script to run (must exist in package.json) */
     script: string;
-    /** Env var that controls whether this plugin is enabled (e.g. PLUGIN_WEB_UI) */
+    /** Env var that controls whether this plugin is enabled (e.g. PLUGIN_PLAYWRIGHT) */
     envVar: string;
     /** Whether to start this plugin on launch — resolved from process.env at runtime */
     readonly enabled: boolean;
@@ -26,15 +32,15 @@ function isEnabled(envVar: string): boolean {
 
 const plugins: PluginDefinition[] = [
     {
-        name: 'Web-UI',
-        script: 'plugin:web-ui',
-        envVar: 'PLUGIN_WEB_UI',
+        name: 'Playwright',
+        script: 'plugin:playwright',
+        envVar: 'PLUGIN_PLAYWRIGHT',
         get enabled() { return isEnabled(this.envVar); },
     },
     {
-        name: 'Mobile-UI',
-        script: 'plugin:mobile-ui',
-        envVar: 'PLUGIN_MOBILE_UI',
+        name: 'Appium',
+        script: 'plugin:appium',
+        envVar: 'PLUGIN_APPIUM',
         get enabled() { return isEnabled(this.envVar); },
     },
     {
@@ -44,15 +50,20 @@ const plugins: PluginDefinition[] = [
         get enabled() { return isEnabled(this.envVar); },
     },
     {
-        name: 'Performance',
-        script: 'plugin:performance',
-        envVar: 'PLUGIN_PERFORMANCE',
+        name: 'Gatling',
+        script: 'plugin:gatling',
+        envVar: 'PLUGIN_GATLING',
         get enabled() { return isEnabled(this.envVar); },
     },
+    // Pixelmatch is co-located inside the Playwright process (see
+    // src/plugins/playwright/server.ts) so it can read the active
+    // Playwright session in-memory. Toggle via PLUGIN_PIXELMATCH=true — the
+    // launcher does NOT spawn a separate Pixelmatch process to avoid port
+    // collision on 50056.
     {
-        name: 'Visual',
-        script: 'plugin:visual',
-        envVar: 'PLUGIN_VISUAL',
+        name: 'Mobilewright',
+        script: 'plugin:mobilewright',
+        envVar: 'PLUGIN_MOBILEWRIGHT',
         get enabled() { return isEnabled(this.envVar); },
     },
 ];

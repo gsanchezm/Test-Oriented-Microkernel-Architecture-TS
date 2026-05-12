@@ -247,8 +247,8 @@ jobs:
 
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > /tmp/ahm-ci-logs/proxy.log 2>&1 &
           PROXY_PID=$!
-          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/web-ui/server.ts > /tmp/ahm-ci-logs/web-ui.log 2>&1 &
-          WEB_UI_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > /tmp/ahm-ci-logs/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > /tmp/ahm-ci-logs/api.log 2>&1 &
           API_PID=$!
 
@@ -262,25 +262,25 @@ jobs:
             if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
               echo "Port $port did not become ready."
               echo "Proxy log:" && cat /tmp/ahm-ci-logs/proxy.log || true
-              echo "Playwright log:" && cat /tmp/ahm-ci-logs/web-ui.log || true
+              echo "Playwright log:" && cat /tmp/ahm-ci-logs/playwright.log || true
               echo "API log:" && cat /tmp/ahm-ci-logs/api.log || true
               exit 1
             fi
           done
 
           kill -0 "$PROXY_PID"
-          kill -0 "$WEB_UI_PID"
+          kill -0 "$PLAYWRIGHT_PID"
           kill -0 "$API_PID"
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: web
           VIEWPORT: desktop
-          DRIVER: web-ui
+          DRIVER: playwright
           HEADLESS: 'true'
-          WEB_UI_ADDRESS: 127.0.0.1:50052
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
           API_ADAPTER_ADDRESS: 127.0.0.1:50055
-          PLUGIN_WEB_UI: 'true'
+          PLUGIN_PLAYWRIGHT: 'true'
           PLUGIN_API: 'true'
 
       - name: Run E2E tests
@@ -290,7 +290,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: web
           VIEWPORT: desktop
-          DRIVER: web-ui
+          DRIVER: playwright
           PROXY_ADDRESS: 127.0.0.1:50051
           HEADLESS: 'true'
           MINIO_ENDPOINT: localhost
@@ -374,8 +374,8 @@ jobs:
 
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > /tmp/ahm-ci-logs/proxy.log 2>&1 &
           PROXY_PID=$!
-          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/web-ui/server.ts > /tmp/ahm-ci-logs/web-ui.log 2>&1 &
-          WEB_UI_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > /tmp/ahm-ci-logs/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > /tmp/ahm-ci-logs/api.log 2>&1 &
           API_PID=$!
 
@@ -389,25 +389,25 @@ jobs:
             if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
               echo "Port $port did not become ready."
               echo "Proxy log:" && cat /tmp/ahm-ci-logs/proxy.log || true
-              echo "Playwright log:" && cat /tmp/ahm-ci-logs/web-ui.log || true
+              echo "Playwright log:" && cat /tmp/ahm-ci-logs/playwright.log || true
               echo "API log:" && cat /tmp/ahm-ci-logs/api.log || true
               exit 1
             fi
           done
 
           kill -0 "$PROXY_PID"
-          kill -0 "$WEB_UI_PID"
+          kill -0 "$PLAYWRIGHT_PID"
           kill -0 "$API_PID"
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: web
           VIEWPORT: responsive
-          DRIVER: web-ui
+          DRIVER: playwright
           HEADLESS: 'true'
-          WEB_UI_ADDRESS: 127.0.0.1:50052
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
           API_ADAPTER_ADDRESS: 127.0.0.1:50055
-          PLUGIN_WEB_UI: 'true'
+          PLUGIN_PLAYWRIGHT: 'true'
           PLUGIN_API: 'true'
 
       - name: Run E2E tests
@@ -417,7 +417,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: web
           VIEWPORT: responsive
-          DRIVER: web-ui
+          DRIVER: playwright
           PROXY_ADDRESS: 127.0.0.1:50051
           HEADLESS: 'true'
           MINIO_ENDPOINT: localhost
@@ -548,7 +548,7 @@ jobs:
       - name: Start proxy + Appium plugin
         run: |
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts &
-          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/mobile-ui/server.ts &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/appium/server.ts &
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts &
           for port in 50051 50053 50055; do
             for i in $(seq 1 20); do
@@ -559,13 +559,13 @@ jobs:
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: android
-          DRIVER: mobile-ui
+          DRIVER: appium
           APPIUM_HOST: localhost
           APPIUM_PORT: '4723'
           CAP_PROFILE: docker_android
           ANDROID_APP_PATH: assets/apps/android/app-release.apk
           ANDROID_UDID: localhost:5555
-          PLUGIN_MOBILE_UI: 'true'
+          PLUGIN_APPIUM: 'true'
           PLUGIN_API: 'true'
 
       - name: Run E2E tests
@@ -574,7 +574,7 @@ jobs:
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: android
-          DRIVER: mobile-ui
+          DRIVER: appium
           APPIUM_HOST: localhost
           APPIUM_PORT: '4723'
           CAP_PROFILE: docker_android
@@ -708,7 +708,7 @@ jobs:
       - name: Start proxy + Appium plugin
         run: |
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts &
-          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/mobile-ui/server.ts &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/appium/server.ts &
           npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts &
           for port in 50051 50053 50055; do
             for i in $(seq 1 20); do
@@ -719,14 +719,14 @@ jobs:
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: ios
-          DRIVER: mobile-ui
+          DRIVER: appium
           APPIUM_HOST: localhost
           APPIUM_PORT: '4723'
           CAP_PROFILE: ci_ios_headless
           IOS_APP_PATH: ${{ vars.IOS_APP_PATH || env.IOS_APP_PATH }}
           IOS_UDID: ${{ env.IOS_UDID }}
           IOS_DEVICE_NAME: ${{ env.IOS_DEVICE_NAME }}
-          PLUGIN_MOBILE_UI: 'true'
+          PLUGIN_APPIUM: 'true'
           PLUGIN_API: 'true'
           MINIO_ENDPOINT: localhost
           MINIO_PORT: '9000'
@@ -738,7 +738,7 @@ jobs:
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           PLATFORM: ios
-          DRIVER: mobile-ui
+          DRIVER: appium
           APPIUM_HOST: localhost
           APPIUM_PORT: '4723'
           CAP_PROFILE: ci_ios_headless
