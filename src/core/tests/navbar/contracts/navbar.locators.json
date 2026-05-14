@@ -55,9 +55,6 @@
   "headerLanguageFRLabel": {
     "mobile": "~text-header-lang-fr"
   },
-  "logoutButton": {
-    "web": "[data-testid='logout-btn']"
-  },
   "mobileMenuButton": {
     "web": "[data-testid='mobile-menu-btn']"
   },

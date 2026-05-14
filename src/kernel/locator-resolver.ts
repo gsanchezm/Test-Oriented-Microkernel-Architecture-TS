@@ -45,13 +45,29 @@ function loadLocators(): Record<string, any> {
     }
 
     const merged: Record<string, any> = {};
+    const ownerOf: Record<string, string> = {};
     for (const filePath of files) {
+        let parsed: Record<string, any>;
         try {
-            const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, any>;
-            Object.assign(merged, parsed);
+            parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, any>;
         } catch (error: any) {
             throw new Error(`[Proxy] Critical Failure: Cannot load locator artifact at ${filePath}. ${error.message}`);
         }
+
+        // Cross-file key collisions silently shadow whichever file loads first.
+        // That's the kind of bug you only catch by staring at test failures —
+        // fail loudly at startup instead so the contract namespace stays clean.
+        for (const key of Object.keys(parsed)) {
+            const previous = ownerOf[key];
+            if (previous) {
+                throw new Error(
+                    `[Proxy] Locator key collision: "${key}" is defined in both ` +
+                    `${previous} and ${filePath}. Rename one — keys are global across all *.locators.json.`,
+                );
+            }
+            ownerOf[key] = filePath;
+        }
+        Object.assign(merged, parsed);
     }
 
     locatorsCache = merged;

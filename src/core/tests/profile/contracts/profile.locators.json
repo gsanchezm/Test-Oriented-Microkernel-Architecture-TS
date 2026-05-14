@@ -26,7 +26,7 @@
   "fullNameLabel": {
     "mobile": "~label-profile-fullname"
   },
-  "fullNameInput": {
+  "profileFullNameInput": {
     "web": {
       "responsive": "[data-testid='profile-fullname-responsive']",
       "desktop": "[data-testid='profile-fullname-desktop']"
@@ -36,7 +36,7 @@
   "phoneNumberLabel": {
     "mobile": "~label-profile-phone"
   },
-  "phoneNumberInput": {
+  "profilePhoneNumberInput": {
     "web": "[data-testid='profile-phone']",
     "mobile": "~input-profile-phone"
   },
