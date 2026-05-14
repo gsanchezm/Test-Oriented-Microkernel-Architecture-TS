@@ -19,6 +19,7 @@ When(
     },
 );
 
+//remove
 When('the user selects the {string} market', async function (market: string) {
     await route(this).selectMarket(market);
 });

@@ -3,7 +3,13 @@ import { logger } from '@utils/logger';
 import { UsersDataSource } from '@core/test-data/users.data-source';
 import { LoginDao } from '@core/tests/login/dao/login.dao';
 import { CheckoutDao } from '@core/tests/checkout/dao/checkout.dao';
-import type { CartItemResponse, CountryCode, CountryInfo } from '@core/tests/checkout/dao/checkout.types';
+import type {
+    CartItemResponse,
+    CheckoutRequest,
+    CheckoutResponse,
+    CountryCode,
+    CountryInfo,
+} from '@core/tests/checkout/dao/checkout.types';
 import {
     injectBrowserSession,
     BrowserSessionState,
@@ -179,10 +185,16 @@ export class CheckoutRoute {
     async fillDelivery(address: DeliveryAddress, contact: ContactDetails): Promise<void> {
         const { token, market } = this.requireAuthAndMarket('delivery');
         const ctx = this.world.orderContext!;
+
+        log.info({ ...address, ...contact, driver: this.driver }, 'Filling delivery details');
+
+        // Persist for the api branch, which submits via CheckoutDao in verifyOrderAccepted.
+        this.world.deliveryAddress = address;
+        this.world.contact = contact;
+
+        if (this.driver === 'api') return;
+
         const auth = this.world.auth!;
-
-        log.info({ ...address, ...contact }, 'Filling delivery details');
-
         const session: BrowserSessionState = {
             token,
             username: auth.username,
@@ -203,17 +215,25 @@ export class CheckoutRoute {
 
         await fillDeliveryAddress(address.street, zipSlot, secondary);
         await fillContactInfo(contact.name, contact.phone);
-
-        this.world.contact = contact;
     }
 
     async selectPayment(method: string): Promise<void> {
-        log.info({ method }, 'Selecting payment method');
+        log.info({ method, driver: this.driver }, 'Selecting payment method');
+        this.world.payment = { ...this.world.payment, method };
+        if (this.driver === 'api') return;
         await selectPaymentMethod(method);
     }
 
     async enterCard(card: string, exp: string, cvv: string): Promise<void> {
-        log.info({ cardLastFour: card.slice(-4) }, 'Entering card details');
+        log.info({ cardLastFour: card.slice(-4), driver: this.driver }, 'Entering card details');
+        this.world.payment = {
+            ...this.world.payment,
+            method: this.world.payment?.method ?? 'Credit Card',
+            cardNumber: card,
+            cardExpiry: exp,
+            cardCvv: cvv,
+        };
+        if (this.driver === 'api') return;
         await fillCardDetails(card, exp, cvv, this.world.contact?.name);
     }
 
@@ -221,7 +241,13 @@ export class CheckoutRoute {
         const country = this.world.orderContext?.countryInfo;
         if (!country) throw new Error('Missing country metadata. Run market step before verification.');
 
-        log.info({ market: country.code }, 'Verifying order acceptance');
+        log.info({ market: country.code, driver: this.driver }, 'Verifying order acceptance');
+
+        if (this.driver === 'api') {
+            this.world.checkoutResult = await this.submitOrderViaApi(country);
+            return;
+        }
+
         await placeOrder();
         await verifyOrderOnUI(country, this.world.orderContext!.cartItems);
     }
@@ -265,6 +291,60 @@ export class CheckoutRoute {
         const market = this.world.orderContext?.market;
         if (!market) throw new Error(`Missing market context at "${stage}" stage. Run market step first.`);
         return { token, market };
+    }
+
+    // Submit the accumulated checkout state via the DAO. Mirrors the UI path's
+    // placeOrder + success-screen wait: a populated `order_id` is the API's
+    // analogue of the success screen rendering.
+    private async submitOrderViaApi(country: CountryInfo): Promise<CheckoutResponse> {
+        const { token, market } = this.requireAuthAndMarket('verifyOrderAccepted (api)');
+        const ctx = this.world.orderContext!;
+        const address = this.world.deliveryAddress;
+        const contact = this.world.contact;
+        const payment = this.world.payment;
+        if (!address) throw new Error('Missing delivery address — run the fill-delivery step first.');
+        if (!contact)  throw new Error('Missing contact info — run the fill-delivery step first.');
+        if (!payment?.method) throw new Error('Missing payment method — run the payment step first.');
+
+        const body: CheckoutRequest = {
+            country_code: market,
+            items: [{ pizza_id: ctx.pizzaId, size: ctx.size, quantity: ctx.qty }],
+            name: contact.name,
+            address: address.street,
+            phone: contact.phone,
+            payment_method: payment.method,
+        };
+
+        // Map address into the country-specific zip-shaped field.
+        for (const field of country.required_fields ?? []) {
+            if (field === 'colonia')         body.colonia    = address.suburb;
+            else if (field === 'prefectura') body.prefectura = address.suburb ?? address.zip;
+            else if (field === 'plz')        body.plz        = address.zip;
+            else if (field === 'zip_code')   body.zip_code   = address.zip;
+        }
+
+        const isCard = payment.method.toLowerCase().includes('card');
+        if (isCard) {
+            body.card_number = payment.cardNumber;
+            body.card_expiry = payment.cardExpiry;
+            body.card_cvv    = payment.cardCvv;
+        }
+
+        // Tip field is required by some markets — default to 0 to stay focused
+        // on the order-accepted assertion (tip math has its own tests).
+        if (country.tip_field) body[country.tip_field] = 0;
+
+        const result = await this.checkout.placeOrder({ token, countryCode: market, body });
+        if (!result.order_id) {
+            throw new Error(`API placeOrder rejected the order. Response: ${JSON.stringify(result)}`);
+        }
+        log.info({
+            orderId: result.order_id,
+            status: result.status,
+            total: result.total,
+            currency: result.currency,
+        }, 'Order accepted (api driver)');
+        return result;
     }
 
     private pickZipSlot(country: CountryInfo, address: DeliveryAddress): string | undefined {

@@ -1,5 +1,5 @@
 import type { LoginResponse } from '@core/tests/login/dao/login.types';
-import type { CartItemResponse, CountryInfo, CountryCode } from '@core/tests/checkout/dao/checkout.types';
+import type { CartItemResponse, CheckoutResponse, CountryInfo, CountryCode } from '@core/tests/checkout/dao/checkout.types';
 
 export interface CheckoutWorld {
     auth?: {
@@ -29,5 +29,27 @@ export interface CheckoutWorld {
         name: string;
         phone: string;
     };
+    // Market + language chosen on the login screen. Populated by LoginRoute so
+    // downstream assertions (especially under DRIVER=api, which has no UI to
+    // read from) can recover the chosen locale.
+    locale?: {
+        market: string;
+        language: string;
+    };
+    // Delivery + payment captured by the route. Under DRIVER=api the UI steps
+    // never run, so the route accumulates the inputs here and the final
+    // verifyOrderAccepted step submits the order via CheckoutDao.placeOrder.
+    deliveryAddress?: {
+        street: string;
+        zip?: string;
+        suburb?: string;
+    };
+    payment?: {
+        method: string;
+        cardNumber?: string;
+        cardExpiry?: string;
+        cardCvv?: string;
+    };
+    checkoutResult?: CheckoutResponse;
 }
 

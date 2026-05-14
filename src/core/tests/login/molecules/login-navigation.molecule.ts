@@ -14,6 +14,13 @@ const LOGIN_WAIT_TIMEOUT_MS = 20_000;
 export async function openLoginScreen(): Promise<void> {
     const driver = process.env.DRIVER ?? 'playwright';
 
+    // No UI to open under api driver — the login screen is a UI concept; the
+    // route's loginAs() will hit the auth endpoint directly via LoginDao.
+    if (driver === 'api') {
+        log.info({ driver }, 'Login screen no-op (api driver)');
+        return;
+    }
+
     if (driver === 'appium' || driver === 'mobilewright') {
         // The app launches into the login screen; nothing to navigate to.
         await sendIntent(

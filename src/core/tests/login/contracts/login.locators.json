@@ -16,41 +16,19 @@
     "web": "p.text-gray-400",
     "mobile": "~text-login-subtitle"
   },
-  "marketButtonUS": {
-    "web": "[data-testid='market-US']",
-    "mobile": "~btn-market-US"
+  "marketButtonList": {
+    "web": "[data-testid^='market-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-market-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-market-'`]"
+    }
   },
-  "marketButtonMX": {
-    "web": "[data-testid='market-MX']",
-    "mobile": "~btn-market-MX"
-  },
-  "marketButtonCH": {
-    "web": "[data-testid='market-CH']",
-    "mobile": "~btn-market-CH"
-  },
-  "marketButtonJP": {
-    "web": "[data-testid='market-JP']",
-    "mobile": "~btn-market-JP"
-  },
-  "languageButtonEnglish": {
-    "web": "[data-testid='lang-en']",
-    "mobile": "~btn-lang-en"
-  },
-  "languageButtonSpanish": {
-    "web": "[data-testid='lang-es']",
-    "mobile": "~btn-lang-es"
-  },
-  "languageButtonGerman": {
-    "web": "[data-testid='lang-de']",
-    "mobile": "~btn-lang-de"
-  },
-  "languageButtonFrench": {
-    "web": "[data-testid='lang-fr']",
-    "mobile": "~btn-lang-fr"
-  },
-  "languageButtonJapanese": {
-    "web": "[data-testid='lang-ja']",
-    "mobile": "~btn-lang-ja"
+  "switzerlandLanguageList": {
+    "web": "[data-testid^='lang-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-lang-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-lang-'`]"
+    }
   },
   "logoutButton": {
     "web": {
@@ -78,13 +56,6 @@
   },
   "marketSelectionContainer": {
     "mobile": "~view-market-selection"
-  },
-  "marketOptionsList": {
-    "web": "[data-testid^='market-']",
-    "mobile": {
-      "android": "android=new UiSelector().descriptionStartsWith(\"btn-market-\")",
-      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-market-'`]"
-    }
   },
   "marketFlag": {
     "mobile": {
