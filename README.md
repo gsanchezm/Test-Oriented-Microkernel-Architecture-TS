@@ -83,11 +83,11 @@ Toggle plugins with `PLUGIN_<TOOL>=true|false` in `.env` and they hot-reload.
 | Layer     | Folder                        | Responsibility                                                             |
 |-----------|-------------------------------|----------------------------------------------------------------------------|
 | Atom      | `kernel/client.ts`            | `sendIntent()` — single gRPC primitive                                     |
-| Molecule  | `[domain]/actions/*.molecule` | One UI action wrapped over `sendIntent`                                    |
-| Route     | `[domain]/routes/*.route`     | Orchestrates molecules + DAOs; chooses plugin per intent                   |
+| Molecule  | `[domain]/molecules/*.molecule` | One UI action wrapped over `sendIntent`                                    |
+| Route     | `[domain]/organisms/*.route`     | Orchestrates molecules + DAOs; chooses plugin per intent                   |
 | Step      | `[domain]/step_definitions/`  | Thin Gherkin binding — one line, calls a route method                      |
 | DAO       | `[domain]/dao/`               | Direct API calls for `Given` state injection ($S_0$)                       |
-| Resonance | `[domain]/simulations/`       | Gatling simulations co-located with the feature, driven by Examples table  |
+| Resonance | `[domain]/resonance/`       | Gatling simulations co-located with the feature, driven by Examples table  |
 
 Steps look like this:
 
@@ -97,7 +97,7 @@ Given('the OmniPizza user is logged in as {string}', async function (alias) {
 });
 ```
 
-…all orchestration lives in [`CheckoutRoute`](src/core/tests/checkout/routes/checkout.route.ts).
+…all orchestration lives in [`CheckoutRoute`](src/core/tests/checkout/organisms/checkout.route.ts).
 
 ## How to extend
 
@@ -279,10 +279,10 @@ AHM defines *how tests execute* through formal constraints rather than prescribi
 | AHM layer          | Implementation                                                                                                                |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------------|
 | ⚛️ Atoms           | `kernel/client.ts` — `sendIntent()` indivisible primitives                                                                    |
-| 🧬 Molecules       | `[domain]/actions/` — grouped intents, cross-platform                                                                         |
-| 🦠 Organisms       | `[domain]/routes/` — orchestrate molecules, decide which plugin to call                                                       |
+| 🧬 Molecules       | `[domain]/molecules/` — grouped intents, cross-platform                                                                         |
+| 🦠 Organisms       | `[domain]/organisms/` — orchestrate molecules, decide which plugin to call                                                       |
 | 🌍 Eco-Systems     | `[domain]/features/` + `step_definitions/` — BDD scenarios, thin bindings                                                     |
-| 🌊 Resonance       | `[domain]/simulations/` — Gatling load simulations driven by the same Examples table                                          |
+| 🌊 Resonance       | `[domain]/resonance/` — Gatling load simulations driven by the same Examples table                                          |
 | 🌀 Execution Helix | `.github/workflows/` — CI/CD pipelines uniting all layers into parallel, isolated orbits governed by mathematical constraints |
 
 ### Adapting other test categories
@@ -303,4 +303,4 @@ Both modes run the same `checkout-load.gatling.ts` simulation. The difference is
 
 `@gatling.io/core` and `@gatling.io/http` call `Java.type()` at module load and only work inside the Gatling JVM bundle. They must **never** be imported from `src/plugins/gatling/gatling.ts` or any handler running in the Node plugin server. Simulations are spawned as subprocesses; the plugin server only orchestrates and parses results.
 
-Files under `src/core/tests/checkout/simulations/**` keep relative imports — `@gatling.io/cli` bundles them with esbuild, which doesn't honor `tsconfig.paths`.
+Files under `src/core/tests/checkout/resonance/**` keep relative imports — `@gatling.io/cli` bundles them with esbuild, which doesn't honor `tsconfig.paths`.

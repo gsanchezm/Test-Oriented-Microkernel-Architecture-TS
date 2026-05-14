@@ -1,6 +1,6 @@
 import { After, AfterAll, Given, Then, When, setDefaultTimeout } from '@cucumber/cucumber';
 import { closeClient, sendIntent } from '@kernel/client';
-import { CheckoutRoute } from '@core/tests/checkout/routes/checkout.route';
+import { CheckoutRoute } from '@core/tests/checkout/organisms/checkout.route';
 import type { CheckoutWorld } from '@core/tests/support/world';
 import { INTENT } from '@kernel/intents';
 

@@ -1,14 +1,122 @@
 {
+  "loginScreen": {
+    "mobile": "~screen-login"
+  },
+  "appLogo": {
+    "mobile": "~img-logo"
+  },
+  "appNameText": {
+    "mobile": "~text-app-name"
+  },
+  "welcomeTitleText": {
+    "web": "h2.text-3xl",
+    "mobile": "~text-welcome-title"
+  },
+  "subtitleText": {
+    "web": "p.text-gray-400",
+    "mobile": "~text-login-subtitle"
+  },
+  "marketButtonUS": {
+    "web": "[data-testid='market-US']",
+    "mobile": "~btn-market-US"
+  },
+  "marketButtonMX": {
+    "web": "[data-testid='market-MX']",
+    "mobile": "~btn-market-MX"
+  },
+  "marketButtonCH": {
+    "web": "[data-testid='market-CH']",
+    "mobile": "~btn-market-CH"
+  },
+  "marketButtonJP": {
+    "web": "[data-testid='market-JP']",
+    "mobile": "~btn-market-JP"
+  },
+  "languageButtonEnglish": {
+    "web": "[data-testid='lang-en']",
+    "mobile": "~btn-lang-en"
+  },
+  "languageButtonSpanish": {
+    "web": "[data-testid='lang-es']",
+    "mobile": "~btn-lang-es"
+  },
+  "languageButtonGerman": {
+    "web": "[data-testid='lang-de']",
+    "mobile": "~btn-lang-de"
+  },
+  "languageButtonFrench": {
+    "web": "[data-testid='lang-fr']",
+    "mobile": "~btn-lang-fr"
+  },
+  "languageButtonJapanese": {
+    "web": "[data-testid='lang-ja']",
+    "mobile": "~btn-lang-ja"
+  },
+  "logoutButton": {
+    "web": {
+      "desktop": "[data-testid='logout-btn']",
+      "responsive": "[data-testid='mobile-logout-btn']"
+    },
+    "mobile": "~btn-logout"
+  },
   "usernameInput": {
-    "web": "[data-testid='input-username']",
+    "web": {
+      "responsive": "[data-testid='username-responsive']",
+      "desktop": "[data-testid='username-desktop']"
+    },
     "mobile": "~input-username"
   },
   "passwordInput": {
-    "web": "[data-testid='input-password']",
+    "web": {
+      "responsive": "[data-testid='password-responsive']",
+      "desktop": "[data-testid='password-desktop']"
+    },
     "mobile": "~input-password"
   },
+  "togglePasswordButton": {
+    "web": "[data-testid='toggle-password']"
+  },
+  "marketSelectionContainer": {
+    "mobile": "~view-market-selection"
+  },
+  "marketOptionsList": {
+    "web": "[data-testid^='market-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-market-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-market-'`]"
+    }
+  },
+  "marketFlag": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-flag-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-flag-'`]"
+    }
+  },
   "loginButton": {
-    "web": "[data-testid='btn-login']",
+    "web": {
+      "responsive": "[data-testid='login-button-responsive']",
+      "desktop": "[data-testid='login-button-desktop']"
+    },
     "mobile": "~btn-login"
+  },
+  "loginError": {
+    "web": "[data-testid='login-error']",
+    "mobile": "~text-login-error"
+  },
+  "quickLoginLabel": {
+    "mobile": "~text-quick-login-label"
+  },
+  "quickLoginUserList": {
+    "web": "[data-testid^='user-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-user-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-user-'`]"
+    }
+  },
+  "quickLoginUserLabel": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-user-label-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-user-label-'`]"
+    }
   }
 }

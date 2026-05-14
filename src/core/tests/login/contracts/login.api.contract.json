@@ -1,0 +1,37 @@
+{
+  "feature": "login",
+  "version": "1.0.0",
+  "baseUrlRef": "{{apiBaseUrl}}",
+  "endpoints": [
+    {
+      "id": "login.authenticate",
+      "description": "Exchange credentials for an access token. Used by DAOs to seed $S_0$ state and by the gatling resonance suite for load tests.",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "headersTemplate": {
+        "Content-Type": "application/json",
+        "Accept-Language": "{{language}}",
+        "X-Market": "{{market}}"
+      },
+      "bodyTemplate": {
+        "username": "{{username}}",
+        "password": "{{password}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.token", "matches": "^[A-Za-z0-9._-]{10,}$" }
+        ]
+      },
+      "extract": [
+        { "name": "accessToken", "from": "body", "path": "$.token" },
+        { "name": "userId",      "from": "body", "path": "$.user.id" }
+      ],
+      "tags": ["@api", "@login", "@auth"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

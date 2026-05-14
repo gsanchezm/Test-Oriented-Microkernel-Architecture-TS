@@ -7,21 +7,21 @@ import type { CartItemResponse, CountryCode, CountryInfo } from '@core/tests/che
 import {
     injectBrowserSession,
     BrowserSessionState,
-} from '@core/tests/checkout/actions/checkout-session.molecule';
-import { navigateToCheckout } from '@core/tests/checkout/actions/checkout-navigation.molecule';
+} from '@core/tests/checkout/molecules/checkout-session.molecule';
+import { navigateToCheckout } from '@core/tests/checkout/molecules/checkout-navigation.molecule';
 import {
     fillDeliveryAddress,
     fillContactInfo,
     SecondaryAddressField,
-} from '@core/tests/checkout/actions/checkout-address.molecule';
+} from '@core/tests/checkout/molecules/checkout-address.molecule';
 import {
     selectPaymentMethod,
     fillCardDetails,
-} from '@core/tests/checkout/actions/checkout-payment.molecule';
+} from '@core/tests/checkout/molecules/checkout-payment.molecule';
 import {
     placeOrder,
     verifyOrderAccepted as verifyOrderOnUI,
-} from '@core/tests/checkout/actions/checkout-order.molecule';
+} from '@core/tests/checkout/molecules/checkout-order.molecule';
 import type { CheckoutWorld } from '@core/tests/support/world';
 import { INTENT } from '@kernel/intents';
 

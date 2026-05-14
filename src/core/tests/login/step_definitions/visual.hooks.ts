@@ -1,16 +1,9 @@
-// Visual After hook for the checkout feature.
+// Visual After hook for the login feature.
 //
-// Why this lives in step_definitions/ instead of support/:
-// Cucumber runs After hooks in REVERSE registration order. support/
-// loads before step_definitions/, so a hook in support/ would register
-// first and therefore run LAST — after `checkout.steps.ts:After` has
-// already invoked `resetClientState()` (localStorage.clear + NAVIGATE
-// to BASE_URL). By that point the Playwright page is no longer on
-// /checkout, so the visual capture would snapshot the home page.
-//
-// Placing the hook here (filename sorts after `checkout.steps.ts`)
-// guarantees it registers later → runs first → captures while the
-// scenario's UI state is still on screen.
+// Mirrors the checkout pattern (see checkout/step_definitions/visual.hooks.ts
+// for the full rationale on hook ordering — the file must register AFTER
+// login.steps.ts so it runs FIRST in the After phase, before resetClientState
+// navigates away).
 
 import { After } from '@cucumber/cucumber';
 import { sendIntent } from '@kernel/client';
@@ -32,13 +25,10 @@ function featureFromUri(uri: string): string | null {
 
 After({ tags: '@visual' }, async function ({ pickle, result }) {
     if (!isPixelmatchPluginEnabled()) return;
-    if (result?.status === 'FAILED') return; // don't pile visual diffs on top of a functional failure
+    if (result?.status === 'FAILED') return;
 
     const feature = featureFromUri(pickle.uri);
-    if (!feature) {
-        visualLog.warn({ uri: pickle.uri }, 'Visual hook could not derive feature from pickle.uri');
-        return;
-    }
+    if (!feature || feature !== 'login') return;
 
     let contract;
     try {
@@ -52,7 +42,7 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
     }
 
     const scenarioTags = new Set(pickle.tags.map((t) => t.name));
-    scenarioTags.add(`@${feature}`); // feature name is implicit for every scenario in that feature
+    scenarioTags.add(`@${feature}`);
     const matched = contract.snapshots.filter((snap) =>
         (snap.tags ?? []).every((t) => scenarioTags.has(t)),
     );
@@ -65,17 +55,14 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
         return;
     }
 
-    // Per-market bucketing: scenario data shapes the rendered DOM (cart
-    // items, prices, currency) so a single global baseline would be
-    // unstable. Pass `market` through the visual contract target so the
-    // plugin scopes baseline/result paths under <viewport>/<market>/.
+    // Per-market bucketing — same rationale as checkout. The market lives in
+    // the world only after a market step ran; before that the snapshot is the
+    // un-localized initial state and we skip the suffix.
     const world = this as CheckoutWorld;
     const market = world.orderContext?.market;
     const optionsJson = market ? `||${JSON.stringify({ market })}` : '';
 
     for (const snap of matched) {
-        // Third arg routes the intent to the pixelmatch plugin (port 50056) —
-        // the default DRIVER target would land on playwright/appium.
         await sendIntent(
             INTENT.COMPARE_SNAPSHOT,
             `${feature}||${snap.id}${optionsJson}`,
