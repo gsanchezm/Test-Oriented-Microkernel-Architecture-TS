@@ -33,7 +33,7 @@ export const RunCheckoutLoadAction: ActionHandler<GatlingActionContext> = {
         const startedAt = Date.now();
         const { exitCode, reportDir } = await runner.run({
             profile,
-            sourcesFolder: 'src/core/tests/checkout/simulations',
+            sourcesFolder: 'src/core/tests/checkout/resonance',
             simulation: 'checkout-load',
             env: extraEnv,
         });

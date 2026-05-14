@@ -17,7 +17,7 @@ import { parseSimulationTarget } from '@plugins/shared/parseCompositeTarget';
 import { GatlingActionContext } from '@plugins/gatling/actions/GatlingActionContext';
 import { writePerformanceSummary } from '@plugins/gatling/actions/performance-telemetry-writer';
 
-const DEFAULT_SOURCES_FOLDER = 'src/core/tests/checkout/simulations';
+const DEFAULT_SOURCES_FOLDER = 'src/core/tests/checkout/resonance';
 
 export const RunSimulationAction: ActionHandler<GatlingActionContext> = {
     name: 'RUN_SIMULATION',

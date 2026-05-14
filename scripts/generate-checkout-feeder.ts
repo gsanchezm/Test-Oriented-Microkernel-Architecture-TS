@@ -9,11 +9,11 @@
 
 import * as fs   from 'fs';
 import * as path from 'path';
-import { featureToCheckoutRows } from '@core/tests/checkout/simulations/checkout-rows';
+import { featureToCheckoutRows } from '@core/tests/checkout/resonance/checkout-rows';
 
 const OUT_FILE = path.resolve(
     __dirname,
-    '../src/core/tests/checkout/simulations/checkout-rows.generated.ts',
+    '../src/core/tests/checkout/resonance/checkout-rows.generated.ts',
 );
 
 const rows = featureToCheckoutRows(['Credit Card', 'Cash']);

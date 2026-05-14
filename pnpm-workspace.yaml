@@ -1,3 +1,11 @@
+allowBuilds:
+  appium: true
+  appium-ios-tuntap: true
+  edgedriver: true
+  esbuild: true
+  geckodriver: true
+  protobufjs: true
+  sharp: true
 onlyBuiltDependencies:
   - appium
   - appium-ios-tuntap
