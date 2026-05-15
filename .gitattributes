@@ -1,0 +1,7 @@
+# Visual baselines are binary PNGs — never let GitHub render textual diffs
+# and never let merge tools attempt 3-way merge on them.
+visual-baselines/**/*.png binary -diff -merge
+
+# App binaries (large, opaque) follow the same rule.
+assets/apps/**/*.apk binary -diff -merge
+assets/apps/**/*.ipa binary -diff -merge

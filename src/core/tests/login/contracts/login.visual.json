@@ -1,6 +1,6 @@
 {
   "feature": "login",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "defaults": {
     "thresholds": { "pixelRatio": 0.005 },
     "platforms": ["web", "android", "ios"],
@@ -27,6 +27,17 @@
       "viewports": ["desktop", "responsive", "mobile"],
       "thresholds": { "pixelRatio": 0.01 },
       "tags": ["@visual", "@login", "@localized"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "login_screen_invalid_credentials",
+      "description": "Login screen after a failed sign-in attempt — the error banner ([data-testid='login-error']) renders 'Invalid credentials' below the form.",
+      "regionRef": "loginScreen",
+      "maskRefs": ["usernameInput", "passwordInput"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@login", "@invalid"],
       "telemetry": { "enabled": true, "emitOnLoad": false }
     }
   ]

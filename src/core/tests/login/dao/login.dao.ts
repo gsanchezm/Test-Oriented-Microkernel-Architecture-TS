@@ -1,5 +1,7 @@
 import { HttpClient } from '@plugins/api/http';
+import { HttpError } from '@plugins/api/http/http.error';
 import type {
+    LoginAttemptResult,
     LoginDaoOptions,
     LoginRequest,
     LoginResponse,
@@ -39,6 +41,32 @@ export class LoginDao {
         return this.httpClient.post<LoginResponse>(this.loginEndpoint, {
             body: credentials,
         });
+    }
+
+    // Negative-path variant. Used by invalid-credentials scenarios where the
+    // caller EXPECTS the backend to reject the payload. Empty username/password
+    // are allowed (the test cases include both-empty); we still post them
+    // verbatim so the backend's own validator is exercised.
+    async loginAllowError(credentials: LoginRequest): Promise<LoginAttemptResult> {
+        try {
+            const response = await this.httpClient.post<LoginResponse>(this.loginEndpoint, {
+                body: credentials,
+            });
+            return { ok: true, response };
+        } catch (err) {
+            if (err instanceof HttpError) {
+                return {
+                    ok: false,
+                    status: err.status,
+                    message: err.message,
+                    body: err.responseBody,
+                };
+            }
+            return {
+                ok: false,
+                message: (err as Error).message,
+            };
+        }
     }
 
     extractToken(response: LoginResponse): string | undefined {

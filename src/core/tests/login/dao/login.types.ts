@@ -25,3 +25,7 @@ export interface LoginDaoOptions {
     headers?: Record<string, string>;
     fetchImpl?: typeof fetch;
 }
+
+export type LoginAttemptResult =
+    | { ok: true; response: LoginResponse }
+    | { ok: false; status?: number; message: string; body?: unknown };

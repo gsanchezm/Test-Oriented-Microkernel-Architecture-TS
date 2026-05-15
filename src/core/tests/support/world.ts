@@ -51,5 +51,13 @@ export interface CheckoutWorld {
         cardCvv?: string;
     };
     checkoutResult?: CheckoutResponse;
+    // Set by LoginRoute.attemptLogin when the credentials are expected to fail.
+    // Under DRIVER=api the route catches HttpError, records status+message here,
+    // and the Then-step asserts against it instead of a UI element.
+    loginAttempt?: {
+        ok: boolean;
+        status?: number;
+        message?: string;
+    };
 }
 

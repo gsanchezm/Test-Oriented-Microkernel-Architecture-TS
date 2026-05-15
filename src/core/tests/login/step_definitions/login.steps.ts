@@ -40,6 +40,17 @@ Then('the logout button label is {string}', async function (expected: string) {
     await route(this).verifyLogoutLabel(expected);
 });
 
+When(
+    'the user attempts to log in with username {string} and password {string}',
+    async function (username: string, password: string) {
+        await route(this).attemptLogin(username, password);
+    },
+);
+
+Then('the login error message contains {string}', async function (expected: string) {
+    await route(this).verifyLoginErrorContains(expected);
+});
+
 After(async function () {
     try {
         await route(this).resetClientState();

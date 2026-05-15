@@ -43,9 +43,21 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
 
     const scenarioTags = new Set(pickle.tags.map((t) => t.name));
     scenarioTags.add(`@${feature}`);
-    const matched = contract.snapshots.filter((snap) =>
+    const candidates = contract.snapshots.filter((snap) =>
         (snap.tags ?? []).every((t) => scenarioTags.has(t)),
     );
+
+    // When multiple snapshots match (e.g. `login_screen_initial` with
+    // ["@visual","@login"] and `login_screen_invalid_credentials` with
+    // ["@visual","@login","@invalid"]) prefer the MOST specific — i.e. the
+    // entries whose tag set is the longest. Otherwise we'd capture both
+    // and the less-specific one would diff loudly against a baseline taken
+    // from a different scenario state.
+    const longest = candidates.reduce(
+        (acc, snap) => Math.max(acc, (snap.tags ?? []).length),
+        0,
+    );
+    const matched = candidates.filter((snap) => (snap.tags ?? []).length === longest);
 
     if (matched.length === 0) {
         visualLog.info(
