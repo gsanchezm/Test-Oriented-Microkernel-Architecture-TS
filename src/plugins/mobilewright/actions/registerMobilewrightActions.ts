@@ -3,6 +3,7 @@ import { MobilewrightActionContext } from '@plugins/mobilewright/actions/Mobilew
 import { NavigateAction } from '@plugins/mobilewright/actions/Navigate';
 import { ClickAction } from '@plugins/mobilewright/actions/Click';
 import { TypeAction } from '@plugins/mobilewright/actions/Type';
+import { ClearTextAction } from '@plugins/mobilewright/actions/ClearText';
 import { AssertTextAction } from '@plugins/mobilewright/actions/AssertText';
 import { WaitForElementAction } from '@plugins/mobilewright/actions/WaitForElement';
 
@@ -16,6 +17,7 @@ export function getMobilewrightActionRegistry(): ActionRegistry<MobilewrightActi
         .register(NavigateAction)
         .register(ClickAction)
         .register(TypeAction)
+        .register(ClearTextAction)
         .register(AssertTextAction)
         .register(WaitForElementAction);
 

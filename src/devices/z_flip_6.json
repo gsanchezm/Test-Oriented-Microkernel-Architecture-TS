@@ -2,7 +2,7 @@
   "id": "z_flip_6",
   "platform": "android",
   "osVersion": "16",
-  "udid": null,
+  "udid": "R5CX71NFF9H",
   "model": "Galaxy Z Flip 6",
   "screen": null,
   "compatibleDrivers": ["appium", "mobilewright"],

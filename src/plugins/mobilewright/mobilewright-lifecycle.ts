@@ -52,6 +52,12 @@ function resolveDeviceIdOverride(platform: DevicePlatform, sessionId: string): s
 }
 
 function resolveBinaryPathOverride(platform: DevicePlatform): string | undefined {
+    // Only forward the APK/IPA path when an explicit install is requested.
+    // Otherwise Mobilewright's `installApps` triggers `installPackageLI` on
+    // every `launch()`, which force-stops the running app and breaks the
+    // launch handshake (WebSocket 1006 → session throws → next call relaunches
+    // → reinstall loop). This mirrors Appium's `noReset: true` default.
+    if (process.env.MW_INSTALL_APP !== 'true') return undefined;
     return platform === 'android' ? process.env.ANDROID_APP_PATH : process.env.IOS_APP_PATH;
 }
 

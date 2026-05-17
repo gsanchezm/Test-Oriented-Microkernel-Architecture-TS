@@ -57,6 +57,13 @@ export async function submitInvalidCredentials(username: string, password: strin
             INTENT.EVALUATE,
             `window.__loginAttemptSentinel = 'sentinel-${Date.now()}';`,
         );
+    } else {
+        // On mobile, the OmniPizza app pre-fills `standard_user` / `pizza123`
+        // and `noReset: true` keeps that state across scenarios. We MUST clear
+        // both inputs unconditionally — otherwise empty test cases submit the
+        // demo defaults, the API accepts them, and we never see the error.
+        await sendIntent(INTENT.CLEAR_TEXT, 'usernameInput');
+        await sendIntent(INTENT.CLEAR_TEXT, 'passwordInput');
     }
     if (username.length > 0) {
         await sendIntent(INTENT.TYPE, `usernameInput||${username}`);

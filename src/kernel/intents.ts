@@ -11,6 +11,7 @@ export const INTENT = {
     // UI primitives (web-ui + mobile-ui)
     CLICK: 'CLICK',
     TYPE: 'TYPE',
+    CLEAR_TEXT: 'CLEAR_TEXT',
     NAVIGATE: 'NAVIGATE',
     EVALUATE: 'EVALUATE',
     READ_TEXT: 'READ_TEXT',
