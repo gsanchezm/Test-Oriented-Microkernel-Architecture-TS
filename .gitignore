@@ -70,3 +70,6 @@ metrics/processed/**
 metrics/figures/**
 !metrics/figures/
 !metrics/figures/.gitkeep
+
+# Devices
+**/iphone_physical.json
