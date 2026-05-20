@@ -10,11 +10,7 @@
     }
   },
   "orderIdLabel": {
-    "web": "[data-testid='order-id']",
-    "mobile": {
-      "android": "~text-order-id",
-      "ios": "~text-order-id"
-    }
+    "web": "[data-testid='order-id']"
   },
   "orderSuccessTitle": {
     "web": {
@@ -33,6 +29,7 @@
     "mobile": "~view-live-badge"
   },
   "liveTrackingText": {
+    "web": "[data-testid='live-tracking-status']",
     "mobile": "~text-live-tracking"
   },
   "courierTagText": {
@@ -42,12 +39,15 @@
     "mobile": "~text-status-title"
   },
   "statusSubtitleText": {
+    "web": "[data-testid='expected-arrival']",
     "mobile": "~text-status-sub"
   },
   "timeEstimateText": {
+    "web": "[data-testid='delivery-time-min']",
     "mobile": "~text-time-estimate"
   },
   "minLabelText": {
+    "web": "[data-testid='delivery-time-label']",
     "mobile": "~text-min-label"
   },
   "bottomSheetContainer": {
@@ -58,25 +58,38 @@
     "mobile": "~view-courier-card"
   },
   "courierRatingText": {
+    "web": "[data-testid='courier-rating']",
     "mobile": "~text-courier-rating"
   },
   "courierLabelText": {
+    "web": "[data-testid='courier-role-label']",
     "mobile": "~text-courier-label"
   },
   "courierNameText": {
+    "web": "[data-testid='courier-name']",
     "mobile": "~text-courier-name"
   },
   "courierVehicleText": {
+    "web": "[data-testid='courier-vehicle']",
     "mobile": "~text-courier-vehicle"
+  },
+  "courierImage": {
+    "web": "[data-testid='img-courier']",
+    "mobile": "~img-courier-avatar"
   },
   "courierChatButton": {
     "web": {
       "responsive": "[data-testid='courier-chat-responsive']",
       "desktop": "[data-testid='courier-chat-desktop']"
-    }
+    },
+    "mobile": "~btn-courier-chat"
   },
   "courierCallButton": {
-    "web": "[data-testid='courier-call']"
+    "web": {
+      "responsive": "[data-testid='courier-call-responsive']",
+      "desktop": "[data-testid='courier-call-desktop']"
+    },
+    "mobile": "~btn-courier-call"
   },
   "orderIdText": {
     "web": "[data-testid='order-id']"
@@ -89,6 +102,7 @@
     "mobile": "~btn-order-details"
   },
   "orderDetailsLabel": {
+    "web": "[data-testid='order-details-label']",
     "mobile": "~text-order-details"
   }
 }
