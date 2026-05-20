@@ -59,5 +59,10 @@ export interface CheckoutWorld {
         status?: number;
         message?: string;
     };
+    // Populated by OrderSuccessRoute.createPlacedOrder so openSuccessScreen
+    // can rehydrate the success-screen via deep link (mobile) or query param
+    // (web) without re-running the placement flow.
+    placedOrderId?: string;
+    languageOverride?: 'en' | 'es' | 'de' | 'fr' | 'ja';
 }
 
