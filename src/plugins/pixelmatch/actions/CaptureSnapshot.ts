@@ -27,6 +27,7 @@ export const CaptureSnapshotAction: ActionHandler<PixelmatchActionContext> = {
             platform: opts.platform,
             viewport: opts.viewport,
             market: opts.market,
+            language: opts.language,
         });
         ensureDir(paths.runResultDir);
 

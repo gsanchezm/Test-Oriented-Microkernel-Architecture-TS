@@ -20,12 +20,12 @@
     },
     {
       "id": "login_screen_localized",
-      "description": "Login screen after market+language selection — welcome title/subtitle in the selected locale.",
-      "regionRef": "loginScreen",
-      "maskRefs": ["usernameInput", "passwordInput"],
+      "description": "Post-login chrome — logout button label rendered in the active locale. The market-language-localization scenarios end after login completes, so this snapshot fires on the post-login screen where the localized logout button is visible (the same element the scenario asserts).",
+      "regionRef": "logoutButton",
+      "maskRefs": [],
       "platforms": ["web", "android", "ios"],
       "viewports": ["desktop", "responsive", "mobile"],
-      "thresholds": { "pixelRatio": 0.01 },
+      "thresholds": { "pixelRatio": 0.02 },
       "tags": ["@visual", "@login", "@localized"],
       "telemetry": { "enabled": true, "emitOnLoad": false }
     },

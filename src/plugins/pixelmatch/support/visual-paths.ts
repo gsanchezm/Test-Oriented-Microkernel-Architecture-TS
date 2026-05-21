@@ -1,10 +1,11 @@
 // Deterministic path helpers for the Visual oracle.
 //
-// Layout (market segment is optional — present for scenario-bound
-// snapshots whose render depends on per-market data, omitted when the
-// snapshot is market-agnostic):
-//   visual-baselines/<feature>/<snapshot-id>/<platform>/<viewport>[/<market>]/baseline.png
-//   visual-results/<run-id>/<feature>/<snapshot-id>/<platform>/<viewport>[/<market>]/{actual,diff}.png + result.json
+// Layout (the market and language segments are optional — present for
+// scenario-bound snapshots whose render depends on per-market or
+// per-language data, omitted when the snapshot is invariant in that
+// dimension):
+//   visual-baselines/<feature>/<snapshot-id>/<platform>/<viewport>[/<market>][/<language>]/baseline.png
+//   visual-results/<run-id>/<feature>/<snapshot-id>/<platform>/<viewport>[/<market>][/<language>]/{actual,diff}.png + result.json
 //
 // runId precedence mirrors ContractTelemetryWriter: TOM_RUN_ID → GITHUB_RUN_ID → generated.
 
@@ -21,10 +22,19 @@ export interface VisualPathKey {
     viewport: string;
     /** Optional scenario-data dimension (e.g. country code "US"/"MX"). */
     market?: string;
+    /** Optional rendering-language dimension ("en"/"es"/"de"/"fr"/"ja").
+     *  Needed when a single market shows multiple languages (CH-de vs CH-fr)
+     *  or when login screens render different copy per locale before the
+     *  market context is established. */
+    language?: string;
 }
 
 function marketSegment(market: string | undefined): string[] {
     return market ? [market.toLowerCase()] : [];
+}
+
+function languageSegment(language: string | undefined): string[] {
+    return language ? [language.toLowerCase()] : [];
 }
 
 export interface VisualBaselinePaths {
@@ -49,6 +59,7 @@ export function baselinePaths(key: VisualPathKey): VisualBaselinePaths {
         key.platform,
         key.viewport,
         ...marketSegment(key.market),
+        ...languageSegment(key.language),
     );
     return {
         baselineDir,
@@ -67,6 +78,7 @@ export function resultPaths(key: VisualPathKey, runId?: string): VisualResultPat
         key.platform,
         key.viewport,
         ...marketSegment(key.market),
+        ...languageSegment(key.language),
     );
     return {
         runId: id,

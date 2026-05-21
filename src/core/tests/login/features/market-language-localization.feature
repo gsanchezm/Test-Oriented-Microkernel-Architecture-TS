@@ -6,7 +6,7 @@ Feature: Market-driven language localization across login + post-login UI
     I want the UI translated end-to-end (login screen and post-login chrome),
     So that I can use the app in my native language without surprises.
 
-  @desktop @visual
+  @desktop @visual @localized
   Scenario Outline: Logout label is translated to <language> after market <market>
     Given the OmniPizza login screen is open
     When the user selects the "<market>" market with language "<language>"

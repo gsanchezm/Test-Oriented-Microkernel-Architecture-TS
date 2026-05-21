@@ -76,9 +76,20 @@ export function comparePngBuffers(
     const totalPixels = a.width * a.height;
     const diffRatio = totalPixels > 0 ? diffPixels / totalPixels : 0;
 
-    const passed =
-        diffPixels <= thresholds.maxDiffPixels &&
-        diffRatio <= thresholds.maxDiffRatio;
+    // OR-semantics: a snapshot passes if *either* threshold is satisfied.
+    // The contract author declares whichever dimension they care about
+    // (pixel count for "≤ N tolerable artifacts" or ratio for "≤ X% of
+    // the region"). Defaults are zero for both, but unspecified dimensions
+    // should not silently veto a satisfied one — that was the old AND
+    // surprise where pixelRatio: 0.01 was negated by pixelCount: 0 default.
+    // If both are zero (defaults across the board) we still demand exact
+    // equality, which is the original strict policy.
+    const exactRequested =
+        thresholds.maxDiffPixels === 0 && thresholds.maxDiffRatio === 0;
+    const passed = exactRequested
+        ? diffPixels === 0
+        : diffPixels <= thresholds.maxDiffPixels ||
+          diffRatio <= thresholds.maxDiffRatio;
 
     return {
         width: a.width,

@@ -27,6 +27,8 @@ export const UpdateBaselineAction: ActionHandler<PixelmatchActionContext> = {
             snapshotId: opts.snapshotId,
             platform: opts.platform,
             viewport: opts.viewport,
+            market: opts.market,
+            language: opts.language,
         };
 
         const startedAt = Date.now();

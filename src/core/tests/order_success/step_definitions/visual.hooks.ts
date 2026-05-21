@@ -77,13 +77,17 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
         return;
     }
 
-    // Per-market bucketing — same rationale as checkout/login. The active
-    // market lives in the world after the placement step ran; for this slice
-    // it's always populated by the time the screen renders, so we always
-    // include the market suffix.
+    // Per-(market, language) bucketing. order_success scenarios always
+    // populate both fields before the visual hook fires.
     const world = this as CheckoutWorld;
     const market = world.orderContext?.market;
-    const optionsJson = market ? `||${JSON.stringify({ market })}` : '';
+    const language = world.languageOverride ?? world.locale?.language;
+    const bucket: Record<string, string> = {};
+    if (market) bucket.market = market;
+    if (language) bucket.language = language;
+    const optionsJson = Object.keys(bucket).length > 0
+        ? `||${JSON.stringify(bucket)}`
+        : '';
 
     for (const snap of matched) {
         // Wrapped in try/catch — visual drift is a pixelmatch concern. See

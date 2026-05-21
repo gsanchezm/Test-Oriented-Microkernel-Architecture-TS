@@ -287,10 +287,20 @@ AHM defines *how tests execute* through formal constraints rather than prescribi
 
 ### Adapting other test categories
 
-- **Visual / accessibility** — map onto Molecules: a snapshot check is a `COMPARE_SNAPSHOT` intent. The `pixelmatch` plugin owns the oracle.
+- **Visual / accessibility** — map onto Molecules: a snapshot check is a `COMPARE_SNAPSHOT` intent. The `pixelmatch` plugin owns the oracle. Visual snapshots are **a dimension of the web Eco-System**, not a separate pipeline: the same Cucumber scenarios that drive functional checks fire visual hooks when tagged `@visual` and `PLUGIN_PIXELMATCH=true`. The CI gate (`scripts/visual-gate.js`) surfaces drift as an independent failure so functional and visual regressions remain separately diagnosable.
 - **DAST** — fits into Resonance. Same feeder mechanics as load tests, payload becomes the attack surface.
 - **SAST** — outside the AHM kernel. Static analysis doesn't carry stochastic noise, so $\lambda < 0$ doesn't apply. Runs as a regular CI job.
 - **Unit tests** — outside the kernel. They evaluate code locally, no network jitter; should live alongside source code.
+
+### Visual oracle: baselines + bucketing + threshold
+
+Three design decisions worth knowing before authoring or extending visual snapshots:
+
+- **Baselines live in `visual-baselines/` (tracked) but PNGs are gitignored locally** (`.gitignore: visual-baselines/*` + `!visual-baselines/.gitkeep`). Canonical baselines come exclusively from the `update-visual-baselines.yml` workflow which runs in the Playwright-jammy container and `git add -f`'s the PNGs into a PR. Locally, `pnpm visual:refresh` regenerates baselines for iteration, but those stay invisible to git so dev fonts (Windows ClearType, macOS subpixel) never pollute the committed Linux-rendered set.
+- **Snapshot keys bucket by `<feature>/<snapshotId>/<platform>/<viewport>/[<market>/][<language>/]`.** The market and language segments are optional and propagate from `world.orderContext`/`world.locale`/`world.languageOverride` through the visual hook's options JSON. Two scenarios with the same market but different language land on different baselines — the right granularity for i18n testing.
+- **Threshold policy is OR-logic.** A snapshot passes if either `pixelRatio` OR `pixelCount` is satisfied. Defaults are zero for both (strict equality if the contract says nothing). The previous AND behavior silently vetoed a satisfied dimension if the other defaulted to zero — a `pixelRatio: 0.01` declaration is now respected on its own.
+
+To accept a legitimate UI change: trigger `update-visual-baselines.yml` workflow_dispatch with a `reason`, review the resulting PR, merge. The next PR's `e2e-web` Visual gate goes green automatically.
 
 ### Performance: TOM-driven vs standalone
 

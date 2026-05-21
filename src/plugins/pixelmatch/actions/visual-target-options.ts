@@ -15,6 +15,8 @@ export interface VisualTargetOptions {
     viewport: string;
     /** Optional scenario-data dimension (e.g. country code "US"/"MX") used to bucket baselines. */
     market?: string;
+    /** Optional rendering-language dimension ("en"/"es"/"de"/"fr"/"ja"). */
+    language?: string;
     saveActualOnly: boolean;
     updateReason: string | null;
     raw: Record<string, unknown>;
@@ -32,6 +34,9 @@ export function parseVisualTarget(target: string): VisualTargetOptions {
     const market = typeof variables.market === 'string' && variables.market.length > 0
         ? variables.market.toLowerCase()
         : undefined;
+    const language = typeof variables.language === 'string' && variables.language.length > 0
+        ? variables.language.toLowerCase()
+        : undefined;
 
     return {
         feature,
@@ -39,6 +44,7 @@ export function parseVisualTarget(target: string): VisualTargetOptions {
         platform,
         viewport,
         market,
+        language,
         saveActualOnly: variables.saveActualOnly === true,
         updateReason: typeof variables.updateReason === 'string' ? variables.updateReason : null,
         raw: variables,

@@ -75,12 +75,19 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
         return;
     }
 
-    // Per-market bucketing — same rationale as checkout. The market lives in
-    // the world only after a market step ran; before that the snapshot is the
-    // un-localized initial state and we skip the suffix.
+    // Per-(market, language) bucketing. On the login screen the market is
+    // usually unset until the user clicks the market button, but the
+    // language is set by LoginRoute as soon as the market+language pair
+    // has been selected. We bucket on whatever is present.
     const world = this as CheckoutWorld;
-    const market = world.orderContext?.market;
-    const optionsJson = market ? `||${JSON.stringify({ market })}` : '';
+    const market = world.orderContext?.market ?? world.locale?.market;
+    const language = world.locale?.language;
+    const bucket: Record<string, string> = {};
+    if (market) bucket.market = market;
+    if (language) bucket.language = language;
+    const optionsJson = Object.keys(bucket).length > 0
+        ? `||${JSON.stringify(bucket)}`
+        : '';
 
     for (const snap of matched) {
         // Wrapped in try/catch — visual drift is a pixelmatch concern. See

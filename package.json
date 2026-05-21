@@ -12,6 +12,7 @@
     "plugin:pixelmatch": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/pixelmatch/server.ts",
     "plugin:mobilewright": "ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/mobilewright/server.ts",
     "test": "cucumber-js",
+    "visual:refresh": "node scripts/visual-refresh.js",
     "perf:generate": "node -r tsconfig-paths/register node_modules/ts-node/dist/bin.js scripts/generate-checkout-feeder.ts",
     "preperf:smoke": "pnpm run perf:generate",
     "preperf:load": "pnpm run perf:generate",

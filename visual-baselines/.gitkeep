@@ -1,0 +1,7 @@
+# Placeholder so `visual-baselines/` exists in the repo even when no
+# baseline PNGs are committed yet. The PNGs themselves are gitignored
+# locally (see .gitignore) and arrive via the
+# update-visual-baselines.yml workflow which force-stages them. Once
+# that workflow's PR merges, real baseline PNGs live alongside this
+# file — keep it untouched so the directory is never accidentally
+# removed during a `rm -rf visual-baselines/*` (it skips dotfiles).

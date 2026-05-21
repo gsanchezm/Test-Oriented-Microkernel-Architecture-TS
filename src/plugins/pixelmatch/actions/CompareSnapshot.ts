@@ -42,6 +42,7 @@ export const CompareSnapshotAction: ActionHandler<PixelmatchActionContext> = {
             platform: opts.platform,
             viewport: opts.viewport,
             market: opts.market,
+            language: opts.language,
         };
 
         const thresholds = resolveThresholds(snapshot.thresholds);

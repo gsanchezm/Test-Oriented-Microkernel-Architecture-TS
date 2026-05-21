@@ -77,10 +77,22 @@ jobs:
       - name: Regenerate baselines
         run: ./node_modules/.bin/cucumber-js --tags "@visual"
 
+      - name: Force-stage baselines (override the local-only PNG ignore rule)
+        # The repo's .gitignore excludes `visual-baselines/*` (only the
+        # .gitkeep is tracked by default) so dev laptops don't accidentally
+        # commit Windows/macOS-rendered PNGs that would diff against the
+        # CI Linux container. This workflow IS that Linux container — its
+        # baselines are the canonical ones — so we override the ignore via
+        # `git add -f` and let peter-evans commit the resulting index.
+        run: git add -f visual-baselines/
+
       - name: Open refresh PR
         uses: peter-evans/create-pull-request@v6
         with:
-          add-paths: visual-baselines/
+          # `add-paths` omitted on purpose: peter-evans then commits the
+          # entire pre-staged index, including the force-staged PNGs.
+          # Setting `add-paths: visual-baselines/` re-runs `git add` without
+          # `-f` and silently drops the ignored files.
           branch: visual-baselines/refresh-${{ github.run_id }}
           base: ${{ github.event.inputs.target_branch || github.ref_name }}
           commit-message: |
@@ -98,8 +110,9 @@ jobs:
             **Source run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
             Review the PNG diffs in this PR before merging — every checked-in
-            baseline becomes the new source of truth for the `visual.yml`
-            workflow.
+            baseline becomes the new source of truth for the `e2e-web` /
+            `e2e-web-responsive` jobs in `ahm-execution-helix.yml` (the
+            Visual gate compares actual captures against these PNGs).
 
       - name: Upload refresh artifacts
         if: always()

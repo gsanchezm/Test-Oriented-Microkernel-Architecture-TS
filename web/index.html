@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AHM — Atomic Helix Model</title>
-  <meta name="description" content="The Testing-Oriented Microkernel (TOM). Chaos-resilient E2E automation for Web, Mobile, API, and Performance." />
+  <meta name="description" content="The Testing-Oriented Microkernel (TOM). Chaos-resilient E2E automation for Web, Mobile, API, Performance, and Visual snapshot regression." />
   <style>
     /* ─── Reset & Base ─────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -501,7 +501,7 @@
       <div class="feature-card">
         <div class="feature-icon">📦</div>
         <h3>Plugin Isolation</h3>
-        <p>Each execution engine — Web, Mobile, API, Performance — runs as an independent gRPC server. Deploy only what you need. Kill one without touching the others.</p>
+        <p>Each execution engine — Web, Mobile, API, Performance, Visual — runs as an independent gRPC server. Deploy only what you need. Kill one without touching the others.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">π</div>
@@ -633,7 +633,7 @@ graph TD
   <div class="container">
     <span class="tag">Helix Continuity</span>
     <h2 class="section-title">Unified Continuous Execution.</h2>
-    <p class="section-sub">A single workflow, one source of truth. All execution layers (API, Web, Android, Perf) unified into a single AHM Execution Helix.</p>
+    <p class="section-sub">A single workflow, one source of truth. All execution layers (API, Web, Visual, Performance, Mobile) unified into a single AHM Execution Helix. Visual snapshot regression is fused into the Web E2E jobs &mdash; same container, same captures &mdash; with a dedicated gate that surfaces drift as an independent check.</p>
 
     <div class="cicd-table" style="margin-top: 48px; overflow-x: auto; background: var(--surface-2); border-radius: var(--radius); border: 1px solid var(--border);">
       <table style="width: 100%; text-align: left; border-collapse: collapse;">
@@ -642,6 +642,7 @@ graph TD
             <th style="padding: 18px; font-size: .9rem;">Trigger Event</th>
             <th style="padding: 18px; font-size: .9rem;">API Smoke</th>
             <th style="padding: 18px; font-size: .9rem;">Web E2E</th>
+            <th style="padding: 18px; font-size: .9rem;">Visual Diff</th>
             <th style="padding: 18px; font-size: .9rem;">Performance</th>
             <th style="padding: 18px; font-size: .9rem;">Mobile (Android)</th>
           </tr>
@@ -651,6 +652,7 @@ graph TD
             <td style="padding: 18px; font-size: .88rem; font-weight: 700;">Push to main</td>
             <td style="padding: 18px; color: #3fb950;">✅ Running</td>
             <td style="padding: 18px; color: #3fb950;">✅ Running</td>
+            <td style="padding: 18px; color: #3fb950;">✅ Running (gated)</td>
             <td style="padding: 18px; color: #3fb950;">✅ Running (Smoke)</td>
             <td style="padding: 18px; color: var(--text-muted);">—</td>
           </tr>
@@ -658,19 +660,37 @@ graph TD
             <td style="padding: 18px; font-size: .88rem; font-weight: 700;">Pull Request</td>
             <td style="padding: 18px; color: #3fb950;">✅ Running</td>
             <td style="padding: 18px; color: #3fb950;">✅ Running</td>
+            <td style="padding: 18px; color: #3fb950;">✅ Running (gated)</td>
             <td style="padding: 18px; color: var(--text-muted);">—</td>
             <td style="padding: 18px; color: var(--text-muted);">—</td>
           </tr>
-          <tr>
+          <tr style="border-bottom: 1px solid var(--border);">
             <td style="padding: 18px; font-size: .88rem; font-weight: 700;">Manual Helix Dispatch</td>
             <td style="padding: 18px; color: #58a6ff;">Optional</td>
             <td style="padding: 18px; color: #58a6ff;">Optional</td>
+            <td style="padding: 18px; color: #58a6ff;">Optional (within Web)</td>
             <td style="padding: 18px; color: #58a6ff;">Optional</td>
             <td style="padding: 18px; color: #ffbd2e;">Manual Selection Only</td>
+          </tr>
+          <tr>
+            <td style="padding: 18px; font-size: .88rem; font-weight: 700;">Update Visual Baselines</td>
+            <td style="padding: 18px; color: var(--text-muted);">—</td>
+            <td style="padding: 18px; color: var(--text-muted);">—</td>
+            <td style="padding: 18px; color: #ffbd2e;">Workflow Dispatch &mdash; opens PR</td>
+            <td style="padding: 18px; color: var(--text-muted);">—</td>
+            <td style="padding: 18px; color: var(--text-muted);">—</td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <p style="margin-top: 24px; font-size: .85rem; color: var(--text-muted); line-height: 1.6;">
+      Visual snapshots live in <code style="color: var(--accent); font-size: .8rem;">visual-baselines/</code> committed via the
+      <code style="color: var(--accent); font-size: .8rem;">update-visual-baselines.yml</code> workflow (Linux container with pinned Chromium + fonts &rarr; deterministic baselines).
+      Each Pull Request runs the Web E2E job inside the same container, captures actuals via the
+      <code style="color: var(--accent); font-size: .8rem;">pixelmatch</code> plugin co-located in the Playwright process, and the dedicated
+      <code style="color: var(--accent); font-size: .8rem;">Visual gate</code> step fails the check only on drift &mdash; keeping functional and visual regressions independently visible.
+    </p>
   </div>
 </section>
 

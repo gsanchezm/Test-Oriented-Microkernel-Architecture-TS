@@ -75,13 +75,21 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
         return;
     }
 
-    // Per-market bucketing: scenario data shapes the rendered DOM (cart
-    // items, prices, currency) so a single global baseline would be
-    // unstable. Pass `market` through the visual contract target so the
-    // plugin scopes baseline/result paths under <viewport>/<market>/.
+    // Per-(market, language) bucketing: scenario data shapes the rendered
+    // DOM (cart items, prices, currency, copy) so a single global baseline
+    // would be unstable. Pass both dimensions through the visual target so
+    // the plugin scopes baseline/result paths under
+    // <viewport>/<market>/<language>/. Either is optional; omitted ones
+    // collapse to the parent dir.
     const world = this as CheckoutWorld;
-    const market = world.orderContext?.market;
-    const optionsJson = market ? `||${JSON.stringify({ market })}` : '';
+    const market = world.orderContext?.market ?? world.locale?.market;
+    const language = world.locale?.language;
+    const bucket: Record<string, string> = {};
+    if (market) bucket.market = market;
+    if (language) bucket.language = language;
+    const optionsJson = Object.keys(bucket).length > 0
+        ? `||${JSON.stringify(bucket)}`
+        : '';
 
     for (const snap of matched) {
         // Third arg routes the intent to the pixelmatch plugin (port 50056) —

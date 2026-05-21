@@ -43,7 +43,16 @@ assets/**
 .agents/
 docs/
 target/
-scripts/
+scripts/*
+# Negations: scripts referenced by the CI workflows MUST ship with the
+# repo or the corresponding step fails with "module not found". Local-only
+# dev tooling (build-test-report.js, visual-refresh.js, etc.) stays
+# ignored by the umbrella `scripts/*` rule above. The trailing-slash form
+# (`scripts/`) does NOT support per-file negation, so we use the glob.
+!scripts/generate-checkout-feeder.ts
+!scripts/visual-gate.js
+!scripts/metrics/
+!scripts/metrics/**
 src/core/tests/checkout/simulations/checkout-rows.generated.ts
 results/
 ahm_artifacts/
@@ -57,7 +66,18 @@ analyze_telemetry.py
 figures/
 *.csv
 visual-results/
-visual-baselines/
+
+# visual-baselines/: the directory placeholder is tracked (via .gitkeep)
+# but the PNGs inside are ignored locally — dev laptops generate their
+# own baselines via `pnpm visual:refresh` for iteration without polluting
+# the canonical set. The canonical baselines come from the
+# update-visual-baselines.yml workflow which force-stages PNGs in the
+# Linux container (mcr.microsoft.com/playwright:v1.58.2-jammy) and opens
+# a PR. Both visual.yml and the refresh workflow watch
+# visual-baselines/** so the trigger still fires when a PR ships
+# regenerated baselines.
+visual-baselines/*
+!visual-baselines/.gitkeep
 
 # Metrics pipeline output — schemas/summary stay tracked, runs are local
 metrics/raw/**
