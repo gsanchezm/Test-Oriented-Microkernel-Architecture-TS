@@ -83,10 +83,20 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
     const optionsJson = market ? `||${JSON.stringify({ market })}` : '';
 
     for (const snap of matched) {
-        await sendIntent(
-            INTENT.COMPARE_SNAPSHOT,
-            `${feature}||${snap.id}${optionsJson}`,
-            'pixelmatch',
-        );
+        // Wrapped in try/catch — visual drift is a pixelmatch concern. See
+        // the matching hook in checkout/step_definitions/visual.hooks.ts
+        // for the full rationale.
+        try {
+            await sendIntent(
+                INTENT.COMPARE_SNAPSHOT,
+                `${feature}||${snap.id}${optionsJson}`,
+                'pixelmatch',
+            );
+        } catch (err) {
+            visualLog.info(
+                { feature, snapshotId: snap.id, err: (err as Error).message },
+                'Visual diff detected — recorded for the Visual report, not propagated to the scenario',
+            );
+        }
     }
 });

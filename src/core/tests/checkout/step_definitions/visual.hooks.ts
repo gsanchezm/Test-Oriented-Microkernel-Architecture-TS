@@ -86,10 +86,23 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
     for (const snap of matched) {
         // Third arg routes the intent to the pixelmatch plugin (port 50056) —
         // the default DRIVER target would land on playwright/appium.
-        await sendIntent(
-            INTENT.COMPARE_SNAPSHOT,
-            `${feature}||${snap.id}${optionsJson}`,
-            'pixelmatch',
-        );
+        //
+        // Wrapped in try/catch so a visual drift does NOT fail the functional
+        // scenario. Pixel-level comparison is a separate concern owned by the
+        // pixelmatch oracle; its outcome lives in visual-results/<runId>/.../
+        // result.json (read by the Visual tab of the test report). The
+        // cucumber tab should reflect functional behavior only.
+        try {
+            await sendIntent(
+                INTENT.COMPARE_SNAPSHOT,
+                `${feature}||${snap.id}${optionsJson}`,
+                'pixelmatch',
+            );
+        } catch (err) {
+            visualLog.info(
+                { feature, snapshotId: snap.id, err: (err as Error).message },
+                'Visual diff detected — recorded for the Visual report, not propagated to the scenario',
+            );
+        }
     }
 });

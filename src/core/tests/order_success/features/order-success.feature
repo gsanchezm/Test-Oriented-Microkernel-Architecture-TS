@@ -11,7 +11,7 @@ Feature: Order success screen surfaces tracking & courier per market
   Background:
     Given the OmniPizza user is logged in as "standard_user"
 
-  @desktop @responsive @android @ios @visual
+  @desktop @responsive @android @ios @visual @ui-only
   Scenario Outline: Order success screen in <market>/<language> shows tracking + courier
     Given a placed order exists in market "<market>" using language "<language>"
     When they open the order success screen

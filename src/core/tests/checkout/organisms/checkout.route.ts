@@ -63,6 +63,16 @@ const ZIP_SLOT_PRIMARY_BY_FIELD: Record<string, 'zip' | 'suburb'> = {
 // — it replaces the zip in the single market-specific address slot.
 const SECONDARY_ADDRESS_FIELDS = new Set(['colonia']);
 
+// Backend accepts only the literals 'card' / 'cash' for payment_method;
+// features carry the UI label so the same matrix can drive both UI clicks
+// and API submissions. This map is the single translation point used by
+// the api branch of the route.
+function toApiPaymentMethod(uiLabel: string): string {
+    const v = (uiLabel || '').toLowerCase();
+    if (v.includes('cash')) return 'cash';
+    return 'card';
+}
+
 // -- route --
 
 export class CheckoutRoute {
@@ -306,13 +316,19 @@ export class CheckoutRoute {
         if (!contact)  throw new Error('Missing contact info — run the fill-delivery step first.');
         if (!payment?.method) throw new Error('Missing payment method — run the payment step first.');
 
+        // Backend uses a Pydantic Literal["card","cash"] for payment_method,
+        // but features carry the UI label ("Credit Card" / "Cash") since
+        // that's what the user sees and clicks. The web frontend translates
+        // before POSTing; the API path bypasses the UI, so we replicate
+        // the same translation here. Anything not matching maps to "card"
+        // as a safe default (the existing matrix only uses these two).
         const body: CheckoutRequest = {
             country_code: market,
             items: [{ pizza_id: ctx.pizzaId, size: ctx.size, quantity: ctx.qty }],
             name: contact.name,
             address: address.street,
             phone: contact.phone,
-            payment_method: payment.method,
+            payment_method: toApiPaymentMethod(payment.method),
         };
 
         // Map address into the country-specific zip-shaped field.

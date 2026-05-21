@@ -129,6 +129,10 @@ export default simulation((setUp) => {
             const zip     = session.get<string>('zip');
             const suburb  = session.get<string>('suburb');
             const payment = session.get<string>('payment');
+            // Backend uses Pydantic Literal["card","cash"]; the feeder rows
+            // carry the UI label so the same matrix can drive UI tests too,
+            // so translate here at the API boundary.
+            const paymentMethod = payment && payment.toLowerCase().includes('cash') ? 'cash' : 'card';
 
             const payload: Record<string, unknown> = {
                 country_code: market,
@@ -140,7 +144,7 @@ export default simulation((setUp) => {
                 name:           session.get<string>('name'),
                 address:        session.get<string>('street'),
                 phone:          session.get<string>('phone'),
-                payment_method: payment,
+                payment_method: paymentMethod,
             };
 
             // Market-specific zip / suburb fields
@@ -156,8 +160,8 @@ export default simulation((setUp) => {
                 payload['prefectura'] = suburb;
             }
 
-            // Card details (Credit Card only)
-            if (payment === 'Credit Card') {
+            // Card details only on the card branch.
+            if (paymentMethod === 'card') {
                 payload['card_number'] = session.get<string>('card');
                 payload['card_expiry'] = session.get<string>('exp');
                 payload['card_cvv']    = session.get<string>('cvv');
