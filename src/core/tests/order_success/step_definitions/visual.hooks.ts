@@ -18,13 +18,24 @@ function isPixelmatchPluginEnabled(): boolean {
     return (process.env.PLUGIN_PIXELMATCH ?? 'false').toLowerCase() === 'true';
 }
 
+function hasUiDriver(): boolean {
+    // Visual snapshots need a live UI session. The api driver has no page to
+    // capture from, so the hook must short-circuit cleanly instead of letting
+    // the pixelmatch plugin throw "no active session".
+    const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
+    return driver === 'playwright' || driver === 'mobilewright' || driver === 'appium';
+}
+
 function featureFromUri(uri: string): string | null {
-    const match = uri.match(/src\/core\/tests\/([^/]+)\/features\//);
+    // Cucumber's pickle.uri carries the OS-native path separator, so on
+    // Windows the URI uses backslashes; match both to stay portable.
+    const match = uri.match(/src[\\/]+core[\\/]+tests[\\/]+([^\\/]+)[\\/]+features[\\/]+/);
     return match ? match[1] : null;
 }
 
 After({ tags: '@visual' }, async function ({ pickle, result }) {
     if (!isPixelmatchPluginEnabled()) return;
+    if (!hasUiDriver()) return;
     if (result?.status === 'FAILED') return;
 
     const feature = featureFromUri(pickle.uri);

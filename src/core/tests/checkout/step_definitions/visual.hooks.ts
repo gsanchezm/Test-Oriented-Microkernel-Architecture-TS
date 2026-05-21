@@ -25,20 +25,30 @@ function isPixelmatchPluginEnabled(): boolean {
     return (process.env.PLUGIN_PIXELMATCH ?? 'false').toLowerCase() === 'true';
 }
 
+function hasUiDriver(): boolean {
+    const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
+    return driver === 'playwright' || driver === 'mobilewright' || driver === 'appium';
+}
+
 function featureFromUri(uri: string): string | null {
-    const match = uri.match(/src\/core\/tests\/([^/]+)\/features\//);
+    // Cucumber's pickle.uri carries the OS-native path separator, so on
+    // Windows the URI uses backslashes; match both to stay portable.
+    const match = uri.match(/src[\\/]+core[\\/]+tests[\\/]+([^\\/]+)[\\/]+features[\\/]+/);
     return match ? match[1] : null;
 }
 
 After({ tags: '@visual' }, async function ({ pickle, result }) {
     if (!isPixelmatchPluginEnabled()) return;
+    if (!hasUiDriver()) return;
     if (result?.status === 'FAILED') return; // don't pile visual diffs on top of a functional failure
 
     const feature = featureFromUri(pickle.uri);
-    if (!feature) {
-        visualLog.warn({ uri: pickle.uri }, 'Visual hook could not derive feature from pickle.uri');
-        return;
-    }
+    // Each slice's visual.hooks.ts only handles its own feature — otherwise
+    // every slice's hook would fire for every @visual scenario, duplicating
+    // COMPARE_SNAPSHOT calls and (worse) re-capturing the same key which
+    // races against the just-written baseline and surfaces flaky size
+    // mismatches via the fullPage fallback (see playwright-screenshot-source.ts:18).
+    if (!feature || feature !== 'checkout') return;
 
     let contract;
     try {
