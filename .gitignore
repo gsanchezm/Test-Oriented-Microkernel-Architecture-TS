@@ -73,3 +73,5 @@ metrics/figures/**
 
 # Devices
 **/iphone_physical.json
+
+reports/
