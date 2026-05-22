@@ -1,9 +1,6 @@
-import { ActionContext } from '@plugins/shared/ActionHandler';
+import { ActionInvocationContext, DriverContext, MetadataContext } from '@plugins/shared/ActionHandler';
 import { HttpClient } from '@plugins/api/http/http.client';
 
-export interface ApiActionContext extends ActionContext<HttpClient> {
+export interface ApiActionContext extends ActionInvocationContext, DriverContext<HttpClient>, MetadataContext {
     client: HttpClient;
-    target: string;
-    sessionId: string;
-    metadata?: Record<string, unknown>;
 }

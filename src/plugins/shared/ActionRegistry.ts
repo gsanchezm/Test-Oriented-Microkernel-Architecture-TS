@@ -6,7 +6,7 @@
 // itself does not need to be touched — Open/Closed in practice.
 
 import { logger } from '@utils/logger';
-import { ActionContext, ActionHandler } from '@plugins/shared/ActionHandler';
+import { ActionHandler, ActionLogContext } from '@plugins/shared/ActionHandler';
 import { maskActionTarget } from '@plugins/shared/maskActionTarget';
 
 export interface ActionRegistryOptions {
@@ -14,7 +14,7 @@ export interface ActionRegistryOptions {
     plugin: string;
 }
 
-export class ActionRegistry<TContext extends ActionContext = ActionContext> {
+export class ActionRegistry<TContext extends ActionLogContext = ActionLogContext> {
     private readonly handlers = new Map<string, ActionHandler<TContext>>();
     private readonly plugin: string;
     private readonly log = logger.child({ layer: 'action-registry' });

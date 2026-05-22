@@ -36,20 +36,44 @@ export type MobilewrightOverrides = Record<string, unknown>;
  * Android 10+, so a SDK 28 device must declare `["appium"]` only). */
 export type CompatibleDriver = 'playwright' | 'appium' | 'mobilewright' | 'api';
 
-export interface DevicePassport {
+export interface DeviceIdentity {
     /** File-name-safe identifier. Must match the JSON filename without `.json`. */
     id: string;
+    /** Human-readable model. Informational. */
+    model?: string;
+    screen?: DeviceScreen | null;
+}
+
+export interface DevicePlatformInfo {
     platform: DevicePlatform;
     /** OS version string. Optional — emulators/simulators may leave it blank. */
     osVersion?: string | null;
     /** ADB serial / iOS UDID. Null when the device is selected via env at runtime. */
     udid?: string | null;
-    /** Human-readable model. Informational. */
-    model?: string;
-    screen?: DeviceScreen | null;
+}
+
+export interface DeviceAppBinding {
     app?: DeviceAppInfo;
+}
+
+export interface AppiumDeviceConfig {
     appium?: AppiumOverrides;
+}
+
+export interface MobilewrightDeviceConfig {
     mobilewright?: MobilewrightOverrides;
+}
+
+export interface DriverCompatibility {
     /** Drivers compatible with this device. Omit to allow any driver. */
     compatibleDrivers?: CompatibleDriver[];
+}
+
+export interface DevicePassport
+    extends DeviceIdentity,
+    DevicePlatformInfo,
+    DeviceAppBinding,
+    AppiumDeviceConfig,
+    MobilewrightDeviceConfig,
+    DriverCompatibility {
 }

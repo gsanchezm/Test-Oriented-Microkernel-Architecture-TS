@@ -1,9 +1,14 @@
 import type { Browser, Page } from 'playwright';
-import { ActionContext } from '@plugins/shared/ActionHandler';
+import {
+    ActionInvocationContext,
+    DriverContext,
+    MetadataContext,
+    PlatformContext,
+    ViewportContext,
+} from '@plugins/shared/ActionHandler';
 
-export interface PlaywrightActionContext extends ActionContext<Page> {
+export interface PlaywrightActionContext
+    extends ActionInvocationContext, DriverContext<Page>, PlatformContext, ViewportContext, MetadataContext {
     page: Page;
     browser: Browser;
-    target: string;
-    sessionId: string;
 }

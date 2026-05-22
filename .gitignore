@@ -61,6 +61,11 @@ ahm-artifacts-old/
 generate-ahm-data.sh
 .claude/
 CLAUDE.md
+.antigravitycli/
+.agents/
+.agent/
+.antigravity/
+AGENTS.md
 run-and-download.sh
 analyze_telemetry.py
 figures/

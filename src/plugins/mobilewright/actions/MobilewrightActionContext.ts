@@ -1,11 +1,14 @@
 import type { Device, Locator } from 'mobilewright';
-import { ActionContext } from '@plugins/shared/ActionHandler';
+import {
+    ActionInvocationContext,
+    DriverContext,
+    MetadataContext,
+    PlatformContext,
+} from '@plugins/shared/ActionHandler';
 import type { MobilewrightPlatform } from '@plugins/mobilewright/mobilewright-lifecycle';
 
-export interface MobilewrightActionContext extends ActionContext<Device> {
-    driver: Device;
-    target: string;
-    sessionId: string;
+export interface MobilewrightActionContext
+    extends ActionInvocationContext, DriverContext<Device>, PlatformContext, MetadataContext {
     platform: MobilewrightPlatform;
 }
 

@@ -8,7 +8,12 @@
 import { resolve, isAbsolute } from 'path';
 import { existsSync } from 'fs';
 import { logger } from '@utils/logger';
-import { DevicePassport } from '@devices/device-passport.types';
+import {
+    AppiumDeviceConfig,
+    DeviceAppBinding,
+    DeviceIdentity,
+    DevicePlatformInfo,
+} from '@devices/device-passport.types';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 
@@ -19,6 +24,10 @@ export interface AppiumCapsOptions {
     udidOverride?: string;
     /** Override binary path at runtime (e.g. ANDROID_APP_PATH / IOS_APP_PATH from env). */
     binaryPathOverride?: string;
+}
+
+export interface AppiumCapabilitiesPassport
+    extends DeviceIdentity, DevicePlatformInfo, DeviceAppBinding, AppiumDeviceConfig {
 }
 
 const APPIUM_PREFIX = 'appium:';
@@ -39,7 +48,7 @@ function resolveBinaryPath(rel: string | undefined, override: string | undefined
 
 /** Build a W3C capabilities object from a passport. Pure — no side effects. */
 export function toAppiumCapabilities(
-    passport: DevicePassport,
+    passport: AppiumCapabilitiesPassport,
     options: AppiumCapsOptions = {},
 ): Record<string, unknown> {
     const caps: Record<string, unknown> = {

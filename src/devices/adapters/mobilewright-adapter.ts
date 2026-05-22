@@ -7,7 +7,11 @@
 
 import { resolve, isAbsolute } from 'path';
 import type { LaunchOptions, DriverConfig } from 'mobilewright';
-import { DevicePassport } from '@devices/device-passport.types';
+import {
+    DeviceAppBinding,
+    DevicePlatformInfo,
+    MobilewrightDeviceConfig,
+} from '@devices/device-passport.types';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 
@@ -23,13 +27,17 @@ export interface BuildOptions {
     binaryPathOverride?: string;
 }
 
+export interface MobilewrightOptionsPassport
+    extends DevicePlatformInfo, DeviceAppBinding, MobilewrightDeviceConfig {
+}
+
 function resolveBinaryPath(rel: string | undefined, override: string | undefined): string | undefined {
     const value = override ?? rel;
     if (!value) return undefined;
     return isAbsolute(value) ? value : resolve(REPO_ROOT, value);
 }
 
-function pickDriverConfig(passport: DevicePassport): DriverConfig | undefined {
+function pickDriverConfig(passport: MobilewrightOptionsPassport): DriverConfig | undefined {
     const raw = passport.mobilewright?.driver;
     if (!raw) return undefined;
     if (typeof raw === 'string') {
@@ -40,7 +48,7 @@ function pickDriverConfig(passport: DevicePassport): DriverConfig | undefined {
 
 /** Build mobilewright LaunchOptions from a passport. Pure — no side effects. */
 export function toMobilewrightOptions(
-    passport: DevicePassport,
+    passport: MobilewrightOptionsPassport,
     options: BuildOptions = {},
 ): MobilewrightLaunchOptions {
     const deviceId = options.deviceIdOverride ?? passport.udid ?? undefined;
