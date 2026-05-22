@@ -48,7 +48,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   NODE_VERSION: '22'
   LOG_LEVEL: info
-  OMNIPIZZA_RELEASE_BASE_URL: https://github.com/gsanchezm/OmniPizza/releases/download/v1.0.1
+  # OmniPizza release base URL is resolved dynamically by the
+  # `resolve-omnipizza-release` job (queries GitHub's /releases/latest)
+  # and consumed by the mobile jobs via `needs.<job>.outputs.base_url`.
+  OMNIPIZZA_RELEASES_REPO: gsanchezm/OmniPizza
   PLAYWRIGHT_VERSION: '1.58.2'
   PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.58.2-jammy
 
@@ -126,6 +129,51 @@ jobs:
 
     steps:
       - run: echo "Gatling selected"
+
+  # ---------------------------------------------------------------------------
+  # Resolver: latest OmniPizza release
+  #
+  # Queries GitHub's `/releases/latest` for the OmniPizza repo and exposes
+  # the tag + download base URL as job outputs. Mobile jobs consume these
+  # via `needs.resolve-omnipizza-release.outputs.*` so the workflow always
+  # tests against the freshest published APK / simulator bundle without
+  # editing this file each release. Gated on mobile being selected so the
+  # API call is skipped when only API/Web/Perf are dispatched.
+  # ---------------------------------------------------------------------------
+  resolve-omnipizza-release:
+    name: Resolve — OmniPizza latest release
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'mobile'
+      || inputs.platform == 'android'
+      || inputs.platform == 'ios'
+    outputs:
+      tag: ${{ steps.fetch.outputs.tag }}
+      base_url: ${{ steps.fetch.outputs.base_url }}
+    steps:
+      - name: Fetch latest release tag
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${OMNIPIZZA_RELEASES_REPO}/releases/latest" \
+            | jq -r .tag_name)
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "Failed to resolve latest OmniPizza release tag."
+            exit 1
+          fi
+          BASE_URL="https://github.com/${OMNIPIZZA_RELEASES_REPO}/releases/download/${TAG}"
+          echo "Resolved OmniPizza release: $TAG"
+          echo "Download base URL: $BASE_URL"
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------------------
   # Job 1: API E2E
@@ -500,7 +548,7 @@ jobs:
   # ---------------------------------------------------------------------------
   e2e-android:
     name: E2E — Android (Appium)
-    needs: gate-android
+    needs: [gate-android, resolve-omnipizza-release]
     runs-on: ubuntu-latest
 
     steps:
@@ -535,8 +583,12 @@ jobs:
           adb version
 
       - name: Download Android app artifact
+        env:
+          OMNIPIZZA_RELEASE_BASE_URL: ${{ needs.resolve-omnipizza-release.outputs.base_url }}
+          OMNIPIZZA_RELEASE_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
         run: |
           mkdir -p assets/apps/android
+          echo "Downloading OmniPizza Android APK from release ${OMNIPIZZA_RELEASE_TAG}"
           curl -fL "$OMNIPIZZA_RELEASE_BASE_URL/omnipizza-release.apk" \
             -o assets/apps/android/app-release.apk
           ls -lh assets/apps/android/app-release.apk
@@ -665,7 +717,7 @@ jobs:
   # ---------------------------------------------------------------------------
   e2e-ios:
     name: E2E — iOS (Appium)
-    needs: gate-ios
+    needs: [gate-ios, resolve-omnipizza-release]
     runs-on: macos-latest
 
     steps:
@@ -680,8 +732,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download iOS simulator artifact
+        env:
+          OMNIPIZZA_RELEASE_BASE_URL: ${{ needs.resolve-omnipizza-release.outputs.base_url }}
+          OMNIPIZZA_RELEASE_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
         run: |
           mkdir -p assets/apps/ios
+          echo "Downloading OmniPizza iOS simulator bundle from release ${OMNIPIZZA_RELEASE_TAG}"
           curl -fL "$OMNIPIZZA_RELEASE_BASE_URL/OmniPizza-Simulator.zip" \
             -o assets/apps/ios/OmniPizza-Simulator.zip
           ls -lh assets/apps/ios/OmniPizza-Simulator.zip
