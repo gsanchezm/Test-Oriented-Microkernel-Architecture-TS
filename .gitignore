@@ -43,16 +43,6 @@ assets/**
 .agents/
 docs/
 target/
-scripts/*
-# Negations: scripts referenced by the CI workflows MUST ship with the
-# repo or the corresponding step fails with "module not found". Local-only
-# dev tooling (build-test-report.js, visual-refresh.js, etc.) stays
-# ignored by the umbrella `scripts/*` rule above. The trailing-slash form
-# (`scripts/`) does NOT support per-file negation, so we use the glob.
-!scripts/generate-checkout-feeder.ts
-!scripts/visual-gate.js
-!scripts/metrics/
-!scripts/metrics/**
 src/core/tests/checkout/simulations/checkout-rows.generated.ts
 results/
 ahm_artifacts/
@@ -104,3 +94,4 @@ reports/
 # Local-only working artifacts (not part of the product, not for upstream)
 cucumber.focused.js
 OMNIPIZZA-PLATFORM-BUGS.md
+OMNIPIZZA-FOLLOWUP-*.md
