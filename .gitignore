@@ -100,3 +100,7 @@ metrics/figures/**
 **/iphone_physical.json
 
 reports/
+
+# Local-only working artifacts (not part of the product, not for upstream)
+cucumber.focused.js
+OMNIPIZZA-PLATFORM-BUGS.md

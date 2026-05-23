@@ -31,17 +31,19 @@ const SUPPORTED_MARKETS = new Set<CountryCode>([
 ]);
 const SUPPORTED_LANGUAGES = new Set<LanguageCode>(['en', 'es', 'de', 'fr', 'ja']);
 
+// State that must survive across steps is hung off the World — `profile.steps`
+// instantiates a fresh ProfileRoute per binding, so instance fields lose their
+// values between `When update` and `And save`. Mirrors pizzaBuilder.route's
+// pizzaBuilderDraft pattern.
+interface ProfileWorldShape extends CheckoutWorld {
+    profilePendingUpdate?: ProfileUpdateInputs;
+    profileLastResponse?: ProfileResponse;
+}
+
 export class ProfileRoute {
     private readonly profileDao: ProfileDao;
-    // Carries the most-recent update intent across steps (When fill → And save
-    // → Then verify). Under DRIVER=api the route uses this to issue the
-    // PATCH, then re-reads via GET inside verifyProfileApi.
-    private pendingUpdate?: ProfileUpdateInputs;
-    // Last response observed from the profile API. Populated by the @api
-    // path so verifyProfileApi can assert without re-fetching on every step.
-    private lastProfileResponse?: ProfileResponse;
 
-    constructor(private readonly world: CheckoutWorld) {
+    constructor(private readonly world: ProfileWorldShape) {
         this.profileDao = new ProfileDao();
     }
 
@@ -86,7 +88,7 @@ export class ProfileRoute {
             // matches so the api branch still exercises a real read.
             const { token } = this.requireAuth();
             const profile = await this.profileDao.getProfile({ token, countryCode: this.market() });
-            this.lastProfileResponse = profile;
+            this.world.profileLastResponse = profile;
             const apiUsername = (profile.username ?? '').trim();
             if (apiUsername && !apiUsername.toLowerCase().includes(expectedUsername.toLowerCase())) {
                 throw new Error(
@@ -128,7 +130,7 @@ export class ProfileRoute {
 
     async updateProfileFields(values: ProfileUpdateInputs): Promise<void> {
         log.info({ values, driver: this.driver }, 'Updating profile fields');
-        this.pendingUpdate = values;
+        this.world.profilePendingUpdate = values;
         await fillProfileForm(values);
     }
 
@@ -147,7 +149,7 @@ export class ProfileRoute {
                     notes:     update.notes,
                 },
             });
-            this.lastProfileResponse = response;
+            this.world.profileLastResponse = response;
             return;
         }
         await saveProfile();
@@ -186,7 +188,7 @@ export class ProfileRoute {
         const { token } = this.requireAuth();
         log.info({ values }, 'Asserting profile via API (GET /api/users/me/profile)');
         const profile = await this.profileDao.getProfile({ token, countryCode: this.market() });
-        this.lastProfileResponse = profile;
+        this.world.profileLastResponse = profile;
 
         this.assertField('full_name', profile.full_name, values.fullName);
         this.assertField('phone',     profile.phone,     values.phone);
@@ -217,12 +219,13 @@ export class ProfileRoute {
     }
 
     private requirePendingUpdate(): ProfileUpdateInputs {
-        if (!this.pendingUpdate) {
+        const pending = this.world.profilePendingUpdate;
+        if (!pending) {
             throw new Error(
                 'No pending profile update — the When step "they update the profile with…" must run before save.',
             );
         }
-        return this.pendingUpdate;
+        return pending;
     }
 
     private market(): CountryCode | undefined {

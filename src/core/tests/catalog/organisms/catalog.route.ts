@@ -28,12 +28,26 @@ const log = logger.child({ layer: 'route', domain: 'catalog' });
 
 export type Driver = 'playwright' | 'appium' | 'mobilewright' | 'api';
 
-const SUPPORTED_CATEGORIES = new Set<CatalogCategory>(['classic', 'vegetarian', 'premium']);
+// Mirrors OmniPizza's canonical taxonomy (returned per pizza on /api/pizzas
+// and exposed by CategoryFilter.jsx). `all` is the no-filter pseudo-bucket;
+// the API only ever stamps pizzas with one of `popular | veggie | meat | sides`.
+const SUPPORTED_CATEGORIES = new Set<CatalogCategory>(['all', 'popular', 'veggie', 'meat', 'sides']);
+
+// Catalog state lives on the World — `catalog.steps` instantiates a fresh
+// CatalogRoute per binding, so instance fields lose their values between
+// steps. Same fix as ProfileRoute / PizzaBuilderRoute.
+interface CatalogWorldShape extends CheckoutWorld {
+    catalogCache?: Pizza[];
+    catalogCanonicalCache?: Pizza[];
+    catalogLastSearchQuery?: string;
+    catalogLastCategory?: CatalogCategory;
+    catalogLastOpenedItem?: { id: string; name: string };
+}
 
 export class CatalogRoute {
     private readonly catalogDao: CatalogDao;
 
-    constructor(private readonly world: CheckoutWorld) {
+    constructor(private readonly world: CatalogWorldShape) {
         this.catalogDao = new CatalogDao();
     }
 
@@ -82,7 +96,7 @@ export class CatalogRoute {
         if (this.driver === 'api') {
             // API-driver equivalent: the cached payload from browseCatalog
             // proves the API surface is "displayed" for this market.
-            const cache = this.catalogCache;
+            const cache = this.world.catalogCache;
             if (!cache || cache.length === 0) {
                 throw new Error('[api] Catalog API returned no pizzas — cannot consider catalog "displayed".');
             }
@@ -122,7 +136,7 @@ export class CatalogRoute {
 
     async searchCatalog(query: string): Promise<void> {
         log.info({ query, driver: this.driver }, 'Searching catalog');
-        this.lastSearchQuery = query;
+        this.world.catalogLastSearchQuery = query;
         if (this.driver === 'api') return;
         await typeSearchQuery(query);
     }
@@ -158,8 +172,8 @@ export class CatalogRoute {
 
     async clearFilters(): Promise<void> {
         log.info({ driver: this.driver }, 'Clearing catalog filters');
-        this.lastSearchQuery = undefined;
-        this.lastCategory = undefined;
+        this.world.catalogLastSearchQuery = undefined;
+        this.world.catalogLastCategory = undefined;
         if (this.driver === 'api') return;
         await clearAllFilters();
     }
@@ -179,7 +193,7 @@ export class CatalogRoute {
             return;
         }
         const visible = await readVisiblePizzaNames();
-        const baselineCount = this.catalogCache?.length ?? 0;
+        const baselineCount = this.world.catalogCache?.length ?? 0;
         if (baselineCount === 0) {
             // Without a cached baseline we can only assert non-emptiness.
             if (visible.length === 0) {
@@ -202,7 +216,7 @@ export class CatalogRoute {
             const supported = [...SUPPORTED_CATEGORIES].join(', ');
             throw new Error(`Unsupported category "${category}". Supported: ${supported}`);
         }
-        this.lastCategory = normalized as CatalogCategory;
+        this.world.catalogLastCategory = normalized as CatalogCategory;
         if (this.driver === 'api') return;
         await selectCategory(normalized);
     }
@@ -227,22 +241,27 @@ export class CatalogRoute {
             // The DAO already filtered the list; nothing further to assert.
             return;
         }
-        // UI: walk the DOM names and apply the same heuristic via the DAO.
+        // UI: read visible names, map each back to the cached catalog payload
+        // (which carries the API-provided `category`), assert all match.
         const visible = await readVisiblePizzaNames();
         if (visible.length === 0) {
             throw new Error(
                 `[ui] Category filter "${normalized}" left no cards visible.`,
             );
         }
+        const cache = this.world.catalogCache ?? [];
         for (const name of visible) {
-            const bucket = CatalogDao.categoryOf({
-                id: '', name, description: '', price: 0, base_price: 0,
-                currency: '', currency_symbol: '', image: '',
-            });
-            if (bucket !== normalized) {
+            const found = cache.find((p) => p.name.toLowerCase() === name.toLowerCase());
+            if (!found) {
+                throw new Error(
+                    `[ui] Visible pizza "${name}" is not in the catalog API response — ` +
+                    `cache may be stale or the FE rendered a pizza /api/pizzas didn't return.`,
+                );
+            }
+            if (found.category !== normalized) {
                 throw new Error(
                     `[ui] Pizza "${name}" is visible under category "${normalized}" ` +
-                    `but maps to "${bucket}".`,
+                    `but the API stamps it as "${found.category ?? '(unset)'}".`,
                 );
             }
         }
@@ -251,7 +270,7 @@ export class CatalogRoute {
     async openPizza(itemDisplayName: string): Promise<void> {
         log.info({ item: itemDisplayName, driver: this.driver }, 'Opening pizza card');
         const id = this.resolvePizzaId(itemDisplayName);
-        this.lastOpenedItem = { id, name: itemDisplayName };
+        this.world.catalogLastOpenedItem = { id, name: itemDisplayName };
         if (this.driver === 'api') return;
         await openPizzaCard(id);
     }
@@ -262,7 +281,7 @@ export class CatalogRoute {
             // No UI builder under api — but `openPizza` already validated
             // the item exists in the catalog. Surface that fact here so the
             // step still has something to assert.
-            const last = this.lastOpenedItem;
+            const last = this.world.catalogLastOpenedItem;
             if (!last || last.name.toLowerCase() !== itemDisplayName.toLowerCase()) {
                 throw new Error(
                     `[api] Cannot verify builder for "${itemDisplayName}" — ` +
@@ -271,20 +290,18 @@ export class CatalogRoute {
             }
             return;
         }
-        const id = this.lastOpenedItem?.id ?? this.resolvePizzaId(itemDisplayName);
+        const id = this.world.catalogLastOpenedItem?.id ?? this.resolvePizzaId(itemDisplayName);
         await assertBuilderOpen(id);
     }
 
     // -- internals ------------------------------------------------------
 
-    // Per-scenario caches, refreshed by browseCatalog. Plain fields (not
-    // world-bound) because the catalog data is route-internal — the World
-    // interface stays slim. If a future scenario needs to read these
-    // across steps from outside the route, promote them to world.* fields.
-    private catalogCache: Pizza[] | undefined;
-    private lastSearchQuery: string | undefined;
-    private lastCategory: CatalogCategory | undefined;
-    private lastOpenedItem: { id: string; name: string } | undefined;
+    // Caches and per-scenario state are hung off the World (CatalogWorldShape)
+    // because `catalog.steps` instantiates a fresh CatalogRoute per binding
+    // — instance fields would be lost between `browse` and any downstream
+    // step. The canonical (X-Language=en) cache shadows the localized one
+    // so name lookups recover the right id when the FE returns translated
+    // names (MX "Margarita" / JP "マルゲリータ" → still resolves to p01).
 
     private get driver(): Driver {
         return (process.env.DRIVER ?? 'playwright') as Driver;
@@ -304,7 +321,7 @@ export class CatalogRoute {
         token: string,
     ): Promise<void> {
         try {
-            this.catalogCache = await this.catalogDao.getPizzas({
+            this.world.catalogCache = await this.catalogDao.getPizzas({
                 token,
                 countryCode: market,
                 language,
@@ -319,32 +336,45 @@ export class CatalogRoute {
                 { err: (err as Error).message, market, language },
                 'CatalogDao.getPizzas failed during cache refresh',
             );
-            this.catalogCache = undefined;
+            this.world.catalogCache = undefined;
+        }
+        if (language === 'en') {
+            this.world.catalogCanonicalCache = this.world.catalogCache;
+            return;
+        }
+        try {
+            this.world.catalogCanonicalCache = await this.catalogDao.getPizzas({
+                token,
+                countryCode: market,
+                language: 'en' as LanguageCode,
+            });
+        } catch {
+            this.world.catalogCanonicalCache = undefined;
         }
     }
 
     /**
-     * Resolves the API pizza id for a localized display name. Walks the
-     * cached catalog payload first; if the cache is empty or the name
-     * doesn't match, falls back to a slug derived from the display name
-     * (lowercase, spaces → hyphens). The slug fallback keeps the UI path
-     * working when the API was unreachable during browseCatalog.
+     * Resolves the API pizza id for a feature-supplied display name. Walks
+     * the localized cache first (the user sees those names on the page);
+     * when the feature carries a canonical English name that the localized
+     * catalog has translated (MX: "Margarita" vs feature "Margherita";
+     * JP: "ペパロニ" vs feature "Pepperoni"), falls back to the canonical
+     * English cache. Ids (p01..p12) are stable cross-market, so the id we
+     * recover from the canonical cache is the right one to use for the
+     * current market's request.
      */
     private resolvePizzaId(displayName: string): string {
-        const cache = this.catalogCache ?? [];
-        const hit = cache.find(
-            (p) => p.name.toLowerCase() === displayName.toLowerCase(),
-        );
+        const needle = displayName.toLowerCase();
+        const localized = this.world.catalogCache ?? [];
+        const hit = localized.find((p) => p.name.toLowerCase() === needle);
         if (hit) return hit.id;
-        // Fallback: the OmniPizza backend uses lowercased pizza names as ids
-        // (verified via /api/pizzas) — `Pepperoni` → `pepperoni`. Strip
-        // diacritics + replace non-alphanum with hyphens to stay robust.
-        return displayName
-            .normalize('NFD')
-            .replace(/\p{Diacritic}/gu, '')
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
+        const canonical = this.world.catalogCanonicalCache ?? [];
+        const canonicalHit = canonical.find((p) => p.name.toLowerCase() === needle);
+        if (canonicalHit) return canonicalHit.id;
+        const available = [...localized, ...canonical].map((p) => p.name).join(', ');
+        throw new Error(
+            `Pizza "${displayName}" not found in catalog cache. Available: ${available}`,
+        );
     }
 
     private assertAllNamesContain(names: string[], query: string): void {

@@ -68,8 +68,13 @@ export class PizzaBuilderDao {
 
     /**
      * Resolves an item name (e.g. "Pepperoni") to its market-specific pizza
-     * id. Case-insensitive match. Throws when the catalog has no such item
-     * so the caller surfaces a clear error instead of POSTing an empty id.
+     * id. Case-insensitive match. Features carry canonical English display
+     * names; the backend returns localized names per market (e.g. MX shows
+     * "Margarita", JP shows "マルゲリータ") but the underlying `id` is the
+     * same across markets (verified against /api/pizzas: `p01` is Margherita
+     * in every locale). When the localized fetch misses, we fall back to a
+     * canonical (X-Language: en) fetch and resolve there — the id we hand
+     * back is still valid for the requested market.
      */
     async resolvePizzaId(params: {
         token: string;
@@ -85,9 +90,19 @@ export class PizzaBuilderDao {
         if (!pizzas?.length) {
             throw new Error(`Pizzas API empty for market "${params.countryCode}". Verify /api/pizzas.`);
         }
-        const pizza = pizzas.find(
+        let pizza = pizzas.find(
             (p) => p.name.toLowerCase() === params.itemName.toLowerCase(),
         );
+        if (!pizza && (params.language ?? 'en').toLowerCase() !== 'en') {
+            const canonical = await this.getPizzas({
+                token: params.token,
+                countryCode: params.countryCode,
+                language: 'en',
+            });
+            pizza = canonical.find(
+                (p) => p.name.toLowerCase() === params.itemName.toLowerCase(),
+            );
+        }
         if (!pizza) {
             const available = pizzas.map((p) => p.name).join(', ');
             throw new Error(

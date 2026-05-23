@@ -80,12 +80,10 @@ export class CatalogDao {
     }
 
     /**
-     * Filter the catalog by logical category. The backend doesn't yet ship a
-     * `category` field on Pizza, so the DAO maps each item to a bucket via
-     * its localized name. This is the single translation point: when the
-     * backend exposes a real category column, swap the mapping here and
-     * every caller (route + molecules + the catalog-load gatling sim) keeps
-     * working.
+     * Filter the catalog by category. Reads `pizza.category` from the API
+     * response (canonical taxonomy: popular | veggie | meat | sides). `all`
+     * is the no-filter pseudo-bucket exposed by the UI and short-circuits
+     * to the full list.
      */
     async filterByCategory(params: {
         token: string;
@@ -98,38 +96,8 @@ export class CatalogDao {
             countryCode: params.countryCode,
             language: params.language,
         });
-        return all.filter((p) => CatalogDao.categoryOf(p) === params.category);
-    }
-
-    /**
-     * Localized-name → bucket heuristic. Static + exported via the static
-     * method so molecules can call it without instantiating the DAO.
-     *
-     * The Latin pizzas (Pepperoni, Margherita, Marinara, etc.) map to their
-     * traditional buckets; the wider menu is treated as `premium` by default
-     * so a new SKU lands in a bucket without flipping any test red.
-     */
-    static categoryOf(pizza: Pizza): CatalogCategory {
-        const name = pizza.name.toLowerCase();
-        // Vegetarian first — "Margherita" is also "classic" historically, but
-        // the catalog feature treats Margherita as the canonical vegetarian
-        // example for the CH/DE row, so we honor that bucketing.
-        if (
-            name.includes('margherita') ||
-            name.includes('marinara') ||
-            name.includes('veggie') ||
-            name.includes('vegetarian')
-        ) {
-            return 'vegetarian';
-        }
-        if (
-            name.includes('pepperoni') ||
-            name.includes('hawaiian') ||
-            name.includes('cheese')
-        ) {
-            return 'classic';
-        }
-        return 'premium';
+        if (params.category === 'all') return all;
+        return all.filter((p) => p.category === params.category);
     }
 
     private authHeaders(

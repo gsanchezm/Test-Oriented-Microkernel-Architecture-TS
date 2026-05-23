@@ -29,10 +29,9 @@ export interface CatalogDaoOptions {
     fetchImpl?: typeof fetch;
 }
 
-// Logical category buckets exposed to the catalog feature. The backend does
-// not yet ship a structured `category` field on Pizza — the catalog UI buckets
-// items by name conventions (classic/vegetarian/premium). The DAO surfaces a
-// pure-string union here so feature-file values (`classic`, `vegetarian`,
-// `premium`) stay type-checked and the molecule's filter logic has one place
-// to evolve when the backend exposes a real category column.
-export type CatalogCategory = 'classic' | 'vegetarian' | 'premium';
+// Canonical category taxonomy shipped by the OmniPizza backend on
+// /api/pizzas — `pizza.category` per item — and matching the FE's
+// `category-<id>` testid set (CategoryFilter.jsx). `all` is the no-filter
+// pseudo-bucket exposed by the UI; the API uses `popular | veggie | meat |
+// sides` for actual pizza assignment.
+export type CatalogCategory = 'all' | 'popular' | 'veggie' | 'meat' | 'sides';

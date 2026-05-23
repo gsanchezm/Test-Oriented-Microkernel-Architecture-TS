@@ -46,13 +46,18 @@ Feature: Browse the OmniPizza catalog across markets
     When they clear the catalog filters
     Then the full pizza grid is restored
 
+    # Query must be a substring of at least one pizza name AS RETURNED by
+    # /api/pizzas for that market — names are localized per `X-Language`.
+    # MX returns "Margarita" (Spanish spelling, no h); JP returns katakana
+    # for every name, so the only viable English-substring query is "BBQ"
+    # (kept untranslated inside `BBQチキン`).
     Examples:
-      | market | language | query      |
-      | US     | en       | Pepperoni  |
-      | MX     | es       | Margherita |
-      | CH     | de       | Marinara   |
-      | CH     | fr       | Marinara   |
-      | JP     | ja       | Pepperoni  |
+      | market | language | query     |
+      | US     | en       | Pepperoni |
+      | MX     | es       | Margarita |
+      | CH     | de       | Marinara  |
+      | CH     | fr       | Marinara  |
+      | JP     | ja       | BBQ       |
 
   @desktop @responsive @android @ios @visual
   Scenario Outline: Filtering by category narrows the catalog in <market>
@@ -61,12 +66,12 @@ Feature: Browse the OmniPizza catalog across markets
     Then only pizzas in category "<category>" are visible
 
     Examples:
-      | market | language | category   |
-      | US     | en       | classic    |
-      | MX     | es       | classic    |
-      | CH     | de       | vegetarian |
-      | CH     | fr       | vegetarian |
-      | JP     | ja       | premium    |
+      | market | language | category |
+      | US     | en       | popular  |
+      | MX     | es       | meat     |
+      | CH     | de       | veggie   |
+      | CH     | fr       | veggie   |
+      | JP     | ja       | meat     |
 
   @desktop @responsive @android @ios @visual
   Scenario Outline: Opening a pizza card launches the builder in <market>

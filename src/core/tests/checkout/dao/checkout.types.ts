@@ -33,6 +33,10 @@ export interface Pizza {
     currency: string;
     currency_symbol: string;
     image: string;
+    // Canonical taxonomy from /api/pizzas: 'all' | 'popular' | 'veggie' | 'meat' | 'sides'.
+    // Optional because legacy/historical responses may not include it; routes
+    // should fall back to (or skip) verification when undefined.
+    category?: string;
 }
 
 // -- cart --

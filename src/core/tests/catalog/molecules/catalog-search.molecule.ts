@@ -25,10 +25,16 @@ export async function typeSearchQuery(query: string): Promise<void> {
 }
 
 /**
- * Clears any active search / category filter via the catalog's "clear
- * filters" affordance. Mobile carries no explicit clear affordance in the
- * locator contract, so on mobile we simply clear the search input. Web
- * uses the `clearFiltersButton`.
+ * Clears any active search / category filter. The live OmniPizza FE does
+ * not currently ship a `clear-filters-desktop` testid (confirmed via a DOM
+ * probe on 2026-05-22 — `search-pizza-desktop` is present but no clear
+ * button has a testid). The reactive grid restores the full catalog as
+ * soon as the search input is empty, so we emulate the clear by blanking
+ * the search input on every driver instead of clicking a dedicated affordance.
+ *
+ * If/when the FE ships a `clear-filters-<viewport>` testid, switch back to
+ * `INTENT.CLICK clearFiltersButton` for the web path so category filters
+ * (which a search-only clear doesn't touch) are reset too.
  */
 export async function clearAllFilters(): Promise<void> {
     const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
@@ -36,12 +42,5 @@ export async function clearAllFilters(): Promise<void> {
         log.info({ driver }, 'Catalog clear-filters no-op (api driver)');
         return;
     }
-    if (driver === 'appium' || driver === 'mobilewright') {
-        // No clearFiltersButton in the mobile locator contract — emulate by
-        // emptying the search input. The mobile catalog re-renders the full
-        // grid as soon as the search query is empty.
-        await sendIntent(INTENT.CLEAR_TEXT, 'searchInput');
-        return;
-    }
-    await sendIntent(INTENT.CLICK, 'clearFiltersButton');
+    await sendIntent(INTENT.CLEAR_TEXT, 'searchInput');
 }

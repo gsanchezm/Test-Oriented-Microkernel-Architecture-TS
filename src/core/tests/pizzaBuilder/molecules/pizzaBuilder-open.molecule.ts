@@ -1,14 +1,17 @@
 import { sendIntent } from '@kernel/client';
 import { logger } from '@utils/logger';
 import { INTENT } from '@kernel/intents';
+import { openPizzaCard } from '@core/tests/catalog/molecules/catalog-card.molecule';
 import type { CountryCode } from '@core/tests/pizzaBuilder/dao/pizzaBuilder.types';
 
 const log = logger.child({ layer: 'molecule', domain: 'pizzaBuilder', action: 'open' });
 
-// `welcomeTitleText` exists on every market's login screen and the
-// customizer header is rendered after the screen mounts; here we wait on a
-// builder-only element so the page-readiness signal is unambiguous. Web has
-// `confirmAddToCartButton`; mobile has `pizzaBuilderScreen`.
+// The customizer is a modal opened from the catalog (PizzaCustomizerModal,
+// confirmed by OmniPizza on 2026-05-22 — there is no /customizer URL route).
+// Web: wait for `screen-catalog`, click the pizza card, then wait for
+// `confirmAddToCartButton` (modal's primary CTA). Mobile retains the deep-
+// link path because Appium/mobilewright actually drive a native screen.
+const CATALOG_WAIT_TARGET_WEB = 'catalogScreen';
 const WAIT_TARGET_WEB = 'confirmAddToCartButton';
 const WAIT_TARGET_MOBILE = 'pizzaBuilderScreen';
 const WAIT_TIMEOUT_MS = 30_000;
@@ -27,21 +30,18 @@ interface OpenBuilderArgs {
  * Lands directly on the pizza-builder screen for the given item, market and
  * language. Atomic, deep-linked entry — mirrors order_success.
  *
- * Web (playwright): NAVIGATE to root first so EVALUATE has an origin (about:blank
- * throws SecurityError on localStorage access), then seed the omnipizza-auth +
- * omnipizza-country Zustand-persisted stores, then NAVIGATE to
- * `/customizer?item=<pizzaId>&market=<m>&language=<l>`.
+ * Web (playwright): NAVIGATE to root (so EVALUATE has an origin — about:blank
+ * throws SecurityError on localStorage access), seed the omnipizza-auth +
+ * omnipizza-country Zustand-persisted stores, NAVIGATE to `/catalog`, wait
+ * for `screen-catalog`, click the pizza card (`pizza-card-<pizzaId>-<viewport>`)
+ * to open the customizer MODAL, wait for the modal's confirm CTA.
  *
  * Mobile (appium / mobilewright): DEEP_LINK to
  * `omnipizza://customizer?item=<pizzaId>&market=<m>&language=<l>`.
  *
- * The `?item=` value is the RESOLVED pizza id (looked up by name via
- * `/api/pizzas`), not the human-readable name — so the FE has a stable key.
- * `itemName` is carried only for log/audit purposes.
- *
- * NOTE: The frontend may not yet ship the `/customizer?item=…&market=…&language=…`
- * deep-link route — that's a TDD expectation; see
- * pizzaBuilder.api.contract.json (entry `pizzaBuilder.customizerDeepLink`).
+ * The `?item=` value (mobile) is the RESOLVED pizza id (looked up by name
+ * via `/api/pizzas`), not the human-readable name — so the FE has a stable
+ * key. `itemName` is carried only for log/audit purposes.
  */
 export async function openPizzaBuilder(args: OpenBuilderArgs): Promise<void> {
     const driver = process.env.DRIVER ?? 'playwright';
@@ -84,14 +84,14 @@ export async function openPizzaBuilder(args: OpenBuilderArgs): Promise<void> {
             token: args.accessToken,
         });
 
-        const qs = new URLSearchParams({
-            item: args.pizzaId,
-            market: args.market,
-            language: args.language,
-        });
-        const url = `${root}/customizer?${qs.toString()}`;
-        log.info({ market: args.market, language: args.language, pizzaId: args.pizzaId }, 'Navigating to customizer (web)');
-        await sendIntent(INTENT.NAVIGATE, url);
+        // The customizer lives as a modal on /catalog (no URL route). Land
+        // on the catalog, wait for it to finish loading, then click the
+        // card — opens the PizzaCustomizerModal.
+        const catalogUrl = `${root}/catalog`;
+        log.info({ market: args.market, language: args.language, pizzaId: args.pizzaId }, 'Navigating to catalog (web) to open customizer modal');
+        await sendIntent(INTENT.NAVIGATE, catalogUrl);
+        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `${CATALOG_WAIT_TARGET_WEB}||${WAIT_TIMEOUT_MS}`);
+        await openPizzaCard(args.pizzaId);
         await sendIntent(INTENT.WAIT_FOR_ELEMENT, `${WAIT_TARGET_WEB}||${WAIT_TIMEOUT_MS}`);
         return;
     }

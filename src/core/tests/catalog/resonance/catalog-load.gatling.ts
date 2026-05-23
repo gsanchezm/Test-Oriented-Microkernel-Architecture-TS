@@ -112,7 +112,7 @@ export default simulation((setUp) => {
             http('Login')
                 .post('/api/auth/login')
                 .body(StringBody('{"username":"standard_user","password":"pizza123"}'))
-                .check(jsonPath('$.token').optional().saveAs('token')),
+                .check(jsonPath('$.access_token').saveAs('token')),
         )
 
         // ── Step 2: GET /api/pizzas ─────────────────────────────────────────
