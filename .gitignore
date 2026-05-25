@@ -17,6 +17,9 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Per-checkout test-harness lock (created by src/core/tests/support/run-lock.ts)
+.ahm-run.lock
+
 # Environment and local config
 .env
 .env.*
@@ -95,3 +98,4 @@ reports/
 cucumber.focused.js
 OMNIPIZZA-PLATFORM-BUGS.md
 OMNIPIZZA-FOLLOWUP-*.md
+bugs/

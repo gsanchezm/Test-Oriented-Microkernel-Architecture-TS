@@ -20,10 +20,13 @@ const running = new Map<string, ChildProcess>();
 function spawnPlugin(plugin: PluginDefinition): void {
     log.info({ name: plugin.name, script: plugin.script }, 'Starting plugin');
 
+    // shell:true is required on Windows where `pnpm` is `pnpm.cmd` and
+    // `spawn('pnpm', …, { shell:false })` exits with ENOENT. Args come from
+    // plugins.config.ts (trusted), so the shell expansion is safe here.
     const child = spawn('pnpm', ['run', plugin.script], {
         env:   { ...process.env },
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false,
+        shell: true,
     });
 
     child.stdout?.on('data', (data: Buffer) => process.stdout.write(`[${plugin.name}] ${data}`));
