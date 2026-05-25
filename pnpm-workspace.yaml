@@ -1,3 +1,6 @@
+packages:
+  - apps/*
+
 allowBuilds:
   appium: true
   appium-ios-tuntap: true

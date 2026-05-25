@@ -387,17 +387,38 @@ function renderVisualTab(visual) {
                 
                 let imagesHtml = '';
                 if (r.resultPath) {
+                    const reportsAbs = path.join(process.cwd(), 'reports');
                     const dir = path.dirname(r.resultPath);
-                    const relDir = path.relative(path.join(process.cwd(), 'reports'), dir).replace(/\\/g, '/');
+                    const relDir = path.relative(reportsAbs, dir).replace(/\\/g, '/');
+
+                    // Baselines live at visual-baselines/<rest>/baseline.png, where <rest>
+                    // is the subpath of result.json after visual-results/<runId>/.
+                    // Deriving (vs. honoring r.baselinePath which can be a foreign absolute
+                    // path from CI) keeps the report portable across machines.
+                    const m = r.resultPath.match(/visual-results[\\/][^\\/]+[\\/](.+?)[\\/]result\.json$/);
+                    const baselineRel = m
+                        ? path.relative(
+                              reportsAbs,
+                              path.join(process.cwd(), 'visual-baselines', m[1], 'baseline.png'),
+                          ).replace(/\\/g, '/')
+                        : null;
+
+                    const baselineLabel = r.baselineCreated ? 'Baseline (new)' : 'Baseline';
+                    const rightLabel = r.status === 'FAIL' ? 'Diff' : 'Actual';
+                    const rightSrc = r.status === 'FAIL' ? `${relDir}/diff.png` : `${relDir}/actual.png`;
+                    const rightBorder = r.status === 'FAIL' ? 'var(--bad)' : 'var(--border)';
+
                     imagesHtml = `
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
                             <div>
-                                <div style="font-size: 11px; color: var(--muted); margin-bottom: 4px;">Baseline</div>
-                                <img src="${relDir}/baseline.png" style="max-width: 100%; border: 1px solid var(--border); border-radius: 6px;" onerror="this.style.display='none'" />
+                                <div style="font-size: 11px; color: var(--muted); margin-bottom: 4px;">${baselineLabel}</div>
+                                ${baselineRel
+                                    ? `<img src="${baselineRel}" style="max-width: 100%; border: 1px solid var(--border); border-radius: 6px;" onerror="this.replaceWith(Object.assign(document.createElement('div'),{style:'font-size:11px;color:var(--muted);padding:16px;border:1px dashed var(--border);border-radius:6px;',textContent:'baseline.png not on disk'}))" />`
+                                    : `<div style="font-size: 11px; color: var(--muted); padding: 16px; border: 1px dashed var(--border); border-radius: 6px;">No baseline path</div>`}
                             </div>
                             <div>
-                                <div style="font-size: 11px; color: var(--muted); margin-bottom: 4px;">Actual ${r.status === 'FAIL' ? '(Diff)' : ''}</div>
-                                <img src="${r.status === 'FAIL' ? `${relDir}/diff.png` : `${relDir}/actual.png`}" style="max-width: 100%; border: 1px solid ${r.status === 'FAIL' ? 'var(--bad)' : 'var(--border)'}; border-radius: 6px;" onerror="this.style.display='none'" />
+                                <div style="font-size: 11px; color: var(--muted); margin-bottom: 4px;">${rightLabel}</div>
+                                <img src="${rightSrc}" style="max-width: 100%; border: 1px solid ${rightBorder}; border-radius: 6px;" onerror="this.style.display='none'" />
                             </div>
                         </div>
                     `;

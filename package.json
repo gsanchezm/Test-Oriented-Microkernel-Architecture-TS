@@ -14,6 +14,10 @@
     "test": "cucumber-js",
     "test:json:api": "cucumber-js --tags '@api' --format json:reports/api.json",
     "test:json:playwright": "cucumber-js --tags '@desktop or @responsive' --format json:reports/playwright.json",
+    "test:json:web:desktop": "cross-env PLUGIN_PIXELMATCH=false cucumber-js --tags '@desktop' --format json:reports/playwright-desktop.json",
+    "test:json:web:responsive": "cross-env PLUGIN_PIXELMATCH=false cucumber-js --tags '@responsive' --format json:reports/playwright-responsive.json",
+    "test:json:visual:desktop": "cross-env PLUGIN_PIXELMATCH=true cucumber-js --tags '@desktop and @visual' --format json:reports/playwright-visual-desktop.json",
+    "test:json:visual:responsive": "cross-env PLUGIN_PIXELMATCH=true cucumber-js --tags '@responsive and @visual' --format json:reports/playwright-visual-responsive.json",
     "test:json:android": "cucumber-js --tags '@android' --format json:reports/android.json",
     "test:json:ios": "cucumber-js --tags '@ios' --format json:reports/ios.json",
     "test:report:verify": "node scripts/report/verify-report.js",
@@ -36,7 +40,11 @@
     "metrics:tables": "ts-node -r tsconfig-paths/register scripts/metrics/build-article-tables.ts",
     "metrics:api": "ts-node -r tsconfig-paths/register scripts/metrics/normalize-api-contract-telemetry.ts",
     "metrics:visual": "ts-node -r tsconfig-paths/register scripts/metrics/normalize-visual-contract-telemetry.ts",
-    "metrics:all": "pnpm run metrics:inventory && pnpm run metrics:coverage && pnpm run metrics:normalize && pnpm run metrics:durations && pnpm run metrics:api && pnpm run metrics:visual && pnpm run metrics:tables"
+    "metrics:all": "pnpm run metrics:inventory && pnpm run metrics:coverage && pnpm run metrics:normalize && pnpm run metrics:durations && pnpm run metrics:api && pnpm run metrics:visual && pnpm run metrics:tables",
+    "dashboard": "pnpm --filter dashboard dev",
+    "dashboard:build": "pnpm --filter dashboard build",
+    "dashboard:fixtures": "pnpm --filter dashboard fixtures:generate",
+    "dashboard:ingest": "pnpm --filter dashboard ingest"
   },
   "keywords": [],
   "author": "",

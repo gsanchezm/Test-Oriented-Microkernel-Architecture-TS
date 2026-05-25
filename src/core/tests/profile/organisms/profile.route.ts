@@ -31,6 +31,13 @@ const SUPPORTED_MARKETS = new Set<CountryCode>([
 ]);
 const SUPPORTED_LANGUAGES = new Set<LanguageCode>(['en', 'es', 'de', 'fr', 'ja']);
 
+// Poll budget for read-after-write on the profile API (see verifyProfileApi).
+// 60 s covers Render's cold-dyno tail (~30 s typical) plus the observed FE
+// PATCH dispatch latency under DRIVER=playwright (the UI save handler does
+// not block, so the PATCH fires asynchronously after the test step returns).
+const READ_POLL_INTERVAL_MS = 250;
+const READ_POLL_MAX_ATTEMPTS = 240; // 60 s
+
 // State that must survive across steps is hung off the World — `profile.steps`
 // instantiates a fresh ProfileRoute per binding, so instance fields lose their
 // values between `When update` and `And save`. Mirrors pizzaBuilder.route's
@@ -152,7 +159,49 @@ export class ProfileRoute {
             this.world.profileLastResponse = response;
             return;
         }
+
         await saveProfile();
+
+        // The UI save click returns within ~35 ms (just dispatches the click +
+        // waits for an always-present anchor). The FE's save handler fires
+        // PATCH /api/users/me/profile asynchronously; if the next step is a
+        // page reload, NAVIGATE *cancels* the in-flight PATCH and the data
+        // never reaches the backend. Anchor the step on a real backend
+        // signal: poll GET /api/users/me/profile until it carries the
+        // just-submitted values, then return. Sequential scenarios that
+        // re-PATCH then re-poll inherit a consistent baseline this way.
+        const update = this.world.profilePendingUpdate;
+        const token = this.world.auth?.token;
+        if (!update || !token) {
+            // No pending update means the When-step didn't run, no values
+            // to verify. No token means the Background didn't log in. In
+            // both cases the UI-only path remains correct — let the
+            // downstream verify step surface the diagnostic.
+            return;
+        }
+        await this.waitForProfilePatchToLand(token, update);
+    }
+
+    private async waitForProfilePatchToLand(
+        token: string,
+        expected: ProfileUpdateInputs,
+    ): Promise<void> {
+        const market = this.market();
+        for (let attempt = 0; attempt < READ_POLL_MAX_ATTEMPTS; attempt++) {
+            try {
+                const profile = await this.profileDao.getProfile({ token, countryCode: market });
+                this.world.profileLastResponse = profile;
+                if (!this.diffFields(profile, expected)) return;
+            } catch (e) {
+                // Network blips are fine — the next poll attempt will retry.
+                log.info({ err: (e as Error).message }, 'profile read-after-write poll: transient error, retrying');
+            }
+            await new Promise((r) => setTimeout(r, READ_POLL_INTERVAL_MS));
+        }
+        log.info(
+            { expected },
+            'profile read-after-write poll exhausted — UI PATCH may have been cancelled by the next navigation; the downstream verify step will report the actual state.',
+        );
     }
 
     async reloadProfile(): Promise<void> {
@@ -183,20 +232,54 @@ export class ProfileRoute {
      * the response is cached on `lastProfileResponse`; this verify step
      * issues a second GET so we explicitly validate read-after-write
      * (the contract requires PATCH to persist, not merely echo).
+     *
+     * Under DRIVER=playwright the prior step `saveProfile()` clicks the UI
+     * Save button and immediately returns — the FE fires PATCH asynchronously
+     * (fetch). A single GET right after the click consistently raced the
+     * still-in-flight PATCH and read stale data (OmniPizza confirmed
+     * 2026-05-24 — PATCH does persist, the harness was reading too early).
+     * Poll the GET until either all four fields match or the budget runs
+     * out; surface the last actual values on timeout.
      */
     async verifyProfileApi(values: ProfileUpdateInputs): Promise<void> {
         const { token } = this.requireAuth();
         log.info({ values }, 'Asserting profile via API (GET /api/users/me/profile)');
-        const profile = await this.profileDao.getProfile({ token, countryCode: this.market() });
-        this.world.profileLastResponse = profile;
 
-        this.assertField('full_name', profile.full_name, values.fullName);
-        this.assertField('phone',     profile.phone,     values.phone);
-        this.assertField('address',   profile.address,   values.address);
-        this.assertField('notes',     profile.notes,     values.notes);
+        const market = this.market();
+        let profile: ProfileResponse | undefined;
+        let lastDiff: { name: string; actual: string; expected: string } | null = null;
+
+        for (let attempt = 0; attempt < READ_POLL_MAX_ATTEMPTS; attempt++) {
+            profile = await this.profileDao.getProfile({ token, countryCode: market });
+            this.world.profileLastResponse = profile;
+            lastDiff = this.diffFields(profile, values);
+            if (!lastDiff) return;
+            await new Promise((r) => setTimeout(r, READ_POLL_INTERVAL_MS));
+        }
+
+        throw new Error(
+            `[api] profile.${lastDiff!.name} mismatch — expected "${lastDiff!.expected}", got "${lastDiff!.actual}".`,
+        );
     }
 
     // -- internals -----------------------------------------------------
+
+    private diffFields(
+        profile: ProfileResponse,
+        values: ProfileUpdateInputs,
+    ): { name: string; actual: string; expected: string } | null {
+        const cmps: Array<[string, unknown, string]> = [
+            ['full_name', profile.full_name, values.fullName],
+            ['phone',     profile.phone,     values.phone],
+            ['address',   profile.address,   values.address],
+            ['notes',     profile.notes,     values.notes],
+        ];
+        for (const [name, actual, expected] of cmps) {
+            const actualStr = typeof actual === 'string' ? actual : actual == null ? '' : String(actual);
+            if (actualStr !== expected) return { name, actual: actualStr, expected };
+        }
+        return null;
+    }
 
     private assertField(name: string, actual: unknown, expected: string): void {
         const actualStr = typeof actual === 'string' ? actual : actual == null ? '' : String(actual);

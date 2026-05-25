@@ -164,24 +164,63 @@ export async function assertAddToCartLabelVisible(label: string): Promise<void> 
         await sendIntent(INTENT.ASSERT_TEXT, `${probe}||${label}`);
         return;
     }
-    // Web: read every add-to-cart button text and assert at least one matches.
-    const script = `JSON.stringify(
-        Array.from(document.querySelectorAll("[data-testid^='add-to-cart-']"))
-            .map((el) => (el.textContent ?? '').trim()),
-    )`;
-    const result = await sendIntent(INTENT.EVALUATE, script);
-    let buttons: string[] = [];
-    try {
-        const parsed = JSON.parse(result.payload ?? '[]');
-        if (Array.isArray(parsed)) buttons = parsed.map((s) => String(s));
-    } catch { /* leave empty */ }
-    const wanted = label.trim();
-    if (!buttons.some((b) => b.includes(wanted))) {
+    // Web: the per-card add-to-cart control is an icon-only "+" button (no
+    // text node, no aria-label — by design, confirmed by OmniPizza on
+    // 2026-05-24). The localized "Add to cart" / "Agregar" / "Hinzufügen" /
+    // "Ajouter" / "追加" string lives on the customizer modal's primary CTA
+    // (`[data-testid='confirm-add-to-cart']`). To verify the label we have
+    // to open the modal — pick the first visible pizza card, click it, read
+    // the modal's button text, assert, then close the modal so the visual
+    // After hook captures the catalog and not a leftover modal.
+    // testid shape is add-to-cart-<id>-<viewport> — strip both ends.
+    const firstIdScript = `(() => {
+        const el = document.querySelector("[data-testid^='add-to-cart-']");
+        if (!el) return '';
+        const tid = el.getAttribute('data-testid') || '';
+        return tid.replace(/^add-to-cart-/, '').replace(/-(desktop|responsive)$/, '');
+    })()`;
+    const idResult = await sendIntent(INTENT.EVALUATE, firstIdScript);
+    const pizzaId = (idResult.payload ?? '').trim();
+    if (!pizzaId) {
         throw new Error(
-            `[catalog] add-to-cart label "${wanted}" not found on any card. ` +
-            `Visible labels: ${JSON.stringify(buttons)}`,
+            '[catalog] no pizza card found to open — addToCartLabel assertion needs at least one rendered card.',
         );
     }
+
+    await openPizzaCardById(pizzaId);
+    await sendIntent(INTENT.WAIT_FOR_ELEMENT, `confirmAddToCartButton||${CATALOG_WAIT_TIMEOUT_MS}`);
+
+    const readResult = await sendIntent(INTENT.READ_TEXT, 'confirmAddToCartButton');
+    const actual = (readResult.payload ?? '').trim();
+    const wanted = label.trim();
+
+    // Close the modal before returning so the next assertion / visual snapshot
+    // doesn't see a leftover overlay. Try the dedicated close button first;
+    // if that testid isn't present, dispatch an Escape key as a fallback
+    // (the OmniPizza modal binds Escape → close). Both are best-effort —
+    // the assertion result is what matters and the next scenario re-NAVIGATEs.
+    await sendIntent(INTENT.CLICK, 'closeBuilderButton').catch(async () => {
+        await sendIntent(
+            INTENT.EVALUATE,
+            "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }))",
+        ).catch(() => { /* best-effort */ });
+    });
+
+    if (!actual.includes(wanted)) {
+        throw new Error(
+            `[catalog] add-to-cart label "${wanted}" not found on confirm-add-to-cart button. ` +
+            `Modal button text: "${actual}".`,
+        );
+    }
+}
+
+// Click the catalog card's "+" button by pizza id. Inlined here (rather than
+// importing from catalog-card.molecule) to keep this molecule callable from
+// the catalog feature's "label visible" Then step without a circular import.
+async function openPizzaCardById(id: string): Promise<void> {
+    const viewport = (process.env.VIEWPORT ?? 'desktop').toLowerCase();
+    const suffix = viewport === 'responsive' ? 'responsive' : 'desktop';
+    await sendIntent(INTENT.CLICK, `[data-testid='add-to-cart-${id}-${suffix}']`);
 }
 
 /**

@@ -238,14 +238,33 @@ export async function assertProfileFields(values: {
     await assertInputValue('notesInput', values.notes, 'notes');
 }
 
+// Poll-based read. The profile screen's first render mounts the inputs with
+// the Zustand store's default empty state — `loadProfile` then resolves
+// `GET /api/users/me/profile` and `persist` rehydrates from localStorage,
+// both populating the inputs asynchronously. A single READ_TEXT right after
+// `waitForProfileScreen` consistently hit that empty window (OmniPizza
+// confirmed 2026-05-24; the FE is not buggy, the readiness contract was).
+// Poll until the input matches the expected value or we exhaust attempts —
+// the empty-window collapses to "first non-empty read"; once non-empty we
+// compare strictly.
+const READ_POLL_INTERVAL_MS = 250;
+const READ_POLL_MAX_ATTEMPTS = 60; // 15 s
+
 async function assertInputValue(key: string, expected: string, label: string): Promise<void> {
-    const result = await sendIntent(INTENT.READ_TEXT, key);
-    const actual = (result.payload ?? '').trim();
-    if (actual !== expected) {
-        throw new Error(
-            `[profile] ${label} mismatch — expected "${expected}", got "${actual}".`,
-        );
+    let actual = '';
+    for (let attempt = 0; attempt < READ_POLL_MAX_ATTEMPTS; attempt++) {
+        const result = await sendIntent(INTENT.READ_TEXT, key);
+        actual = (result.payload ?? '').trim();
+        if (actual === expected) return;
+        // Empty value = still in the pre-hydration window; keep polling.
+        // Non-empty but mismatched = real failure; surface immediately so a
+        // wrong value doesn't waste the rest of the 15 s budget.
+        if (actual.length > 0) break;
+        await new Promise((r) => setTimeout(r, READ_POLL_INTERVAL_MS));
     }
+    throw new Error(
+        `[profile] ${label} mismatch — expected "${expected}", got "${actual}".`,
+    );
 }
 
 // -- helpers -----------------------------------------------------------

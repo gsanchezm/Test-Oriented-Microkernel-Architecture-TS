@@ -255,26 +255,27 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # Job 2: Web E2E — Desktop (Functional + Visual)
+  # Job 2: Web E2E — Desktop (Functional only)
   #
   # Runs the @desktop slice of every feature inside the pinned Playwright
-  # container so visual baselines (committed in `visual-baselines/`) are
-  # compared in the same rendering environment that produced them. The
-  # functional pass/fail and the visual pass/fail are surfaced separately:
-  # cucumber stays green on visual drift (the hook in
-  # `<slice>/step_definitions/visual.hooks.ts` swallows COMPARE_SNAPSHOT
-  # errors), and a dedicated "Visual gate" step examines
-  # `visual-results/*/result.json` and fails the job if any drift exists.
-  # That way a red e2e-web check unambiguously means functional break, and
-  # the visual artifact upload + gate output point at the drift separately.
+  # container with `PLUGIN_PIXELMATCH=false` so the `@visual` After hooks in
+  # each slice self-skip — no COMPARE_SNAPSHOT round-trip, no per-scenario
+  # screenshot capture, ~30-40% faster wall time than the combined job it
+  # replaced. The corresponding visual capture lives in `visual-web` below,
+  # which `needs: e2e-web` so the two never race on the shared
+  # `standard_user` row (the FE Save handler still ships its PATCH async,
+  # see BUG_profile_ui_save_does_not_await_patch.md). Container image is
+  # the same as `visual-web` and `update-visual-baselines.yml` so any
+  # rendering parity needed for the visual pass is also present here.
   # ---------------------------------------------------------------------------
   e2e-web:
-    name: E2E — Web Desktop (Playwright + Visual)
+    name: E2E — Web Desktop (functional)
     needs: gate-web-desktop
     runs-on: ubuntu-latest
 
-    # Same image used by update-visual-baselines.yml. Pinned Chromium +
-    # system fonts → deterministic rendering for the committed baselines.
+    # Pinned Playwright container. Kept identical to the visual job so a
+    # functional regression that depends on rendering shows up in the same
+    # environment that captures baselines.
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-jammy
       options: --user 0
@@ -341,14 +342,17 @@ jobs:
           DRIVER: playwright
           HEADLESS: 'true'
           PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
-          PIXELMATCH_ADDRESS: 127.0.0.1:50056
           API_ADAPTER_ADDRESS: 127.0.0.1:50055
           PLUGIN_PLAYWRIGHT: 'true'
-          PLUGIN_PIXELMATCH: 'true'
+          # Pixelmatch off in the functional pass — the @visual After hooks
+          # self-skip when this is false, removing the per-scenario
+          # screenshot + diff round-trip. Visual capture happens in the
+          # dedicated visual-web job.
+          PLUGIN_PIXELMATCH: 'false'
           PLUGIN_API: 'true'
 
       - name: Run E2E tests
-        run: pnpm test --tags '@desktop'
+        run: pnpm test:json:web:desktop
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
@@ -357,21 +361,272 @@ jobs:
           DRIVER: playwright
           PROXY_ADDRESS: 127.0.0.1:50051
           HEADLESS: 'true'
-          # Pixelmatch co-loaded inside the playwright plugin (see
+          # Belt + suspenders: the hook reads this at scenario time, the
+          # plugin reads it at startup. Set in both places so the plugin
+          # doesn't load capability it won't use AND the hook self-skips
+          # if the plugin ever did register the capability.
+          PLUGIN_PIXELMATCH: 'false'
+          TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}-desktop-func
+
+      - name: Upload service logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: service-logs-${{ github.job }}-${{ github.run_id }}
+          path: /tmp/ahm-ci-logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Parse JSONL to CSV Artifacts
+        if: always()
+        run: |
+          RESULTS_DIR=$(ls -d results/* 2>/dev/null | head -n 1)
+          if [ -z "$RESULTS_DIR" ]; then
+            echo "No results directory found. Telemetry is required for AHM runs."
+            exit 0
+          fi
+          npx ts-node -r tsconfig-paths/register src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
+
+      - name: Upload Telemetry Artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ahm-telemetry-${{ github.job }}-${{ github.run_id }}
+          path: results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Web E2E — Responsive (Functional only)
+  # Mirrors Job 2's design (pinned container, no pixelmatch). See Job 2's
+  # header for the full rationale and the link to visual-web-responsive.
+  # ---------------------------------------------------------------------------
+  e2e-web-responsive:
+    name: E2E — Web Responsive (functional)
+    needs: gate-web-responsive
+    runs-on: ubuntu-latest
+
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start proxy + plugins
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ahm-ci-logs
+
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > /tmp/ahm-ci-logs/proxy.log 2>&1 &
+          PROXY_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > /tmp/ahm-ci-logs/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > /tmp/ahm-ci-logs/api.log 2>&1 &
+          API_PID=$!
+
+          for port in 50051 50052 50055; do
+            ready=false
+            for i in $(seq 1 30); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              sleep 1
+            done
+            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+              echo "Port $port did not become ready."
+              echo "Proxy log:" && cat /tmp/ahm-ci-logs/proxy.log || true
+              echo "Playwright log:" && cat /tmp/ahm-ci-logs/playwright.log || true
+              echo "API log:" && cat /tmp/ahm-ci-logs/api.log || true
+              exit 1
+            fi
+          done
+
+          kill -0 "$PROXY_PID"
+          kill -0 "$PLAYWRIGHT_PID"
+          kill -0 "$API_PID"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
+          PLUGIN_PLAYWRIGHT: 'true'
+          # Pixelmatch off — see e2e-web for full rationale.
+          PLUGIN_PIXELMATCH: 'false'
+          PLUGIN_API: 'true'
+
+      - name: Run E2E tests
+        run: pnpm test:json:web:responsive
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          PROXY_ADDRESS: 127.0.0.1:50051
+          HEADLESS: 'true'
+          PLUGIN_PIXELMATCH: 'false'
+          TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}-responsive-func
+
+      - name: Upload service logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: service-logs-${{ github.job }}-${{ github.run_id }}
+          path: /tmp/ahm-ci-logs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Parse JSONL to CSV Artifacts
+        if: always()
+        run: |
+          RESULTS_DIR=$(ls -d results/* 2>/dev/null | head -n 1)
+          if [ -z "$RESULTS_DIR" ]; then
+            echo "No results directory found. Telemetry is required for AHM runs."
+            exit 0
+          fi
+          npx ts-node -r tsconfig-paths/register src/telemetry/parse-telemetry.ts "$RESULTS_DIR"
+
+      - name: Upload Telemetry Artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ahm-telemetry-${{ github.job }}-${{ github.run_id }}
+          path: results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job 2b: Visual — Web Desktop (Pixelmatch capture + gate)
+  #
+  # `needs: e2e-web` — sequential within the desktop line. Two reasons:
+  #   1. visual-web re-runs the same scenarios that e2e-web just ran. Running
+  #      both in parallel against the live OmniPizza tenant means two
+  #      PATCH-then-read sequences on the shared `standard_user` row at the
+  #      same instants — exactly the race documented in
+  #      BUG_profile_ui_save_does_not_await_patch.md. Sequencing eliminates
+  #      that overlap without per-job test users.
+  #   2. If e2e-web reports a functional break, visual capture against a
+  #      broken page is noise — the visual baselines would diverge for a
+  #      reason that has nothing to do with rendering. We still run visual
+  #      on `if: always()` so a functional red doesn't hide visual red, but
+  #      sequencing keeps the timeline interpretable.
+  # The responsive line (e2e-web-responsive → visual-web-responsive) runs
+  # in parallel to the desktop line; only WITHIN each line is sequential.
+  # ---------------------------------------------------------------------------
+  visual-web:
+    name: Visual — Web Desktop (Pixelmatch)
+    needs: e2e-web
+    if: always() && needs.e2e-web.result != 'skipped' && needs.e2e-web.result != 'cancelled'
+    runs-on: ubuntu-latest
+
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start proxy + plugins
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ahm-ci-logs
+
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > /tmp/ahm-ci-logs/proxy.log 2>&1 &
+          PROXY_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > /tmp/ahm-ci-logs/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > /tmp/ahm-ci-logs/api.log 2>&1 &
+          API_PID=$!
+
+          for port in 50051 50052 50055; do
+            ready=false
+            for i in $(seq 1 30); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              sleep 1
+            done
+            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+              echo "Port $port did not become ready."
+              echo "Proxy log:" && cat /tmp/ahm-ci-logs/proxy.log || true
+              echo "Playwright log:" && cat /tmp/ahm-ci-logs/playwright.log || true
+              echo "API log:" && cat /tmp/ahm-ci-logs/api.log || true
+              exit 1
+            fi
+          done
+
+          kill -0 "$PROXY_PID"
+          kill -0 "$PLAYWRIGHT_PID"
+          kill -0 "$API_PID"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: desktop
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
+          PIXELMATCH_ADDRESS: 127.0.0.1:50056
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
+          PLUGIN_PLAYWRIGHT: 'true'
+          # Pixelmatch on — visual capture is this job's whole reason for
+          # existing. Co-loaded inside the playwright plugin (see
           # plugins.config.ts) so it can read the active browser session.
-          # Enable here so @visual-tagged scenarios actually capture+compare.
           PLUGIN_PIXELMATCH: 'true'
-          # Each CI run gets a unique results bucket under visual-results/
-          # so concurrent jobs (or retries) don't overwrite each other.
-          TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}-desktop
+          PLUGIN_API: 'true'
+
+      - name: Run visual capture
+        run: pnpm test:json:visual:desktop
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: desktop
+          DRIVER: playwright
+          PROXY_ADDRESS: 127.0.0.1:50051
+          HEADLESS: 'true'
+          PLUGIN_PIXELMATCH: 'true'
+          # Distinct run id from the functional pass so visual-results
+          # buckets stay separate per-job.
+          TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}-desktop-visual
 
       - name: Visual gate — fail the job if any snapshot drifted
-        # The cucumber visual hook is non-blocking (drift is recorded but
-        # doesn't fail the scenario). This step is the explicit gate: it
-        # walks `visual-results/<runId>/.../result.json` and exits 1 if any
-        # entry has status=FAIL. Surfaces drift as a distinct CI failure,
-        # leaving the cucumber step's red/green untouched so functional
-        # regressions and visual regressions stay independently visible.
+        # Cucumber stays green on drift (the visual hook swallows
+        # COMPARE_SNAPSHOT failures). This step is the explicit gate: walks
+        # `visual-results/<runId>/.../result.json` and exits 1 if any entry
+        # has status=FAIL. Functional regressions (e2e-web) and visual
+        # regressions stay independently visible.
         if: success() || failure()
         run: node scripts/visual-gate.js
 
@@ -413,14 +668,14 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # Job 3: Web E2E — Responsive (Functional + Visual)
-  # Mirrors Job 2's design: pinned Playwright container, PLUGIN_PIXELMATCH
-  # active, dedicated Visual gate, isolated TOM_RUN_ID, visual artifact
-  # upload. See Job 2's header for the full design rationale.
+  # Job 3b: Visual — Web Responsive (Pixelmatch capture + gate)
+  # Mirrors visual-web. `needs: e2e-web-responsive` — sequential within the
+  # responsive line, parallel to the desktop line.
   # ---------------------------------------------------------------------------
-  e2e-web-responsive:
-    name: E2E — Web Responsive (Playwright + Visual)
-    needs: gate-web-responsive
+  visual-web-responsive:
+    name: Visual — Web Responsive (Pixelmatch)
+    needs: e2e-web-responsive
+    if: always() && needs.e2e-web-responsive.result != 'skipped' && needs.e2e-web-responsive.result != 'cancelled'
     runs-on: ubuntu-latest
 
     container:
@@ -489,8 +744,8 @@ jobs:
           PLUGIN_PIXELMATCH: 'true'
           PLUGIN_API: 'true'
 
-      - name: Run E2E tests
-        run: pnpm test --tags '@responsive'
+      - name: Run visual capture
+        run: pnpm test:json:visual:responsive
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
@@ -500,7 +755,7 @@ jobs:
           PROXY_ADDRESS: 127.0.0.1:50051
           HEADLESS: 'true'
           PLUGIN_PIXELMATCH: 'true'
-          TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}-responsive
+          TOM_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}-responsive-visual
 
       - name: Visual gate — fail the job if any snapshot drifted
         if: success() || failure()

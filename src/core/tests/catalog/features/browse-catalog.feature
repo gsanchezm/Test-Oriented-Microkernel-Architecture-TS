@@ -17,13 +17,18 @@ Feature: Browse the OmniPizza catalog across markets
     Then the catalog screen is fully displayed
     And the add-to-cart label "<addToCartLabel>" is visible on a pizza card
 
+    # addToCartLabel matches what the customizer modal's primary CTA renders.
+    # OmniPizza confirmed 2026-05-24: PizzaCustomizerModal text map is
+    # {en:"Add to Cart", es:"Agregar", de:"Hinzufügen", fr:"Ajouter", ja:"追加"}.
+    # Earlier values "Add to cart" (lowercase c) and "カートに追加" (full phrase)
+    # never matched live FE output.
     Examples:
       | market | language | addToCartLabel |
-      | US     | en       | Add to cart    |
+      | US     | en       | Add to Cart    |
       | MX     | es       | Agregar        |
       | CH     | de       | Hinzufügen     |
       | CH     | fr       | Ajouter        |
-      | JP     | ja       | カートに追加    |
+      | JP     | ja       | 追加            |
 
   @android @ios @visual @ui-only
   Scenario Outline: Catalog shows the localized section title in <market>/<language>

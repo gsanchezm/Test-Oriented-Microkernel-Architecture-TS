@@ -110,23 +110,34 @@ export async function assertAddToCartLabelReflects(expected: string): Promise<vo
     }
 }
 
+const MODAL_OPEN_WAIT_MS = 15_000;
+
 async function readAddToCartLabel(): Promise<string> {
     if (isWebDriver()) {
-        // EVALUATE script: find the first add-to-cart button, return its
-        // accessible text. Falls back gracefully to '' so the assertion
-        // produces a clear diff instead of a JS-level throw.
-        const script = `
-            (() => {
-                const el = document.querySelector("[data-testid^='add-to-cart-']");
-                if (!el) return '';
-                // Prefer textContent (covers both <button>label</button> and
-                // wrappers); innerText would respect CSS visibility and
-                // sometimes returns '' under headless.
-                return (el.textContent || '').trim();
-            })()
-        `;
-        const result = await sendIntent(INTENT.EVALUATE, script);
-        return (result.payload ?? '').trim();
+        // The catalog's per-card "+" button is icon-only (no text, no
+        // aria-label — by design, OmniPizza confirmed 2026-05-24). The
+        // localized "Add to cart" / "Hinzufügen" / "Ajouter" string lives on
+        // the customizer modal's primary CTA (`[data-testid='confirm-add-to-cart']`).
+        // Open the modal on the first card, read the label, then close it
+        // so the visual snapshot bucket captures the catalog and not a
+        // leftover modal.
+        const pizzaId = await firstCatalogPizzaIdOrEmpty();
+        if (!pizzaId) return '';
+
+        const viewport = (process.env.VIEWPORT ?? 'desktop').toLowerCase();
+        const suffix = viewport === 'responsive' ? 'responsive' : 'desktop';
+        await sendIntent(INTENT.CLICK, `[data-testid='add-to-cart-${pizzaId}-${suffix}']`);
+        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `confirmAddToCartButton||${MODAL_OPEN_WAIT_MS}`);
+        const result = await sendIntent(INTENT.READ_TEXT, 'confirmAddToCartButton');
+        const label = (result.payload ?? '').trim();
+        // Close best-effort: dedicated close button if it exists, else Escape.
+        await sendIntent(INTENT.CLICK, 'closeBuilderButton').catch(async () => {
+            await sendIntent(
+                INTENT.EVALUATE,
+                "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }))",
+            ).catch(() => { /* best-effort */ });
+        });
+        return label;
     }
 
     if (isNativeMobileDriver()) {
@@ -142,4 +153,15 @@ async function readAddToCartLabel(): Promise<string> {
 
     // Shouldn't reach here — api was already short-circuited.
     return '';
+}
+
+async function firstCatalogPizzaIdOrEmpty(): Promise<string> {
+    const script = `(() => {
+        const el = document.querySelector("[data-testid^='add-to-cart-']");
+        if (!el) return '';
+        const tid = el.getAttribute('data-testid') ?? '';
+        return tid.replace(/^add-to-cart-/, '').replace(/-(desktop|responsive)$/, '');
+    })()`;
+    const result = await sendIntent(INTENT.EVALUATE, script);
+    return (result.payload ?? '').trim();
 }

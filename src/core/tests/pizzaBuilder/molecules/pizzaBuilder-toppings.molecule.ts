@@ -9,10 +9,11 @@ function isMobileDriver(): boolean {
     return driver === 'appium' || driver === 'mobilewright';
 }
 
-// Topping ids in the feature carry latin-letter accents (jalapeño) and
-// punctuation neutral kebab dashes (extra-cheese). Slug them to a stable
-// testid-safe form — strip diacritics, lower-case — so the FE only needs
-// to expose simple data-testids.
+// Topping ids in the feature carry latin-letter accents (e.g. jalapeño) and
+// the FE catalog uses snake_case ids (mozzarella, black_olives, …). Slug to
+// a stable testid-safe form: strip diacritics + lower-case, but preserve
+// underscores AND hyphens so the slug matches the FE's `topping-<it.id>`
+// attribute verbatim for both kebab and snake-cased ids.
 function slugify(value: string): string {
     return value
         .normalize('NFD')
@@ -20,7 +21,7 @@ function slugify(value: string): string {
         // collapses to "jalapeno" before the testid lookup.
         .replace(/[̀-ͯ]/g, '')
         .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/[^a-z0-9_-]+/g, '-')
         .replace(/^-+|-+$/g, '');
 }
 

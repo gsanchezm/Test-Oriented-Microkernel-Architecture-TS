@@ -60,13 +60,18 @@ Feature: Customize a pizza in the builder across markets
     When they add toppings "<toppings>"
     Then the estimated total reflects size "<size>" plus toppings "<toppings>"
 
+    # Topping ids match the real catalog enumerated in
+    # frontend/src/constants/pizza.js (OmniPizza confirmed 2026-05-24 — the
+    # earlier QA fixtures referenced topping ids that have never shipped:
+    # extra-cheese / olives / jalapeño do not exist; closest real ids are
+    # mozzarella / black_olives, and JP doesn't carry jalapeño at all).
     Examples:
       | market | item       | language | size   | toppings              |
-      | US     | Pepperoni  | en       | Large  | extra-cheese          |
-      | MX     | Margherita | es       | Medium | mushrooms,olives      |
-      | CH     | Marinara   | de       | Small  | extra-cheese          |
+      | US     | Pepperoni  | en       | Large  | mozzarella            |
+      | MX     | Margherita | es       | Medium | mushrooms,black_olives |
+      | CH     | Marinara   | de       | Small  | mozzarella            |
       | CH     | Marinara   | fr       | Small  | mushrooms             |
-      | JP     | Pepperoni  | ja       | Family | extra-cheese,jalapeño |
+      | JP     | Pepperoni  | ja       | Family | mozzarella,pineapple  |
 
   @desktop @responsive @android @ios @visual
   Scenario Outline: Confirming add to cart closes the builder and increments the navbar cart count in <market>
