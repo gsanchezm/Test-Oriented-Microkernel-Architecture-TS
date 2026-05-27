@@ -78,7 +78,7 @@ jobs:
       - run: echo "API selected"
 
   gate-web-desktop:
-    name: Gate — Web Desktop
+    name: Gate — Playwright Desktop
     runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
@@ -88,7 +88,7 @@ jobs:
       - run: echo "Web desktop selected"
 
   gate-web-responsive:
-    name: Gate — Web Responsive
+    name: Gate — Playwright Responsive
     runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
@@ -98,7 +98,7 @@ jobs:
       - run: echo "Web responsive selected"
 
   gate-android:
-    name: Gate — Android
+    name: Gate — Appium Android
     runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
@@ -109,7 +109,7 @@ jobs:
       - run: echo "Android selected"
 
   gate-ios:
-    name: Gate — iOS
+    name: Gate — Appium iOS
     runs-on: ubuntu-latest
     if: >-
       github.event_name != 'workflow_dispatch'
@@ -179,7 +179,7 @@ jobs:
   # Job 1: API E2E
   # ---------------------------------------------------------------------------
   api-smoke:
-    name: API E2E — Checkout
+    name: E2E — API Checkout
     needs: gate-api
     runs-on: ubuntu-latest
 
@@ -269,7 +269,7 @@ jobs:
   # rendering parity needed for the visual pass is also present here.
   # ---------------------------------------------------------------------------
   e2e-web:
-    name: E2E — Web Desktop (functional)
+    name: E2E — Playwright Desktop (functional)
     needs: gate-web-desktop
     runs-on: ubuntu-latest
 
@@ -402,7 +402,7 @@ jobs:
   # header for the full rationale and the link to visual-web-responsive.
   # ---------------------------------------------------------------------------
   e2e-web-responsive:
-    name: E2E — Web Responsive (functional)
+    name: E2E — Playwright Responsive (functional)
     needs: gate-web-responsive
     runs-on: ubuntu-latest
 
@@ -514,7 +514,7 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # Job 2b: Visual — Web Desktop (Pixelmatch capture + gate)
+  # Job 2b: Visual — Playwright Desktop (Pixelmatch capture + gate)
   #
   # `needs: e2e-web` — sequential within the desktop line. Two reasons:
   #   1. visual-web re-runs the same scenarios that e2e-web just ran. Running
@@ -532,7 +532,7 @@ jobs:
   # in parallel to the desktop line; only WITHIN each line is sequential.
   # ---------------------------------------------------------------------------
   visual-web:
-    name: Visual — Web Desktop (Pixelmatch)
+    name: Visual — Playwright Desktop (Pixelmatch)
     needs: e2e-web
     if: always() && needs.e2e-web.result != 'skipped' && needs.e2e-web.result != 'cancelled'
     runs-on: ubuntu-latest
@@ -668,12 +668,12 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # Job 3b: Visual — Web Responsive (Pixelmatch capture + gate)
+  # Job 3b: Visual — Playwright Responsive (Pixelmatch capture + gate)
   # Mirrors visual-web. `needs: e2e-web-responsive` — sequential within the
   # responsive line, parallel to the desktop line.
   # ---------------------------------------------------------------------------
   visual-web-responsive:
-    name: Visual — Web Responsive (Pixelmatch)
+    name: Visual — Playwright Responsive (Pixelmatch)
     needs: e2e-web-responsive
     if: always() && needs.e2e-web-responsive.result != 'skipped' && needs.e2e-web-responsive.result != 'cancelled'
     runs-on: ubuntu-latest
@@ -802,7 +802,7 @@ jobs:
   # Job 4: Android E2E
   # ---------------------------------------------------------------------------
   e2e-android:
-    name: E2E — Android (Appium)
+    name: E2E — Appium Android
     needs: [gate-android, resolve-omnipizza-release]
     runs-on: ubuntu-latest
 
@@ -971,7 +971,7 @@ jobs:
   # Job 5: iOS E2E
   # ---------------------------------------------------------------------------
   e2e-ios:
-    name: E2E — iOS (Appium)
+    name: E2E — Appium iOS
     needs: [gate-ios, resolve-omnipizza-release]
     runs-on: macos-latest
 

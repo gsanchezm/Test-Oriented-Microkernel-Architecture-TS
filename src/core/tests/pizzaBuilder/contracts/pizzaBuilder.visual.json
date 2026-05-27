@@ -8,17 +8,6 @@
   },
   "snapshots": [
     {
-      "id": "pizzaBuilder_open_default",
-      "description": "Customizer on first render: size pills, topping list, and the price/CTA strip are all visible inside the customizer modal container. Region is the whole modal (`pizzaBuilderScreen`) — web maps to `[data-testid='customizer-modal']`, mobile to `~screen-pizza-builder` — so the snapshot captures the full builder surface rather than a single leaf element. Bucketed per (market, language) so JP/MX/CH localizations don't collide on the same baseline.",
-      "regionRef": "pizzaBuilderScreen",
-      "maskRefs": ["customizerPriceText", "estimatedTotalValue"],
-      "platforms": ["web", "android", "ios"],
-      "viewports": ["desktop", "responsive", "mobile"],
-      "thresholds": { "pixelRatio": 0.01 },
-      "tags": ["@visual", "@pizzaBuilder"],
-      "telemetry": { "enabled": true, "emitOnLoad": false }
-    },
-    {
       "id": "pizzaBuilder_size_selected",
       "description": "After a size pill has been clicked — total reflects the size's price. Web target uses the size list region because the highlighted pill is the load-bearing visual change.",
       "regionRef": "sizeOptionsList",

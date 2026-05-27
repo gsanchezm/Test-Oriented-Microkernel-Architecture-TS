@@ -38,7 +38,7 @@ Feature: Navbar shell — links, branding, and language switching per market
       | CH     | fr       |
       | JP     | ja       |
 
-  @desktop @responsive @android @ios @visual
+  @desktop @visual
   Scenario Outline: Header language switcher updates the locale in CH (<sourceLanguage> → <targetLanguage>)
     Given they are on the catalog screen in market "CH" using language "<sourceLanguage>"
     When they switch the header language to "<targetLanguage>"

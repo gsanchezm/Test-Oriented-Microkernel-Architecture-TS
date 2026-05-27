@@ -27,13 +27,13 @@ const PLATFORM_LOGO_FILES: Record<'android' | 'ios', string> = {
  * (chromium→chrome, safari→webkit, msedge→edge) map to the shared asset.
  */
 const BROWSER_LOGO_FILES: Record<string, string> = {
-  chrome:   'browsers/chrome.svg',
-  chromium: 'browsers/chrome.svg',
-  firefox:  'browsers/firefox.svg',
-  edge:     'browsers/edge.svg',
-  msedge:   'browsers/edge.svg',
-  webkit:   'browsers/webkit.svg',
-  safari:   'browsers/webkit.svg',
+  chrome:   'browsers/chrome.png',
+  chromium: 'browsers/chrome.png',
+  firefox:  'browsers/firefox.png',
+  edge:     'browsers/edge.png',
+  msedge:   'browsers/edge.png',
+  webkit:   'browsers/webkit.png',
+  safari:   'browsers/webkit.png',
 };
 
 const BROWSER_LABELS: Record<string, string> = {
