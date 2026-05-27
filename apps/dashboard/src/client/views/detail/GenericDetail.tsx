@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { Tool } from '@shared/types';
 import { DetailHead } from '../../components/DetailHead';
@@ -25,6 +26,8 @@ export function GenericDetail({ runId, tool }: GenericDetailProps) {
   }
 
   const tests = tool.tests;
+  const [searchParams] = useSearchParams();
+  const expandScenarioName = searchParams.get('expand');
   const [filter, setFilter] = useState<TestFilter>('all');
   const [query, setQuery] = useState('');
 
@@ -71,7 +74,7 @@ export function GenericDetail({ runId, tool }: GenericDetailProps) {
         ) : (
           <>
             <FilterBar filter={filter} onFilter={setFilter} query={query} onQuery={setQuery} counts={counts} />
-            <TestList tests={tests} filter={filter} query={query} />
+            <TestList tests={tests} filter={filter} query={query} expandScenarioName={expandScenarioName} />
           </>
         )}
       </div>

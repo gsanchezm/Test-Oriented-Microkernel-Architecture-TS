@@ -39,6 +39,7 @@ import type {
   RunInfo,
   Status,
   TestCase,
+  TestStep,
   WebUiTool,
 } from '../src/shared/types.js';
 import { ingestGatling } from './ingest-gatling.js';
@@ -53,6 +54,8 @@ const reportsDir = path.resolve(process.env.REPORTS_DIR ?? path.join(repoRoot, '
 interface CucumberStep {
   keyword?: string;
   name?: string;
+  hidden?: boolean;
+  match?: { location?: string };
   result?: { status?: string; duration?: number; error_message?: string };
 }
 interface CucumberElement {
@@ -74,7 +77,7 @@ function normalizeStatus(s: string | undefined): Status {
   return 'passed';
 }
 
-function formatNs(ns: number): string {
+export function formatNs(ns: number): string {
   if (ns >= 1_000_000_000) return (ns / 1_000_000_000).toFixed(1) + 's';
   if (ns >= 1_000_000) return Math.round(ns / 1_000_000) + 'ms';
   return Math.max(1, Math.round(ns / 1000)) + 'μs';
@@ -86,7 +89,7 @@ function formatTotalDuration(ns: number): string {
   return `${Math.floor(sec / 60)}m ${String(sec % 60).padStart(2, '0')}s`;
 }
 
-interface IngestedSuite {
+export interface IngestedSuite {
   passed: number;
   failed: number;
   skipped: number;
@@ -95,7 +98,7 @@ interface IngestedSuite {
   tests: TestCase[];
 }
 
-function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
+export function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
   const tests: TestCase[] = [];
   const suiteSet = new Set<string>();
   let totalNs = 0;
@@ -111,6 +114,7 @@ function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
       let scenarioNs = 0;
       let worst: Status = 'passed';
       let errorMsg: string | undefined;
+      const stepsOut: TestStep[] = [];
 
       for (const step of el.steps ?? []) {
         const r = step.result ?? {};
@@ -118,13 +122,34 @@ function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
         scenarioNs += dur;
         if (!r.status || !TERMINAL_STATUSES.has(r.status)) continue;
         const stepStatus = normalizeStatus(r.status);
+
+        const isHidden = step.hidden === true;
+        // Hidden hook that passed: skip — it adds noise without value.
+        if (isHidden && stepStatus !== 'failed') {
+          continue;
+        }
+
         if (stepStatus === 'failed') {
           worst = 'failed';
           if (!errorMsg && r.error_message) errorMsg = r.error_message;
         } else if (stepStatus === 'skipped' && worst !== 'failed') {
           worst = 'skipped';
         }
+
+        const out: TestStep = {
+          keyword: step.keyword ?? '',
+          name: step.name ?? '',
+          status: stepStatus,
+          dur: formatNs(dur),
+        };
+        const matchLocation = step.match?.location;
+        if (matchLocation) out.location = matchLocation;
+        if (stepStatus === 'failed' && r.error_message) out.error = r.error_message;
+        if (isHidden) out.hidden = true;
+        stepsOut.push(out);
       }
+
+      const failedStepIndex = stepsOut.findIndex((s) => s.status === 'failed');
 
       totalNs += scenarioNs;
       tests.push({
@@ -134,6 +159,8 @@ function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
         dur: formatNs(scenarioNs),
         status: worst,
         ...(errorMsg ? { error: errorMsg } : {}),
+        steps: stepsOut,
+        ...(failedStepIndex >= 0 ? { failedStepIndex } : {}),
       });
     }
   }

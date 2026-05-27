@@ -37,4 +37,22 @@ describe('pixelmatchAdapter', () => {
     );
     expect(out.diffs[0].images.baseline).toBe('/reports/run-1/pixelmatch/a%20b%2Fc-baseline.png');
   });
+
+  it('passes through bucketing chips and triggeredBy backlink', () => {
+    const out = pixelmatchAdapter(
+      {
+        ...fixture,
+        diffs: [
+          {
+            name: 'Hero', baseline: 'pricing-hero', diffPct: 0.04, status: 'passed' as const,
+            bucketing: { market: 'us', language: 'en', viewport: 'desktop' },
+            triggeredBy: { feature: 'catalog', scenario: 'Catalog renders in US/en', runId: 'run-1' },
+          },
+        ],
+      },
+      ctx({ runId: 'run-1' }),
+    );
+    expect(out.diffs[0].bucketing).toEqual({ market: 'us', language: 'en', viewport: 'desktop' });
+    expect(out.diffs[0].triggeredBy?.scenario).toBe('Catalog renders in US/en');
+  });
 });

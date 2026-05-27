@@ -28,6 +28,18 @@ export interface TestCase {
   dur: string;
   status: Status;
   error?: string;
+  steps?: TestStep[];
+  failedStepIndex?: number;
+}
+
+export interface TestStep {
+  keyword: string;       // "Given ", "When ", "Then ", "And ", "But ", "After", "Before"
+  name: string;          // text post-substitution (cucumber-js already expands Examples)
+  status: Status;        // 'passed' | 'failed' | 'skipped'
+  dur: string;           // human duration ("280ms" / "1.2s")
+  location?: string;     // step definition source location (cucumber match.location)
+  error?: string;        // set only when status === 'failed'
+  hidden?: boolean;      // hidden cucumber hook — only emitted when failed
 }
 
 export interface Counts {
@@ -95,11 +107,19 @@ export interface PerfDistributionBucket {
   count: number;
 }
 
+export interface PerfStep {
+  name: string;
+  rps: number;
+  p95: number;
+  errors: number;
+}
+
 export interface PerfScenario {
   name: string;
   rps: number;
   p95: number;
   errors: number;
+  steps?: PerfStep[];
 }
 
 export interface PerfBlock {
@@ -131,6 +151,19 @@ export interface VisualDiff {
   diffPct: number;
   status: 'passed' | 'failed';
   images: VisualDiffImages;
+  bucketing?: {
+    feature?: string;
+    snapshot?: string;
+    platform?: string;
+    viewport?: string;
+    market?: string;
+    language?: string;
+  };
+  triggeredBy?: {
+    feature: string;
+    scenario: string;
+    runId?: string;
+  };
 }
 
 export interface VisualTool extends BaseTool {

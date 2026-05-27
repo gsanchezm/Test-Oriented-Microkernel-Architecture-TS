@@ -10,7 +10,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['test/**/*.test.ts'],
+    include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
+    environmentMatchGlobs: [['test/components/**', 'jsdom']],
+    setupFiles: ['test/setup.ts'],
     reporters: 'default',
   },
 });

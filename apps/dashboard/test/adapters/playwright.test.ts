@@ -16,7 +16,14 @@ describe('playwrightAdapter', () => {
     suites: ['Auth'],
     tests: [
       { name: 'login', suite: 'Auth', file: 'auth.spec.ts', dur: '1s', status: 'passed' },
-      { name: 'logout', suite: 'Auth', file: 'auth.spec.ts', dur: '1s', status: 'failed', error: 'boom' },
+      {
+        name: 'logout', suite: 'Auth', file: 'auth.spec.ts', dur: '1s', status: 'failed', error: 'boom',
+        steps: [
+          { keyword: 'Given ', name: 'logged in user', status: 'passed', dur: '300ms' },
+          { keyword: 'When ',  name: 'clicks logout',   status: 'failed', dur: '700ms', error: 'boom' },
+        ],
+        failedStepIndex: 1,
+      },
     ],
   };
 
@@ -27,6 +34,9 @@ describe('playwrightAdapter', () => {
     expect(out.passed).toBe(5);
     expect(out.tests).toHaveLength(2);
     expect(out.tests[1].error).toBe('boom');
+    expect(out.tests[1].steps).toHaveLength(2);
+    expect(out.tests[1].failedStepIndex).toBe(1);
+    expect(out.tests[1].steps?.[1].error).toBe('boom');
   });
 
   it('rejects non-object inputs', () => {

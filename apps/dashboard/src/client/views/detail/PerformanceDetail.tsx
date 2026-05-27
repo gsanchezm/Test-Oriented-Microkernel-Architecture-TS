@@ -1,4 +1,6 @@
-import type { Tool } from '@shared/types';
+import { useState } from 'react';
+
+import type { PerfScenario, Tool } from '@shared/types';
 
 import { DetailHead } from '../../components/DetailHead';
 import { Speedometer } from '../../components/Speedometer';
@@ -116,25 +118,56 @@ export function PerformanceDetail({ runId, tool }: PerformanceDetailProps) {
           </div>
 
           <div className="panel">
-            <h3>Scenarios</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {p.scenarios.map((s, i) => (
-                <div className="scenario" key={i}>
-                  <span
-                    className={
-                      'icon-dot ' +
-                      (s.errors > 1 ? 'failed' : s.errors > 0.3 ? 'skipped' : 'passed')
-                    }
-                  />
-                  <span className="name">{s.name}</span>
-                  <span className="meta">
-                    {s.rps} rps · p95 {s.p95}ms · err {s.errors}%
-                  </span>
-                </div>
+            <h3>Simulations</h3>
+            <div className="sim-list">
+              {p.scenarios.map((sim, i) => (
+                <SimulationCard key={i} sim={sim} />
               ))}
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function SimulationCard({ sim }: { sim: PerfScenario }) {
+  const [open, setOpen] = useState(sim.errors > 0);
+  const hasSteps = Boolean(sim.steps && sim.steps.length);
+  return (
+    <div className={`scenario-card${open ? ' is-open' : ''}`}>
+      <button
+        type="button"
+        className="scenario-card-head"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={'icon-dot ' + (sim.errors > 1 ? 'failed' : sim.errors > 0.3 ? 'skipped' : 'passed')} />
+        <span className="name">{sim.name}</span>
+        <span className="meta">{sim.rps} rps · p95 {sim.p95}ms · err {sim.errors}%</span>
+        <span className="chev">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && hasSteps && (
+        <div className="scenario-card-body">
+          <table className="sim-steps">
+            <thead>
+              <tr><th>Step</th><th>RPS</th><th>P95 (ms)</th><th>%KO</th></tr>
+            </thead>
+            <tbody>
+              {[...(sim.steps ?? [])].sort((a, b) => b.errors - a.errors).map((s, idx) => (
+                <tr key={idx} className={s.errors > 0 ? 'sim-step-bad' : undefined}>
+                  <td>{s.name}</td>
+                  <td>{s.rps}</td>
+                  <td>{s.p95}</td>
+                  <td>{s.errors}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {open && !hasSteps && (
+        <div className="scenario-card-body empty">No per-request breakdown available.</div>
       )}
     </div>
   );

@@ -17,7 +17,15 @@ describe('gatlingAdapter', () => {
       rps: 100, avgMs: 50, p95Ms: 200, p99Ms: 400,
       errorRate: 0.1, requests: 5000, maxRps: 200,
       distribution: [{ label: '< 100 ms', pct: 80, count: 4000 }],
-      scenarios: [{ name: 'login', rps: 60, p95: 90, errors: 0.05 }],
+      scenarios: [
+        {
+          name: 'checkout-load',
+          rps: 60,
+          p95: 90,
+          errors: 0.05,
+          steps: [{ name: 'home', rps: 30, p95: 80, errors: 0 }],
+        },
+      ],
     },
   };
 
@@ -25,6 +33,8 @@ describe('gatlingAdapter', () => {
     const out = gatlingAdapter(fixture, ctx());
     expect(out.kind).toBe('performance');
     expect(out.perf.distribution).toHaveLength(1);
-    expect(out.perf.scenarios[0].name).toBe('login');
+    expect(out.perf.scenarios[0].name).toBe('checkout-load');
+    expect(out.perf.scenarios[0].steps).toHaveLength(1);
+    expect(out.perf.scenarios[0].steps?.[0].name).toBe('home');
   });
 });

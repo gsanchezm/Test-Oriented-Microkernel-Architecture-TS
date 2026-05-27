@@ -17,6 +17,8 @@ export interface VisualTargetOptions {
     market?: string;
     /** Optional rendering-language dimension ("en"/"es"/"de"/"fr"/"ja"). */
     language?: string;
+    /** BDD scenario name (pickle.name) that triggered the snapshot. Threaded through for dashboard backlinks. */
+    scenario?: string;
     saveActualOnly: boolean;
     updateReason: string | null;
     raw: Record<string, unknown>;
@@ -37,6 +39,9 @@ export function parseVisualTarget(target: string): VisualTargetOptions {
     const language = typeof variables.language === 'string' && variables.language.length > 0
         ? variables.language.toLowerCase()
         : undefined;
+    const scenario = typeof variables.scenario === 'string' && variables.scenario.length > 0
+        ? variables.scenario
+        : undefined;
 
     return {
         feature,
@@ -45,6 +50,7 @@ export function parseVisualTarget(target: string): VisualTargetOptions {
         viewport,
         market,
         language,
+        scenario,
         saveActualOnly: variables.saveActualOnly === true,
         updateReason: typeof variables.updateReason === 'string' ? variables.updateReason : null,
         raw: variables,

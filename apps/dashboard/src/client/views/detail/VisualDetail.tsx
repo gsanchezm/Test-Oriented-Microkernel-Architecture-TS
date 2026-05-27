@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import type { Tool } from '@shared/types';
 import { DetailHead } from '../../components/DetailHead';
@@ -125,6 +126,21 @@ export function VisualDetail({ runId, tool }: VisualDetailProps) {
                   <div className="meta">
                     {d.baseline}.png · {d.status === 'passed' ? 'within tolerance' : 'exceeds threshold'}
                   </div>
+                  {d.bucketing && (
+                    <div className="chips">
+                      {d.bucketing.market    && <span className="chip chip-market">{d.bucketing.market}</span>}
+                      {d.bucketing.language  && <span className="chip chip-language">{d.bucketing.language}</span>}
+                      {d.bucketing.viewport  && <span className="chip chip-viewport">{d.bucketing.viewport}</span>}
+                      {d.bucketing.platform  && <span className="chip chip-platform">{d.bucketing.platform}</span>}
+                    </div>
+                  )}
+                  {d.triggeredBy && d.triggeredBy.runId && (
+                    <div className="triggered-by">
+                      <Link to={`/runs/${d.triggeredBy.runId}/playwright?expand=${encodeURIComponent(d.triggeredBy.scenario)}`}>
+                        📍 {d.triggeredBy.scenario} in {d.triggeredBy.feature}
+                      </Link>
+                    </div>
+                  )}
                 </div>
                 <span className={'delta ' + (d.status === 'passed' ? 'ok' : 'bad')}>
                   Δ {d.diffPct.toFixed(2)}%

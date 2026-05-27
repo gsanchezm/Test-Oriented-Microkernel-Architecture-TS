@@ -85,6 +85,7 @@ After({ tags: '@visual' }, async function ({ pickle, result }) {
     const bucket: Record<string, string> = {};
     if (market) bucket.market = market;
     if (language) bucket.language = language;
+    if (pickle.name) bucket.scenario = pickle.name;
     const optionsJson = Object.keys(bucket).length > 0
         ? `||${JSON.stringify(bucket)}`
         : '';

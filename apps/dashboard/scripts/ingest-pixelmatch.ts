@@ -21,6 +21,9 @@ interface VisualResultFile {
   snapshotId?: string;
   platform?: string;
   viewport?: string;
+  market?: string;
+  language?: string;
+  scenario?: string;
   status?: string;
   passed?: boolean;
   diffPixels?: number;
@@ -30,6 +33,20 @@ interface VisualResultFile {
   actualPath?: string;
   diffPath?: string;
   errorMessage?: string | null;
+}
+
+export function bucketingFromPath(visualRunDir: string, resultJsonPath: string): NonNullable<VisualDiff['bucketing']> {
+  const rel = path.relative(visualRunDir, path.dirname(resultJsonPath));
+  const segments = rel.split(/[\\/]/).filter(Boolean);
+  const [feature, snapshot, platform, viewport, market, language] = segments;
+  const bucketing: NonNullable<VisualDiff['bucketing']> = {};
+  if (feature)  bucketing.feature  = feature;
+  if (snapshot) bucketing.snapshot = snapshot;
+  if (platform) bucketing.platform = platform;
+  if (viewport) bucketing.viewport = viewport;
+  if (market)   bucketing.market   = market;
+  if (language) bucketing.language = language;
+  return bucketing;
 }
 
 async function findLatestVisualRunDir(repoRoot: string): Promise<string | null> {
@@ -164,6 +181,11 @@ export async function ingestPixelmatch(
       data.passed === true || (data.status ?? '').toUpperCase() === 'PASS' ? 'passed' : 'failed';
     if (status === 'passed') passed++; else failed++;
 
+    const bucketing = bucketingFromPath(visualRunDir, resultPath);
+    const triggeredBy = data.scenario && data.feature
+      ? { feature: data.feature, scenario: data.scenario, runId: opts.dashboardRunId }
+      : undefined;
+
     diffs.push({
       name: nameForResult(visualRunDir, resultPath, data),
       baseline: key,
@@ -174,6 +196,8 @@ export async function ingestPixelmatch(
         actual:   `/reports/${encodeURIComponent(opts.dashboardRunId)}/pixelmatch/${key}-actual.png`,
         diff:     `/reports/${encodeURIComponent(opts.dashboardRunId)}/pixelmatch/${key}-diff.png`,
       },
+      bucketing,
+      ...(triggeredBy ? { triggeredBy } : {}),
     });
   }
 

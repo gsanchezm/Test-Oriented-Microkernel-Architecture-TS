@@ -50,6 +50,7 @@ export const CompareSnapshotAction: ActionHandler<PixelmatchActionContext> = {
         const result: VisualComparisonResult = {
             feature: opts.feature,
             snapshotId: opts.snapshotId,
+            ...(opts.scenario ? { scenario: opts.scenario } : {}),
             regionRef: snapshot.regionRef,
             resolvedRegion: resolved.resolvedRegion,
             resolvedRegionStrategy: resolved.resolvedRegionStrategy,

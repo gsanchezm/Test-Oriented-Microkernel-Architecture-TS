@@ -16,6 +16,8 @@ export interface VisualThresholdsApplied {
 export interface VisualComparisonResult {
     feature: string;
     snapshotId: string;
+    /** BDD scenario (pickle.name) that triggered this snapshot, when provided by the caller. */
+    scenario?: string;
     regionRef: string;
     resolvedRegion: string | null;
     resolvedRegionStrategy: string | null;

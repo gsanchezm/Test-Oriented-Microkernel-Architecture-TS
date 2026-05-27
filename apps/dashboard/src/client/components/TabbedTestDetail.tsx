@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { Counts, TestCase, Tool } from '@shared/types';
 import { DetailHead } from './DetailHead';
@@ -33,6 +34,8 @@ export function TabbedTestDetail({ runId, tool, tabs, toolMissing }: TabbedTestD
   const [activeId, setActiveId] = useState(tabs[0]?.id ?? '');
   const [filter, setFilter] = useState<TestFilter>('all');
   const [query, setQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const expandScenarioName = searchParams.get('expand');
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
 
@@ -175,7 +178,7 @@ export function TabbedTestDetail({ runId, tool, tabs, toolMissing }: TabbedTestD
               onQuery={setQuery}
               counts={counts}
             />
-            <TestList tests={tests} filter={filter} query={query} />
+            <TestList tests={tests} filter={filter} query={query} expandScenarioName={expandScenarioName} />
           </>
         )}
       </div>

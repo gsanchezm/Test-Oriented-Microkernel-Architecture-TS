@@ -137,8 +137,14 @@ The canonical `Tool` union is a discriminated type by `kind`. See `src/shared/ty
 
 - `web_ui` / `api` → `{ ..., tests: TestCase[] }`
 - `mobile_ui` → `{ ..., platforms: { android: PlatformBlock, ios: PlatformBlock } }`
-- `performance` → `{ ..., perf: { rps, p95Ms, distribution[], scenarios[], ... } }`
-- `visual` → `{ ..., diffs: [{ baseline, diffPct, status, images: { baseline, actual, diff } }] }`
+- `performance` → `{ ..., perf: { rps, p95Ms, distribution[], scenarios: PerfScenario[], ... } }`
+- `visual` → `{ ..., diffs: [{ baseline, diffPct, status, images: { baseline, actual, diff }, bucketing?, triggeredBy? }] }`
+
+**`TestCase` carries optional `steps?: TestStep[]` and `failedStepIndex?: number`** — when present, the UI expands each scenario into a Given/When/Then accordion and highlights the failed step inline with its `error_message`. Failed scenarios auto-expand on first render. Hooks (`@Before`/`@After`) appear only when they failed. Old report JSON without `steps` keeps rendering as before (the row collapses to the scenario-level error).
+
+**`PerfScenario` is now simulation-level** (`{ name, rps, p95, errors, steps?: PerfStep[] }`). Each Gatling simulation produces one entry; per-request rows under it live in `steps[]`. The `PerformanceDetail` view renders these as accordion cards that expand to a per-request table sorted by error rate.
+
+**`VisualDiff.bucketing` and `triggeredBy`** are optional. `bucketing` (`{ feature?, snapshot?, platform?, viewport?, market?, language? }`) drives the chip row under each diff card. `triggeredBy` (`{ feature, scenario, runId? }`) renders a backlink to the originating BDD scenario in the Playwright tab — clicking it opens `/runs/<runId>/playwright?expand=<scenario>` which auto-expands that scenario's accordion via the `?expand=` query param.
 
 **v1 adapters are pass-through.** Each one casts the raw JSON to its expected shape and stamps the right `kind`. The pixelmatch adapter is the only one with real work — it resolves the `images.*` URLs.
 

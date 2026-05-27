@@ -34,15 +34,17 @@ import path from 'node:path';
 import type {
   PerfBlock,
   PerfDistributionBucket,
+  PerfScenario,
+  PerfStep,
   PerformanceTool,
 } from '../src/shared/types.js';
 
-interface RowValues {
+export interface RowValues {
   label: string;
   values: Record<string, number>; // 'col-2' .. 'col-14'
 }
 
-interface SimulationReport {
+export interface SimulationReport {
   /** Logical simulation name, e.g. "checkout-load". */
   simulation: string;
   /** Absolute path to the jssimulation-* dir. */
@@ -254,8 +256,6 @@ export async function ingestGatling(opts: IngestGatlingOptions): Promise<Perform
   let p99w = 0;
   let meanw = 0;
 
-  const scenarios: PerfBlock['scenarios'] = [];
-
   for (const report of reports) {
     const rTotal = report.root.values['col-2'] ?? 0;
     total += rTotal;
@@ -264,20 +264,13 @@ export async function ingestGatling(opts: IngestGatlingOptions): Promise<Perform
     rpsSum += report.root.values['col-6'] ?? 0;
 
     const w = rTotal > 0 ? rTotal : 1;
-    p50w += (report.root.values['col-8'] ?? 0) * w;
-    p95w += (report.root.values['col-10'] ?? 0) * w;
-    p99w += (report.root.values['col-11'] ?? 0) * w;
+    p50w  += (report.root.values['col-8']  ?? 0) * w;
+    p95w  += (report.root.values['col-10'] ?? 0) * w;
+    p99w  += (report.root.values['col-11'] ?? 0) * w;
     meanw += (report.root.values['col-13'] ?? 0) * w;
-
-    for (const s of report.scenarios) {
-      scenarios.push({
-        name: `${report.simulation} · ${s.label}`,
-        rps: s.values['col-6'] ?? 0,
-        p95: s.values['col-10'] ?? 0,
-        errors: s.values['col-5'] ?? 0,
-      });
-    }
   }
+
+  const scenarios: PerfScenario[] = buildPerfScenarios(reports);
 
   const weight = total > 0 ? total : reports.length; // matches the w=1 fallback
   const meanMs = +(meanw / weight).toFixed(1);
@@ -302,14 +295,13 @@ export async function ingestGatling(opts: IngestGatlingOptions): Promise<Perform
     scenarios,
   };
 
-  // "passed/failed": one per scenario row across all simulations. A scenario
-  // is "failed" when its row had >0 KO requests.
+  // "passed/failed": one per step row across all simulations. A step is
+  // "failed" when its error rate > 0.
   let passed = 0;
   let failed = 0;
-  for (const report of reports) {
-    for (const s of report.scenarios) {
-      if ((s.values['col-4'] ?? 0) === 0) passed++;
-      else failed++;
+  for (const s of scenarios) {
+    for (const step of s.steps ?? []) {
+      if (step.errors === 0) passed++; else failed++;
     }
   }
 
@@ -329,6 +321,24 @@ export async function ingestGatling(opts: IngestGatlingOptions): Promise<Perform
     duration: durationFromRps(total, rps),
     perf,
   };
+}
+
+export function buildPerfScenarios(reports: SimulationReport[]): PerfScenario[] {
+  return reports.map((report) => {
+    const steps: PerfStep[] = report.scenarios.map((s) => ({
+      name: s.label,
+      rps:    s.values['col-6']  ?? 0,
+      p95:    s.values['col-10'] ?? 0,
+      errors: s.values['col-5']  ?? 0,
+    }));
+    return {
+      name: report.simulation,
+      rps:    report.root.values['col-6']  ?? 0,
+      p95:    report.root.values['col-10'] ?? 0,
+      errors: report.root.values['col-5']  ?? 0,
+      ...(steps.length > 0 ? { steps } : {}),
+    };
+  });
 }
 
 function durationFromRps(total: number, rps: number): string {
