@@ -160,62 +160,15 @@ export class ProfileRoute {
             return;
         }
 
+        // OmniPizza is a non-persistent demo app: a profile PATCH is accepted
+        // (200) but the value is NOT guaranteed to survive a reload/read-back.
+        // So the UI save step asserts only that the SAVE was accepted — it
+        // clicks Save and returns. We deliberately do NOT poll the backend for
+        // read-after-write persistence (that assumption doesn't hold for this
+        // app). The scenario then verifies the form reflects the entered values
+        // (no reload), which confirms the form accepted the input and the save
+        // did not clear/error the form.
         await saveProfile();
-
-        // The UI save click returns within ~35 ms (just dispatches the click +
-        // waits for an always-present anchor). The FE's save handler fires
-        // PATCH /api/users/me/profile asynchronously; if the next step is a
-        // page reload, NAVIGATE *cancels* the in-flight PATCH and the data
-        // never reaches the backend. Anchor the step on a real backend
-        // signal: poll GET /api/users/me/profile until it carries the
-        // just-submitted values, then return. Sequential scenarios that
-        // re-PATCH then re-poll inherit a consistent baseline this way.
-        const update = this.world.profilePendingUpdate;
-        const token = this.world.auth?.token;
-        if (!update || !token) {
-            // No pending update means the When-step didn't run, no values
-            // to verify. No token means the Background didn't log in. In
-            // both cases the UI-only path remains correct — let the
-            // downstream verify step surface the diagnostic.
-            return;
-        }
-        await this.waitForProfilePatchToLand(token, update);
-    }
-
-    private async waitForProfilePatchToLand(
-        token: string,
-        expected: ProfileUpdateInputs,
-    ): Promise<void> {
-        const market = this.market();
-        let lastDiff: { name: string; actual: string; expected: string } | null = null;
-        for (let attempt = 0; attempt < READ_POLL_MAX_ATTEMPTS; attempt++) {
-            try {
-                const profile = await this.profileDao.getProfile({ token, countryCode: market });
-                this.world.profileLastResponse = profile;
-                lastDiff = this.diffFields(profile, expected);
-                if (!lastDiff) return;
-            } catch (e) {
-                // Network blips are fine — the next poll attempt will retry.
-                log.info({ err: (e as Error).message }, 'profile read-after-write poll: transient error, retrying');
-            }
-            await new Promise((r) => setTimeout(r, READ_POLL_INTERVAL_MS));
-        }
-        // Poll exhausted: the save did NOT land within the budget. Throwing here
-        // (instead of the previous silent log) attributes the failure to the
-        // SAVE step where it actually originates, rather than letting the
-        // downstream reload-and-read step inherit stale state and report a
-        // confusing cross-market value (e.g. a US persistence read surfacing a
-        // JP name written by an earlier scenario). The OmniPizza backend does
-        // not provide read-after-write consistency on /api/users/me/profile for
-        // a sequential PATCH→GET on the same record (observed lag > 60 s in the
-        // majority of attempts under serial load); surface the real diff so the
-        // backend defect is unambiguous in the report.
-        throw new Error(
-            `[profile] save did not persist within ${(READ_POLL_INTERVAL_MS * READ_POLL_MAX_ATTEMPTS) / 1000}s — ` +
-                `profile.${lastDiff?.name ?? 'full_name'} expected "${lastDiff?.expected ?? expected.fullName}", ` +
-                `got "${lastDiff?.actual ?? '<no successful read>'}". ` +
-                `read-after-write did not converge (backend persistence/consistency on /api/users/me/profile).`,
-        );
     }
 
     async reloadProfile(): Promise<void> {

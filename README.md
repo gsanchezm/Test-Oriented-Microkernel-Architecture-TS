@@ -244,6 +244,8 @@ The `mobile` profile chains: `android-emulator (docker-android)` → `appium-ser
 
 The Helix workflow gates jobs by input — Android/iOS are manual-only because they need KVM + docker-android.
 
+Each job is named after the **tool** that executes it (`Playwright`, `Appium`, `Gatling`, `Pixelmatch`) rather than the platform — consistent with the *plugin identity = the tool* principle, so a status check names exactly which engine ran. The job **keys** (`e2e-web`, `e2e-android`, …) are unchanged, so `needs:` wiring and the `update-visual-baselines.yml` references stay intact; only the display names shift. If branch protection requires checks by their old display name, update those required checks in repo settings.
+
 ## Stack
 
 | Concern             | Library                                            |

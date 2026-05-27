@@ -634,7 +634,7 @@ graph TD
   <div class="container">
     <span class="tag">Helix Continuity</span>
     <h2 class="section-title">Unified Continuous Execution.</h2>
-    <p class="section-sub">A single workflow, one source of truth. All execution layers (API, Web, Visual, Performance, Mobile) unified into a single AHM Execution Helix. Visual snapshot regression is fused into the Web E2E jobs &mdash; same container, same captures &mdash; with a dedicated gate that surfaces drift as an independent check.</p>
+    <p class="section-sub">A single workflow, one source of truth. All execution layers (API, Web, Visual, Performance, Mobile) unified into a single AHM Execution Helix. Each job is named after the <strong>engine that executes it</strong> &mdash; Playwright, Appium, Gatling, Pixelmatch &mdash; so a green check names exactly which tool ran, mirroring the microkernel's <em>plugin identity = the tool</em> principle. Visual snapshot regression is fused into the Playwright Web E2E jobs &mdash; same container, same captures &mdash; with a dedicated gate that surfaces drift as an independent check.</p>
 
     <div class="cicd-table" style="margin-top: 48px; overflow-x: auto; background: var(--surface-2); border-radius: var(--radius); border: 1px solid var(--border);">
       <table style="width: 100%; text-align: left; border-collapse: collapse;">
@@ -642,10 +642,10 @@ graph TD
           <tr style="border-bottom: 2px solid var(--border);">
             <th style="padding: 18px; font-size: .9rem;">Trigger Event</th>
             <th style="padding: 18px; font-size: .9rem;">API Smoke</th>
-            <th style="padding: 18px; font-size: .9rem;">Web E2E</th>
-            <th style="padding: 18px; font-size: .9rem;">Visual Diff</th>
-            <th style="padding: 18px; font-size: .9rem;">Performance</th>
-            <th style="padding: 18px; font-size: .9rem;">Mobile (Android)</th>
+            <th style="padding: 18px; font-size: .9rem;">Web E2E (Playwright)</th>
+            <th style="padding: 18px; font-size: .9rem;">Visual Diff (Pixelmatch)</th>
+            <th style="padding: 18px; font-size: .9rem;">Performance (Gatling)</th>
+            <th style="padding: 18px; font-size: .9rem;">Mobile · Android (Appium)</th>
           </tr>
         </thead>
         <tbody>
