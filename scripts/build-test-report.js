@@ -48,10 +48,24 @@ if (!fs.existsSync(REPORTS_DIR)) {
 }
 
 // 1. Load Cucumber data
-const playwright = loadCucumber(path.join(REPORTS_DIR, 'playwright.json'), 'playwright');
+//
+// Playwright source precedence: prefer the per-viewport split files written
+// by `test:json:web:desktop` + `test:json:web:responsive` (the CI's e2e-web /
+// e2e-web-responsive jobs). Fall back to the legacy single `playwright.json`
+// only when no split file is present — never merge both, otherwise scenarios
+// double-count.
+const playwright = loadCucumber(resolvePlaywrightPaths(), 'playwright');
 const api = loadCucumber(path.join(REPORTS_DIR, 'api.json'), 'api');
 const android = loadCucumber(path.join(REPORTS_DIR, 'android.json'), 'android');
 const ios = loadCucumber(path.join(REPORTS_DIR, 'ios.json'), 'ios');
+
+function resolvePlaywrightPaths() {
+    const split = ['playwright-desktop.json', 'playwright-responsive.json']
+        .map((name) => path.join(REPORTS_DIR, name))
+        .filter((p) => fs.existsSync(p));
+    if (split.length > 0) return split;
+    return [path.join(REPORTS_DIR, 'playwright.json')];
+}
 
 // 2. Load Gatling performance data
 const gatlingArgs = process.argv.slice(2);

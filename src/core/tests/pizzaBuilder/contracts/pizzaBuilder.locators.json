@@ -1,5 +1,6 @@
 {
   "pizzaBuilderScreen": {
+    "web": "div[class*=\"max-h-[90vh]\"]",
     "mobile": "~screen-pizza-builder"
   },
   "builderTitleText": {

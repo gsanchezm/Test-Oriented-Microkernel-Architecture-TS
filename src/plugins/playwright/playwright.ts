@@ -1,4 +1,4 @@
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
+import { chromium, firefox, webkit, Browser, BrowserContext, Page } from 'playwright';
 import { logger } from '@utils/logger';
 import { getPlaywrightActionRegistry } from '@plugins/playwright/actions/registerPlaywrightActions';
 
@@ -20,10 +20,50 @@ async function ensureBrowser(): Promise<Browser> {
     if (browser) return browser;
 
     const headless = process.env.HEADLESS !== 'false';
-    const launchArgs = isDesktop && !headless ? ['--start-maximized'] : [];
 
-    logger.info(`[Playwright Adapter] Launching browser (viewport: ${isDesktop ? 'maximized' : '390x844'}, headless: ${headless})...`);
-    browser = await chromium.launch({ headless, args: launchArgs });
+    // BROWSER selects the engine; defaults to chromium when unset.
+    // chromium-family (chromium/chrome/edge) launches via chromium.launch,
+    // optionally pinned to a system channel (chrome/msedge).
+    const engine = (process.env.BROWSER ?? 'chromium').trim().toLowerCase();
+
+    // --start-maximized is a chromium-only flag; firefox/webkit reject it.
+    const isChromiumFamily = engine === 'chromium' || engine === 'chrome' || engine === 'edge' || engine === 'msedge';
+    const launchArgs = isChromiumFamily && isDesktop && !headless ? ['--start-maximized'] : [];
+
+    let channel: string | undefined;
+    switch (engine) {
+        case 'chrome':
+            channel = 'chrome';
+            break;
+        case 'edge':
+        case 'msedge':
+            channel = 'msedge';
+            break;
+        default:
+            channel = undefined;
+    }
+
+    const channelLabel = channel ? ` (channel: ${channel})` : '';
+    logger.info(`[Playwright Adapter] Launching browser engine: ${engine}${channelLabel} (viewport: ${isDesktop ? 'maximized' : '390x844'}, headless: ${headless})...`);
+
+    switch (engine) {
+        case 'firefox':
+            browser = await firefox.launch({ headless });
+            break;
+        case 'webkit':
+            browser = await webkit.launch({ headless });
+            break;
+        case 'chromium':
+        case 'chrome':
+        case 'edge':
+        case 'msedge':
+            browser = await chromium.launch({ headless, args: launchArgs, ...(channel ? { channel } : {}) });
+            break;
+        default:
+            logger.info(`[Playwright Adapter] Unknown BROWSER="${engine}", falling back to chromium.`);
+            browser = await chromium.launch({ headless, args: launchArgs });
+    }
+
     return browser;
 }
 

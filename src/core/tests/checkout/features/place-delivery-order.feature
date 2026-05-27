@@ -8,7 +8,7 @@ Feature: Place a delivery order across markets
   Background:
     Given the OmniPizza user is logged in as "standard_user"
 
-  @desktop @responsive @android @ios @performance @visual
+  @desktop @responsive @android @ios @performance @visual @api
   Scenario Outline: Place a delivery order in <market> paying with credit card
     Given they are ordering in market "<market>"
     And they have an order with "<item>" size "<size>" quantity <qty>
@@ -24,7 +24,7 @@ Feature: Place a delivery order across markets
       | CH     | Marinara   | Small  |   1 | Bahnhofstrasse 12 |     8001 |         | Lukas Baumgartner   | +41 44 668 18 00 | 4242 4242 4242 4242 | 12/28 | 123 |
       | JP     | Pepperoni  | Family |   2 |     1-2-3 Shibuya | 150-0002 | Tokyo   | 田中 健太           |  +81 3 1234 5678 | 4242 4242 4242 4242 | 12/28 | 123 |
 
-  @desktop @responsive @android @ios @performance @visual
+  @desktop @responsive @android @ios @performance @visual @api
   Scenario Outline: Place a delivery order in <market> paying with cash
     Given they are ordering in market "<market>"
     And they have an order with "<item>" size "<size>" quantity <qty>

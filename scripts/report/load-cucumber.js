@@ -3,14 +3,36 @@ const fs = require('fs');
 /**
  * Loads and summarizes Cucumber JSON reports.
  *
- * @param {string} filePath - Path to the cucumber JSON file
+ * @param {string|string[]} filePathOrPaths - Either a single cucumber JSON
+ *   path (legacy single-file callers) OR an array of paths whose summaries
+ *   are merged into one. The array form is used by the split CI flow where
+ *   `playwright-desktop.json` and `playwright-responsive.json` are written
+ *   by separate jobs and need to roll up into a single "Playwright" section
+ *   in the HTML report. Missing paths are silently skipped — caller can
+ *   pass every candidate path and only the ones present contribute.
  * @param {string} platform - The platform name (e.g. android, ios, desktop, api)
  * @returns {object} Summary object: { available, platform, status, features,
  *                                     total, passed, failed, skipped,
  *                                     durationNs, errorGroups }
  */
-function loadCucumber(filePath, platform) {
-    const empty = () => ({
+function loadCucumber(filePathOrPaths, platform) {
+    const empty = () => emptyOf(platform);
+
+    // Normalize input. Legacy callers pass a string; the build orchestrator
+    // can pass an array now. We filter to existing paths up front so callers
+    // can pass every candidate without checking presence themselves.
+    const candidatePaths = Array.isArray(filePathOrPaths)
+        ? filePathOrPaths
+        : [filePathOrPaths];
+    const paths = candidatePaths.filter((p) => p && fs.existsSync(p));
+
+    if (paths.length === 0) return empty();
+    if (paths.length === 1) return loadOne(paths[0], platform);
+    return mergeSummaries(paths.map((p) => loadOne(p, platform)), platform);
+}
+
+function emptyOf(platform) {
+    return {
         available: false,
         platform,
         status: 'NOT_RUN',
@@ -21,17 +43,17 @@ function loadCucumber(filePath, platform) {
         skipped: 0,
         durationNs: 0,
         errorGroups: [],
-    });
+    };
+}
 
-    if (!filePath || !fs.existsSync(filePath)) return empty();
-
+function loadOne(filePath, platform) {
     let rawData;
     try {
         rawData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     } catch (e) {
-        return empty();
+        return emptyOf(platform);
     }
-    if (!Array.isArray(rawData)) return empty();
+    if (!Array.isArray(rawData)) return emptyOf(platform);
 
     let total = 0;
     let passed = 0;
@@ -116,6 +138,53 @@ function loadCucumber(filePath, platform) {
         };
     });
 
+    const errorGroups = Array.from(errorMap.entries()).map(([message, data]) => ({
+        message,
+        count: data.count,
+        scenarios: Array.from(data.scenarios),
+    }));
+
+    return {
+        available: true,
+        platform,
+        status: failed > 0 ? 'FAIL' : (passed > 0 ? 'PASS' : 'NOT_RUN'),
+        features,
+        total,
+        passed,
+        failed,
+        skipped,
+        durationNs,
+        errorGroups,
+    };
+}
+
+/**
+ * Merges multiple cucumber summaries (one per JSON file) into a single
+ * summary. Concatenates features verbatim (assumes the input files describe
+ * non-overlapping scenarios — true for the split CI flow where desktop and
+ * responsive jobs cover different viewport tags). Sums totals + durations.
+ * Merges errorGroups by message so the same recurring error across viewports
+ * surfaces as one group with the union of affected scenarios.
+ */
+function mergeSummaries(summaries, platform) {
+    const features = summaries.flatMap((s) => s.features);
+    const total      = summaries.reduce((a, s) => a + s.total,      0);
+    const passed     = summaries.reduce((a, s) => a + s.passed,     0);
+    const failed     = summaries.reduce((a, s) => a + s.failed,     0);
+    const skipped    = summaries.reduce((a, s) => a + s.skipped,    0);
+    const durationNs = summaries.reduce((a, s) => a + s.durationNs, 0);
+
+    const errorMap = new Map();
+    for (const s of summaries) {
+        for (const eg of s.errorGroups) {
+            if (!errorMap.has(eg.message)) {
+                errorMap.set(eg.message, { count: 0, scenarios: new Set() });
+            }
+            const entry = errorMap.get(eg.message);
+            entry.count += eg.count;
+            eg.scenarios.forEach((sc) => entry.scenarios.add(sc));
+        }
+    }
     const errorGroups = Array.from(errorMap.entries()).map(([message, data]) => ({
         message,
         count: data.count,

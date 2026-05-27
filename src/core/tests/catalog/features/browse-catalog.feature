@@ -43,7 +43,7 @@ Feature: Browse the OmniPizza catalog across markets
       | CH     | fr       | Pizzas       |
       | JP     | ja       | ピザ         |
 
-  @desktop @responsive @android @ios @visual
+  @desktop @responsive @android @ios @visual @api
   Scenario Outline: Searching narrows the catalog by name in <market>
     Given they are browsing the catalog in market "<market>" using language "<language>"
     When they search the catalog for "<query>"
@@ -64,7 +64,7 @@ Feature: Browse the OmniPizza catalog across markets
       | CH     | fr       | Marinara  |
       | JP     | ja       | BBQ       |
 
-  @desktop @responsive @android @ios @visual
+  @desktop @responsive @android @ios @visual @api
   Scenario Outline: Filtering by category narrows the catalog in <market>
     Given they are browsing the catalog in market "<market>" using language "<language>"
     When they select the "<category>" category
@@ -78,7 +78,7 @@ Feature: Browse the OmniPizza catalog across markets
       | CH     | fr       | veggie   |
       | JP     | ja       | meat     |
 
-  @desktop @responsive @android @ios @visual
+  @desktop @responsive @android @ios @visual @api
   Scenario Outline: Opening a pizza card launches the builder in <market>
     Given they are browsing the catalog in market "<market>" using language "<language>"
     When they open the pizza "<item>"

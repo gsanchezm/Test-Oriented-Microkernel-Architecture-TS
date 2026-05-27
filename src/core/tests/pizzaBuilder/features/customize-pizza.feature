@@ -73,7 +73,7 @@ Feature: Customize a pizza in the builder across markets
       | CH     | Marinara   | fr       | Small  | mushrooms             |
       | JP     | Pepperoni  | ja       | Family | mozzarella,pineapple  |
 
-  @desktop @responsive @android @ios @visual
+  @desktop @responsive @android @ios @visual @api
   Scenario Outline: Confirming add to cart closes the builder and increments the navbar cart count in <market>
     Given the pizza builder is open for "<item>" in market "<market>" using language "<language>"
     And they select size "<size>"

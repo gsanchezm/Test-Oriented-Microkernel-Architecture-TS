@@ -187,20 +187,34 @@ export class ProfileRoute {
         expected: ProfileUpdateInputs,
     ): Promise<void> {
         const market = this.market();
+        let lastDiff: { name: string; actual: string; expected: string } | null = null;
         for (let attempt = 0; attempt < READ_POLL_MAX_ATTEMPTS; attempt++) {
             try {
                 const profile = await this.profileDao.getProfile({ token, countryCode: market });
                 this.world.profileLastResponse = profile;
-                if (!this.diffFields(profile, expected)) return;
+                lastDiff = this.diffFields(profile, expected);
+                if (!lastDiff) return;
             } catch (e) {
                 // Network blips are fine — the next poll attempt will retry.
                 log.info({ err: (e as Error).message }, 'profile read-after-write poll: transient error, retrying');
             }
             await new Promise((r) => setTimeout(r, READ_POLL_INTERVAL_MS));
         }
-        log.info(
-            { expected },
-            'profile read-after-write poll exhausted — UI PATCH may have been cancelled by the next navigation; the downstream verify step will report the actual state.',
+        // Poll exhausted: the save did NOT land within the budget. Throwing here
+        // (instead of the previous silent log) attributes the failure to the
+        // SAVE step where it actually originates, rather than letting the
+        // downstream reload-and-read step inherit stale state and report a
+        // confusing cross-market value (e.g. a US persistence read surfacing a
+        // JP name written by an earlier scenario). The OmniPizza backend does
+        // not provide read-after-write consistency on /api/users/me/profile for
+        // a sequential PATCH→GET on the same record (observed lag > 60 s in the
+        // majority of attempts under serial load); surface the real diff so the
+        // backend defect is unambiguous in the report.
+        throw new Error(
+            `[profile] save did not persist within ${(READ_POLL_INTERVAL_MS * READ_POLL_MAX_ATTEMPTS) / 1000}s — ` +
+                `profile.${lastDiff?.name ?? 'full_name'} expected "${lastDiff?.expected ?? expected.fullName}", ` +
+                `got "${lastDiff?.actual ?? '<no successful read>'}". ` +
+                `read-after-write did not converge (backend persistence/consistency on /api/users/me/profile).`,
         );
     }
 

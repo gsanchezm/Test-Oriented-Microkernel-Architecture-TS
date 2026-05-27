@@ -46,6 +46,11 @@ interface BuilderDraft {
 interface PizzaBuilderWorldShape extends CheckoutWorld {
     pizzaBuilderDraft?: BuilderDraft;
     pizzaBuilderCartCount?: number;
+    // Set true by confirmAddToCartViaApi. Discriminates the PRE-confirm use of
+    // assertCartCount (the "cart is 0" precondition — informational under api)
+    // from the POST-confirm use (the real assertion). See assertCartCount.
+    // Lives on the world so it resets automatically per scenario.
+    pizzaBuilderConfirmed?: boolean;
 }
 
 export class PizzaBuilderRoute {
@@ -202,6 +207,23 @@ export class PizzaBuilderRoute {
      * confirm) AND as a postcondition (expectedCount after confirm) — single
      * binding handles both. Under api the cart count is read from /api/cart;
      * the navbar is a UI surface, not part of the api contract.
+     *
+     * API cart semantics (probed live against the Render backend):
+     *   - The standard_user cart is ACCOUNT-scoped and persists across logins,
+     *     so it is NOT reset between scenarios and there is no clear/delete
+     *     endpoint. An absolute "cart is 0" precondition is therefore
+     *     unsatisfiable in a serial run.
+     *   - BUT POST /api/cart REPLACES the cart with exactly the posted items
+     *     (it does not append). So after a single confirm the cart contains
+     *     exactly the one line we posted — regardless of prior state.
+     *
+     * Given that, the precondition (before confirm) is informational only —
+     * we read+log the cart but do NOT assert it, because the prior cart state
+     * is irrelevant (the upcoming POST overwrites it). The postcondition
+     * (after confirm) asserts the ABSOLUTE count, which deterministically
+     * equals the number of lines posted. The `pizzaBuilderConfirmed` flag set
+     * by confirmAddToCartViaApi discriminates the two uses. The UI branch is
+     * unchanged — the navbar count is a fresh per-session surface there.
      */
     async assertCartCount(expected: string): Promise<void> {
         if (this.driver === 'api') {
@@ -213,10 +235,26 @@ export class PizzaBuilderRoute {
                 0,
             );
             this.world.pizzaBuilderCartCount = actualCount;
+
+            // PRE-confirm use ("cart is 0" precondition): informational only.
+            // POST /api/cart replaces the cart, so any pre-existing lines from
+            // earlier scenarios are about to be overwritten — asserting on them
+            // would be meaningless and flaky.
+            if (!this.world.pizzaBuilderConfirmed) {
+                log.info(
+                    { driver: this.driver, market, expected, actualCount },
+                    'assertCartCount pre-confirm (informational under api — POST replaces the cart)',
+                );
+                return;
+            }
+
+            // POST-confirm use: the cart now holds exactly the posted line(s),
+            // so the absolute count is deterministic. Assert it directly.
             if (actualCount !== Number(expected)) {
                 throw new Error(
                     `[api cart count] expected ${expected}, got ${actualCount} ` +
-                    `for market "${market}".`,
+                    `for market "${market}". POST /api/cart replaces the cart, so ` +
+                    `the post-confirm count should equal the number of lines added.`,
                 );
             }
             return;
@@ -314,6 +352,10 @@ export class PizzaBuilderRoute {
             0,
         );
         this.world.pizzaBuilderCartCount = count;
+        // Mark the scenario as past the confirm step so the next assertCartCount
+        // (the postcondition) asserts the absolute count rather than treating
+        // the read as the informational precondition.
+        this.world.pizzaBuilderConfirmed = true;
         log.info({
             market,
             count,

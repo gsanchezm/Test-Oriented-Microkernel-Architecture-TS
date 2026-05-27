@@ -438,6 +438,7 @@
     <li><a href="#features">Features</a></li>
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#cicd">CI/CD</a></li>
+    <li><a href="#reports">Reports</a></li>
     <li><a href="#laws">Laws</a></li>
   </ul>
   <a class="nav-cta" href="https://github.com/gsanchezm/Test-Oriented-Microkernel-Architecture-TS" target="_blank" rel="noopener">GitHub →</a>
@@ -691,6 +692,51 @@ graph TD
       <code style="color: var(--accent); font-size: .8rem;">pixelmatch</code> plugin co-located in the Playwright process, and the dedicated
       <code style="color: var(--accent); font-size: .8rem;">Visual gate</code> step fails the check only on drift &mdash; keeping functional and visual regressions independently visible.
     </p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Reports ──────────────────────────────────────────────────────────────── -->
+<section id="reports">
+  <div class="container">
+    <span class="tag">Observability</span>
+    <h2 class="section-title">Reports for every execution orbit.</h2>
+    <p class="section-sub">Each layer of the Execution Helix emits a self-contained, human-readable report — functional dashboards, performance percentiles, and pixel-level visual diffs — so failures are attributable at a glance.</p>
+
+    <div class="features-grid">
+
+      <figure class="feature-card" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0,0,0,.4);">
+          <img src="images/main_html_report.jpeg" alt="Main test results dashboard showing aggregated functional scenario pass/fail status" style="width: 100%; display: block; filter: contrast(110%);" loading="lazy" />
+        </div>
+        <figcaption>
+          <h3>Main test results dashboard</h3>
+          <p>Aggregated functional pass/fail signal across every Eco-System BDD scenario.</p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0,0,0,.4);">
+          <img src="images/gatling_report.jpeg" alt="Gatling performance report with response-time percentiles and throughput charts" style="width: 100%; display: block; filter: contrast(110%);" loading="lazy" />
+        </div>
+        <figcaption>
+          <h3>Gatling performance report</h3>
+          <p>Resonance-layer load profiles with latency percentiles and throughput over time.</p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 12px 32px rgba(0,0,0,.4);">
+          <img src="images/pixelmatch.jpeg" alt="PixelMatch visual regression report highlighting pixel-level diffs between baseline and actual snapshots" style="width: 100%; display: block; filter: contrast(110%);" loading="lazy" />
+        </div>
+        <figcaption>
+          <h3>PixelMatch visual regression diffs</h3>
+          <p>Baseline-vs-actual snapshot comparison surfacing visual drift independent of the functional gate.</p>
+        </figcaption>
+      </figure>
+
+    </div>
   </div>
 </section>
 
