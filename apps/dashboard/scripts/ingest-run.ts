@@ -52,12 +52,28 @@ const reportsDir = path.resolve(process.env.REPORTS_DIR ?? path.join(repoRoot, '
 
 // ---------- cucumber-js JSON types (subset we care about) ----------------
 
+interface CucumberAttachmentLegacy {
+  data?: string;
+  mime_type?: string;
+}
+
+interface CucumberAttachmentNew {
+  data?: string;
+  body?: string;
+  mediaType?: string;
+  mime_type?: string;
+}
+
 interface CucumberStep {
   keyword?: string;
   name?: string;
   hidden?: boolean;
   match?: { location?: string };
   result?: { status?: string; duration?: number; error_message?: string };
+  /** cucumber-js v7 and earlier */
+  embeddings?: CucumberAttachmentLegacy[];
+  /** cucumber-js v8+ */
+  attachments?: CucumberAttachmentNew[];
 }
 interface CucumberElement {
   name?: string;
@@ -71,6 +87,46 @@ interface CucumberFeature {
 }
 
 const TERMINAL_STATUSES = new Set(['passed', 'failed', 'skipped', 'pending', 'undefined', 'ambiguous']);
+
+/**
+ * Carries a raw base64 screenshot from `ingestCucumber` to `materializeScreenshots`
+ * without adding a transient field to the `TestCase` object (which would leak into
+ * the written JSON and break vitest deep-equality assertions).
+ */
+const screenshotData = new WeakMap<TestCase, { b64: string }>();
+
+function safeSegment(s: string): string {
+  return s.replace(/[^A-Za-z0-9_.-]/g, '_');
+}
+
+/**
+ * Scan all steps of a FAILED element for the first image/* attachment, covering
+ * both legacy (embeddings) and newer (attachments) shapes. Must be called over
+ * the raw CucumberStep array — NOT the already-filtered stepsOut — because the
+ * After-hook that captures screenshots is hidden+passed and is skipped by the
+ * main step loop.
+ */
+function extractImageAttachment(steps: CucumberStep[]): string | null {
+  for (const step of steps) {
+    // Newer shape: step.attachments[].{data|body, mediaType|mime_type}
+    for (const att of step.attachments ?? []) {
+      const mime = att.mediaType ?? att.mime_type ?? '';
+      if (mime.startsWith('image/')) {
+        const raw = att.data ?? att.body ?? '';
+        if (raw) return raw.replace(/^data:[^;]+;base64,/, '');
+      }
+    }
+    // Legacy shape: step.embeddings[].{data, mime_type}
+    for (const emb of step.embeddings ?? []) {
+      const mime = emb.mime_type ?? '';
+      if (mime.startsWith('image/')) {
+        const raw = emb.data ?? '';
+        if (raw) return raw.replace(/^data:[^;]+;base64,/, '');
+      }
+    }
+  }
+  return null;
+}
 
 function normalizeStatus(s: string | undefined): Status {
   if (s === 'failed' || s === 'ambiguous' || s === 'undefined') return 'failed';
@@ -152,8 +208,7 @@ export function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
 
       const failedStepIndex = stepsOut.findIndex((s) => s.status === 'failed');
 
-      totalNs += scenarioNs;
-      tests.push({
+      const tc: TestCase = {
         name: el.name ?? '(unnamed scenario)',
         suite,
         file: uri,
@@ -162,7 +217,17 @@ export function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
         ...(errorMsg ? { error: errorMsg } : {}),
         steps: stepsOut,
         ...(failedStepIndex >= 0 ? { failedStepIndex } : {}),
-      });
+      };
+
+      // If the scenario failed, scan ALL raw steps (including hidden/passed
+      // hooks that are skipped by the main loop) for an image attachment.
+      if (worst === 'failed') {
+        const b64 = extractImageAttachment(el.steps ?? []);
+        if (b64) screenshotData.set(tc, { b64 });
+      }
+
+      totalNs += scenarioNs;
+      tests.push(tc);
     }
   }
 
@@ -174,6 +239,50 @@ export function ingestCucumber(features: CucumberFeature[]): IngestedSuite {
     suites: [...suiteSet],
     tests,
   };
+}
+
+// ---------- Screenshot materializer ------------------------------------
+
+/**
+ * Walk all `TestCase` objects in a tool, decode any stashed base64 screenshot,
+ * write it to `<runDir>/screenshots/<key>.png`, and set `tc.screenshot` to the
+ * served URL.  The WeakMap entry is consumed after writing.
+ *
+ * Called from `main()` for each tool **before** the tool is serialised to JSON,
+ * so the PNG is on disk and the URL is embedded in the same write.
+ */
+async function materializeScreenshots(
+  tests: TestCase[],
+  runDir: string,
+  runId: string,
+): Promise<void> {
+  const outDir = path.join(runDir, 'screenshots');
+  const usedKeys = new Set<string>();
+
+  for (const tc of tests) {
+    const entry = screenshotData.get(tc);
+    if (!entry) continue;
+    screenshotData.delete(tc);
+
+    // Build a filename-safe key from suite + scenario name, unique within this run.
+    let baseKey = `${safeSegment(tc.suite)}__${safeSegment(tc.name)}`;
+    let key = baseKey;
+    let suffix = 2;
+    while (usedKeys.has(key)) {
+      key = `${baseKey}-${suffix++}`;
+    }
+    usedKeys.add(key);
+
+    const pngPath = path.join(outDir, `${key}.png`);
+    try {
+      await fs.mkdir(outDir, { recursive: true });
+      await fs.writeFile(pngPath, Buffer.from(entry.b64, 'base64'));
+      tc.screenshot = `/reports/${encodeURIComponent(runId)}/screenshots/${key}.png`;
+    } catch (err) {
+      // Non-fatal: the screenshot is a nice-to-have; don't fail the whole ingest.
+      console.warn(`[ingest] warning: could not write screenshot ${pngPath}:`, (err as Error).message);
+    }
+  }
 }
 
 // ---------- Top-level ingest --------------------------------------------
@@ -399,7 +508,7 @@ async function buildPlaywrightTool(dir: string = reportsDir): Promise<WebUiTool 
   };
 }
 
-export { buildPlaywrightTool };
+export { buildPlaywrightTool, materializeScreenshots };
 
 async function main(): Promise<void> {
   const { runId: argRunId } = parseArgs();
@@ -419,6 +528,8 @@ async function main(): Promise<void> {
 
   const playwrightTool = await buildPlaywrightTool();
   if (playwrightTool) {
+    // tool.tests is the flat union of all browsers/viewports — same object refs.
+    await materializeScreenshots(playwrightTool.tests, runDir, runId);
     await writeJson(path.join(runDir, 'playwright.json'), playwrightTool);
     const browserNote = playwrightTool.browsers
       ? ` across ${playwrightTool.browsers.length} browsers: ${playwrightTool.browsers.map((b) => b.browser).join(', ')}`
@@ -441,6 +552,7 @@ async function main(): Promise<void> {
       suites: s.suites,
       tests: s.tests,
     };
+    await materializeScreenshots(tool.tests, runDir, runId);
     await writeJson(path.join(runDir, 'api.json'), tool);
     wroteTools.push(`api (${s.passed}P/${s.failed}F/${s.skipped}S)`);
   }
@@ -471,6 +583,13 @@ async function main(): Promise<void> {
         ios:     platformBlock(ios,     process.env.IOS_DEVICE     ?? 'iOS device'),
       },
     };
+    // MobileUiTool has no top-level tests — walk both platforms in one call so
+    // the shared usedKeys Set deduplicates across android and ios (identical
+    // suite+name on both platforms would otherwise produce the same filename).
+    await materializeScreenshots(
+      [...tool.platforms.android.tests, ...tool.platforms.ios.tests],
+      runDir, runId,
+    );
     await writeJson(path.join(runDir, 'appium.json'), tool);
     wroteTools.push(`appium (${tool.passed}P/${tool.failed}F/${tool.skipped}S)`);
   } else if (androidRaw || iosRaw) {

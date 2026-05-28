@@ -159,6 +159,8 @@ async function suppressChaos(
 
 const PASSTHROUGH_ACTIONS = new Set<string>([
     INTENT.NAVIGATE, INTENT.TEARDOWN, INTENT.EVALUATE, INTENT.HIDE_KEYBOARD,
+    // Failure screenshot: carries no logical target — passes empty string directly.
+    INTENT.SCREENSHOT,
     // Visual oracle: targets are `feature||snapshotId||{json}`, resolved
     // internally via VisualContractLoader + locator-resolver. The proxy
     // must not touch them.

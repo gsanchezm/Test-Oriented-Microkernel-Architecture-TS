@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 
 import type { TestCase } from '@shared/types';
 import { StepList } from './StepList';
+import { FailureScreenshot } from './FailureScreenshot';
 import type { TestFilter } from './FilterBar';
 
 interface TestListProps {
@@ -82,6 +83,7 @@ export function TestList({ tests, filter, query, expandScenarioName }: TestListP
                   : t.error
                     ? <pre className="failure">{t.error}</pre>
                     : <div className="empty">No step data captured for this run.</div>}
+                {t.screenshot && <FailureScreenshot src={t.screenshot} />}
               </div>
             )}
           </div>

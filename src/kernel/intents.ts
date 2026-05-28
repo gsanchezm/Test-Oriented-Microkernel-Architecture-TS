@@ -26,6 +26,7 @@ export const INTENT = {
 
     // Lifecycle
     TEARDOWN: 'TEARDOWN',
+    SCREENSHOT: 'SCREENSHOT',
 
     // Visual oracle
     CAPTURE_SNAPSHOT: 'CAPTURE_SNAPSHOT',

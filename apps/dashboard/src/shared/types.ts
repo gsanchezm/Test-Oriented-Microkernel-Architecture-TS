@@ -30,6 +30,8 @@ export interface TestCase {
   error?: string;
   steps?: TestStep[];
   failedStepIndex?: number;
+  /** URL of a failure screenshot PNG, served from /reports/<runId>/screenshots/. Present only when the scenario failed and an image/png attachment was captured in the After hook. */
+  screenshot?: string;
 }
 
 export interface TestStep {

@@ -156,6 +156,15 @@ async function readAddToCartLabel(): Promise<string> {
 }
 
 async function firstCatalogPizzaIdOrEmpty(): Promise<string> {
+    // The language switch re-renders the catalog: `catalogScreen` (the
+    // container `switchHeaderLanguage` waits on) can be present again before
+    // the per-pizza cards have re-mounted, so a bare EVALUATE here races the
+    // i18n re-flow and reads zero cards → '' → the assertion fails with an
+    // empty label. Wait for at least one add-to-cart button to re-appear
+    // first. Best-effort: a genuine absence still falls through to '' so the
+    // caller's contract (return '' when there's no catalog) is preserved.
+    await sendIntent(INTENT.WAIT_FOR_ELEMENT, `[data-testid^='add-to-cart-']||${MODAL_OPEN_WAIT_MS}`)
+        .catch(() => { /* fall through; EVALUATE below returns '' if truly absent */ });
     const script = `(() => {
         const el = document.querySelector("[data-testid^='add-to-cart-']");
         if (!el) return '';
