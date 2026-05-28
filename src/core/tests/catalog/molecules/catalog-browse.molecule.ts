@@ -12,7 +12,11 @@ const log = logger.child({ layer: 'molecule', action: 'catalog-browse' });
 // seedWebPersistedStores pattern (see order-success-screen.molecule.ts).
 // Mobile path is a deep link with `accessToken` + `market` (+ `lang` for CH).
 const CATALOG_WAIT_TARGET = 'catalogScreen';
-const CATALOG_WAIT_TIMEOUT_MS = 30_000;
+// Sized to absorb a Render free-tier cold start that slipped past the BeforeAll
+// warm-up (see support/warm-up.ts). The 30s ceiling used to undercut the 600s
+// per-step budget in catalog.steps.ts and was the proximate cause of the
+// catalog-browse cold-start flake on 2026-05-27.
+const CATALOG_WAIT_TIMEOUT_MS = 90_000;
 
 export type LanguageCode = 'en' | 'es' | 'de' | 'fr' | 'ja';
 

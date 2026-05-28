@@ -3,6 +3,7 @@ import { ensureTelemetryFile, logEvent, TelemetryEvent } from '@telemetry/logger
 import { streamToMinio } from '@telemetry/minio-publisher';
 import { randomUUID } from 'crypto';
 import { acquireRunLock, releaseRunLock } from './run-lock';
+import { warmUpServices } from './warm-up';
 
 let currentRunId: string;
 let telemetryFilePath: string;
@@ -15,11 +16,14 @@ process.once('exit',    releaseOnExit);
 process.once('SIGINT',  () => { releaseRunLock(); process.exit(130); });
 process.once('SIGTERM', () => { releaseRunLock(); process.exit(143); });
 
-BeforeAll(function () {
+BeforeAll(async function () {
   // Acquire BEFORE generating the runId so a failed acquire produces a clean
   // abort with no telemetry side-effects.
   acquireRunLock();
   currentRunId = randomUUID();
+  // Wake the Render free-tier dynos so the first scenario doesn't eat the
+  // cold start and blow its element-wait budget.
+  await warmUpServices();
 });
 
 AfterStep(async function ({ pickle, pickleStep, result }) {
