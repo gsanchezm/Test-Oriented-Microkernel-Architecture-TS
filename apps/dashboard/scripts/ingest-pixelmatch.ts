@@ -49,15 +49,20 @@ export function bucketingFromPath(visualRunDir: string, resultJsonPath: string):
   return bucketing;
 }
 
-async function findLatestVisualRunDir(repoRoot: string): Promise<string | null> {
+interface VisualRunCandidate {
+  dir: string;
+  mtimeMs: number;
+}
+
+async function listVisualRunDirs(repoRoot: string): Promise<VisualRunCandidate[]> {
   const root = path.join(repoRoot, 'visual-results');
   let entries: string[];
   try {
     entries = await fs.readdir(root);
   } catch {
-    return null;
+    return [];
   }
-  const candidates: { dir: string; mtimeMs: number }[] = [];
+  const candidates: VisualRunCandidate[] = [];
   for (const name of entries) {
     const full = path.join(root, name);
     try {
@@ -67,9 +72,48 @@ async function findLatestVisualRunDir(repoRoot: string): Promise<string | null> 
       // ignore
     }
   }
-  if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  return candidates[0].dir;
+  return candidates;
+}
+
+/**
+ * Determine which viewport a tom-* run dir belongs to. In practice each dir is
+ * single-viewport: read the first result.json found and use its `viewport`
+ * field, falling back to the path's viewport segment (index 3 via the same
+ * bucketing logic the rest of the pipeline uses). Returns 'unknown' if neither
+ * source yields a viewport so the dir still participates in selection.
+ */
+async function viewportForRunDir(runDir: string): Promise<string> {
+  const resultPaths = await walkResultJsons(runDir);
+  for (const resultPath of resultPaths) {
+    try {
+      const data = JSON.parse(await fs.readFile(resultPath, 'utf8')) as VisualResultFile;
+      if (data.viewport) return data.viewport;
+    } catch {
+      // fall through to path-based detection
+    }
+    const fromPath = bucketingFromPath(runDir, resultPath).viewport;
+    if (fromPath) return fromPath;
+  }
+  return 'unknown';
+}
+
+/**
+ * Pick the most-recent run dir PER VIEWPORT so both desktop and responsive
+ * snapshots get ingested (the framework writes a separate tom-* dir per
+ * viewport). Within a viewport, ties go to the newest mtime.
+ */
+async function selectVisualRunDirsPerViewport(repoRoot: string): Promise<string[]> {
+  const candidates = await listVisualRunDirs(repoRoot);
+  if (candidates.length === 0) return [];
+  // candidates are already sorted newest-first; the first dir seen per viewport
+  // is therefore the most recent one for that viewport.
+  const byViewport = new Map<string, string>();
+  for (const { dir } of candidates) {
+    const viewport = await viewportForRunDir(dir);
+    if (!byViewport.has(viewport)) byViewport.set(viewport, dir);
+  }
+  return [...byViewport.values()];
 }
 
 async function walkResultJsons(root: string): Promise<string[]> {
@@ -139,18 +183,22 @@ export interface IngestPixelmatchOptions {
   dashboardRunId: string;
 }
 
-export async function ingestPixelmatch(
+interface DirIngestResult {
+  diffs: VisualDiff[];
+  passed: number;
+  failed: number;
+}
+
+/**
+ * Ingest a single tom-* run dir: copy its PNGs into the dashboard's pixelmatch
+ * folder and build the VisualDiff entries (with image URLs keyed off this dir).
+ */
+async function ingestVisualRunDir(
+  visualRunDir: string,
+  outPngDir: string,
   opts: IngestPixelmatchOptions,
-): Promise<VisualTool | null> {
-  const visualRunDir = opts.visualRunDir ?? (await findLatestVisualRunDir(opts.repoRoot));
-  if (!visualRunDir) return null;
-
+): Promise<DirIngestResult> {
   const resultPaths = await walkResultJsons(visualRunDir);
-  if (resultPaths.length === 0) return null;
-
-  const outPngDir = path.join(opts.dashboardRunDir, 'pixelmatch');
-  await fs.mkdir(outPngDir, { recursive: true });
-
   const diffs: VisualDiff[] = [];
   let passed = 0;
   let failed = 0;
@@ -201,17 +249,48 @@ export async function ingestPixelmatch(
     });
   }
 
+  return { diffs, passed, failed };
+}
+
+export async function ingestPixelmatch(
+  opts: IngestPixelmatchOptions,
+): Promise<VisualTool | null> {
+  // When an explicit dir is provided, keep single-dir behavior. Otherwise pick
+  // the most-recent run dir per viewport so both desktop and responsive
+  // snapshots are ingested.
+  const visualRunDirs = opts.visualRunDir
+    ? [opts.visualRunDir]
+    : await selectVisualRunDirsPerViewport(opts.repoRoot);
+  if (visualRunDirs.length === 0) return null;
+
+  const outPngDir = path.join(opts.dashboardRunDir, 'pixelmatch');
+  await fs.mkdir(outPngDir, { recursive: true });
+
+  const diffs: VisualDiff[] = [];
+  let passed = 0;
+  let failed = 0;
+
+  for (const visualRunDir of visualRunDirs) {
+    const res = await ingestVisualRunDir(visualRunDir, outPngDir, opts);
+    diffs.push(...res.diffs);
+    passed += res.passed;
+    failed += res.failed;
+  }
+
+  if (diffs.length === 0) return null;
+
   // Sort failures first so the user lands on what needs triage.
   diffs.sort((a, b) => {
     if (a.status !== b.status) return a.status === 'failed' ? -1 : 1;
     return b.diffPct - a.diffPct;
   });
 
+  const label = visualRunDirs.map((d) => path.basename(d)).join(', ');
   return {
     kind: 'visual',
     id: 'pixelmatch',
     name: 'PixelMatch',
-    description: `Visual regression — ${path.basename(visualRunDir)} (${diffs.length} snapshots).`,
+    description: `Visual regression — ${label} (${diffs.length} snapshots).`,
     passed,
     failed,
     skipped: 0,

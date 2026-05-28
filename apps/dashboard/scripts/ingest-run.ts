@@ -40,6 +40,7 @@ import type {
   Status,
   TestCase,
   TestStep,
+  ViewportBlock,
   WebUiTool,
 } from '../src/shared/types.js';
 import { ingestGatling } from './ingest-gatling.js';
@@ -238,24 +239,115 @@ async function appendManifest(entry: ManifestEntry): Promise<void> {
   await writeJson(manifestPath, entries);
 }
 
+// Only treat a `playwright-<suffix>.json` as a per-browser file when the
+// suffix is a real browser. This avoids mistaking files like
+// `playwright-visual.json` (a tag-filtered subset, not a browser) for a tab.
+const KNOWN_BROWSERS = new Set(['chrome', 'chromium', 'firefox', 'edge', 'msedge', 'webkit', 'safari']);
+// Viewport ids are fixed to the two render axes the framework emits.
+const KNOWN_VIEWPORTS = ['desktop', 'responsive'] as const;
+type KnownViewport = (typeof KNOWN_VIEWPORTS)[number];
+
+function defaultBrowser(): string {
+  return process.env.BROWSER?.toLowerCase() || 'chromium';
+}
+
+function browserBlockFromSuite(browser: string, s: IngestedSuite): BrowserBlock {
+  return {
+    browser,
+    passed: s.passed, failed: s.failed, skipped: s.skipped, duration: s.duration,
+    suites: s.suites, tests: s.tests,
+  };
+}
+
 /**
- * Build the Playwright tool. If `reports/playwright-<browser>.json` files
- * exist (one cucumber JSON per browser), produce a per-browser breakdown so
- * the detail view renders browser sub-tabs. Otherwise fall back to a single
- * flat `reports/playwright.json` (no tabs).
+ * Build the Playwright tool, in this precedence order:
+ *   1. Viewport(+browser) files: `playwright-<viewport>-<browser>.json` and
+ *      legacy `playwright-<viewport>.json` → `viewports[]` with nested
+ *      per-browser breakdown (outer viewport tabs, inner browser tabs).
+ *   2. Per-browser files `playwright-<browser>.json` → `browsers[]` (browser
+ *      sub-tabs, no viewport axis).
+ *   3. Flat `playwright.json` → single flat test list (no tabs).
  */
-async function buildPlaywrightTool(): Promise<WebUiTool | null> {
+async function buildPlaywrightTool(dir: string = reportsDir): Promise<WebUiTool | null> {
   let files: string[] = [];
   try {
-    files = await fs.readdir(reportsDir);
+    files = await fs.readdir(dir);
   } catch {
     files = [];
   }
 
-  // Only treat a `playwright-<suffix>.json` as a per-browser file when the
-  // suffix is a real browser. This avoids mistaking files like
-  // `playwright-visual.json` (a tag-filtered subset, not a browser) for a tab.
-  const KNOWN_BROWSERS = new Set(['chrome', 'chromium', 'firefox', 'edge', 'msedge', 'webkit', 'safari']);
+  // ---- 1. Viewport(+browser) files --------------------------------------
+  // Group browser files per viewport. A viewport file may be either
+  // `playwright-<viewport>-<browser>.json` or legacy `playwright-<viewport>.json`
+  // (browser defaults to $BROWSER or 'chromium').
+  const viewportFiles = new Map<KnownViewport, { file: string; browser: string }[]>();
+  for (const f of files) {
+    const withBrowser = /^playwright-(desktop|responsive)-([a-z0-9]+)\.json$/i.exec(f);
+    if (withBrowser) {
+      const viewport = withBrowser[1].toLowerCase() as KnownViewport;
+      const browser = withBrowser[2].toLowerCase();
+      if (!KNOWN_BROWSERS.has(browser)) continue;
+      const list = viewportFiles.get(viewport) ?? [];
+      list.push({ file: f, browser });
+      viewportFiles.set(viewport, list);
+      continue;
+    }
+    const legacy = /^playwright-(desktop|responsive)\.json$/i.exec(f);
+    if (legacy) {
+      const viewport = legacy[1].toLowerCase() as KnownViewport;
+      const list = viewportFiles.get(viewport) ?? [];
+      list.push({ file: f, browser: defaultBrowser() });
+      viewportFiles.set(viewport, list);
+    }
+  }
+
+  if (viewportFiles.size > 0) {
+    const viewports: ViewportBlock[] = [];
+    for (const viewport of KNOWN_VIEWPORTS) {
+      const entries = viewportFiles.get(viewport);
+      if (!entries || entries.length === 0) continue;
+      const browsers: BrowserBlock[] = [];
+      for (const { file, browser } of entries) {
+        const raw = await readCucumberJson(path.join(dir, file));
+        if (!raw) continue;
+        browsers.push(browserBlockFromSuite(browser, ingestCucumber(raw)));
+      }
+      if (browsers.length === 0) continue;
+      browsers.sort((a, b) => a.browser.localeCompare(b.browser));
+      viewports.push({
+        viewport,
+        passed:  browsers.reduce((a, b) => a + b.passed, 0),
+        failed:  browsers.reduce((a, b) => a + b.failed, 0),
+        skipped: browsers.reduce((a, b) => a + b.skipped, 0),
+        duration: `${browsers.length} browser${browsers.length > 1 ? 's' : ''}`,
+        browsers,
+      });
+    }
+    if (viewports.length > 0) {
+      // Sort desktop before responsive (mirrors KNOWN_VIEWPORTS order, but be
+      // explicit so the structure is stable regardless of discovery order).
+      const order = (v: string) => KNOWN_VIEWPORTS.indexOf(v as KnownViewport);
+      viewports.sort((a, b) => order(a.viewport) - order(b.viewport));
+      const allBrowsers = viewports.flatMap((v) => v.browsers);
+      const passed  = viewports.reduce((a, v) => a + v.passed, 0);
+      const failed  = viewports.reduce((a, v) => a + v.failed, 0);
+      const skipped = viewports.reduce((a, v) => a + v.skipped, 0);
+      const suites  = [...new Set(allBrowsers.flatMap((b) => b.suites))];
+      return {
+        kind: 'web_ui',
+        id: 'playwright',
+        name: 'Playwright',
+        description: 'End-to-end browser tests across desktop and responsive viewports.',
+        passed, failed, skipped,
+        duration: `${viewports.length} viewport${viewports.length > 1 ? 's' : ''}`,
+        suites,
+        tests: allBrowsers.flatMap((b) => b.tests),
+        viewports,
+      };
+    }
+  }
+
+  // ---- 2. Per-browser files ---------------------------------------------
   const browserFiles = files
     .map((f) => {
       const m = /^playwright-(.+)\.json$/i.exec(f);
@@ -268,14 +360,9 @@ async function buildPlaywrightTool(): Promise<WebUiTool | null> {
   if (browserFiles.length > 0) {
     const browsers: BrowserBlock[] = [];
     for (const { file, browser } of browserFiles) {
-      const raw = await readCucumberJson(path.join(reportsDir, file));
+      const raw = await readCucumberJson(path.join(dir, file));
       if (!raw) continue;
-      const s = ingestCucumber(raw);
-      browsers.push({
-        browser,
-        passed: s.passed, failed: s.failed, skipped: s.skipped, duration: s.duration,
-        suites: s.suites, tests: s.tests,
-      });
+      browsers.push(browserBlockFromSuite(browser, ingestCucumber(raw)));
     }
     if (browsers.length > 0) {
       browsers.sort((a, b) => a.browser.localeCompare(b.browser));
@@ -297,8 +384,8 @@ async function buildPlaywrightTool(): Promise<WebUiTool | null> {
     }
   }
 
-  // Fallback: single flat run (no browser breakdown → flat list, no tabs).
-  const flat = await readCucumberJson(path.join(reportsDir, 'playwright.json'));
+  // ---- 3. Fallback: single flat run (no breakdown → flat list, no tabs). -
+  const flat = await readCucumberJson(path.join(dir, 'playwright.json'));
   if (!flat) return null;
   const s = ingestCucumber(flat);
   return {
@@ -311,6 +398,8 @@ async function buildPlaywrightTool(): Promise<WebUiTool | null> {
     tests: s.tests,
   };
 }
+
+export { buildPlaywrightTool };
 
 async function main(): Promise<void> {
   const { runId: argRunId } = parseArgs();

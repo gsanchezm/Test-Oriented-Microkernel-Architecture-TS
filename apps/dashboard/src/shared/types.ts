@@ -70,6 +70,13 @@ export interface BrowserBlock extends Counts {
   tests: TestCase[];
 }
 
+export interface ViewportBlock extends Counts {
+  /** Normalized viewport id: 'desktop' | 'responsive'. */
+  viewport: string;
+  /** Browsers executed in this viewport. Always at least one. */
+  browsers: BrowserBlock[];
+}
+
 export interface WebUiTool extends BaseTool {
   kind: 'web_ui';
   tests: TestCase[];
@@ -80,6 +87,13 @@ export interface WebUiTool extends BaseTool {
    * when absent, it shows a single flat test list.
    */
   browsers?: BrowserBlock[];
+  /**
+   * Optional viewport breakdown (desktop / responsive), each carrying its own
+   * per-browser breakdown. When set, the detail view renders an outer viewport
+   * tab strip with an inner browser tab strip. Takes precedence over
+   * `browsers` / flat `tests`.
+   */
+  viewports?: ViewportBlock[];
 }
 
 export interface ApiTool extends BaseTool {
@@ -140,9 +154,11 @@ export interface PerformanceTool extends BaseTool {
 }
 
 export interface VisualDiffImages {
-  baseline: string;
+  /** Omitted when no baseline PNG exists on disk (e.g. first-run bootstrap). */
+  baseline?: string;
   actual: string;
-  diff: string;
+  /** Omitted when no diff PNG was produced (snapshot identical / within tolerance). */
+  diff?: string;
 }
 
 export interface VisualDiff {
@@ -184,7 +200,7 @@ export type Tool =
  * counts. The detail endpoint returns the full Tool.
  */
 export type ToolSummary =
-  | Omit<WebUiTool, 'tests' | 'browsers'>
+  | Omit<WebUiTool, 'tests' | 'browsers' | 'viewports'>
   | Omit<ApiTool, 'tests'>
   | (Omit<MobileUiTool, 'platforms'> & {
       platforms: {

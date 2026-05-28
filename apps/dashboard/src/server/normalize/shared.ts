@@ -19,9 +19,10 @@ export type Adapter = (
 export function summarize(tool: Tool): ToolSummary {
   switch (tool.kind) {
     case 'web_ui': {
-      const { tests: _tests, browsers: _browsers, ...rest } = tool;
+      const { tests: _tests, browsers: _browsers, viewports: _viewports, ...rest } = tool;
       void _tests;
       void _browsers;
+      void _viewports;
       return rest;
     }
     case 'api': {

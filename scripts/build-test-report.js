@@ -60,9 +60,16 @@ const android = loadCucumber(path.join(REPORTS_DIR, 'android.json'), 'android');
 const ios = loadCucumber(path.join(REPORTS_DIR, 'ios.json'), 'ios');
 
 function resolvePlaywrightPaths() {
-    const split = ['playwright-desktop.json', 'playwright-responsive.json']
-        .map((name) => path.join(REPORTS_DIR, name))
-        .filter((p) => fs.existsSync(p));
+    // Match both the legacy split names (playwright-desktop.json /
+    // playwright-responsive.json) and the new per-browser names
+    // (playwright-<viewport>-<browser>.json, e.g. playwright-desktop-chromium.json).
+    const SPLIT_RE = /^playwright-(desktop|responsive)(-[a-z0-9]+)?\.json$/i;
+    const split = fs
+        .readdirSync(REPORTS_DIR)
+        .filter((name) => SPLIT_RE.test(name))
+        .map((name) => path.join(REPORTS_DIR, name));
+    // If multiple browser files exist for one viewport, their counts aggregate
+    // across browsers in this HTML report — acceptable for this summary view.
     if (split.length > 0) return split;
     return [path.join(REPORTS_DIR, 'playwright.json')];
 }
