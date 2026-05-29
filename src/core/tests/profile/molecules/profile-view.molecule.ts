@@ -181,6 +181,17 @@ export async function assertUsername(expected: string): Promise<void> {
     }
 }
 
+// Non-throwing read of the profile card's name text. Returns '' on web (the
+// `profileUsernameText` locator is mobile-only) or under api. Used by the
+// route to compare the card against a freshly-fetched API full_name with
+// retries, since that field is shared+mutable on the demo backend.
+export async function readUsernameCardText(): Promise<string> {
+    if (isApiDriver()) return '';
+    if (skipIfMobileOnlyOnWeb('profileUsernameText', 'readUsernameCardText')) return '';
+    const result = await sendIntent(INTENT.READ_TEXT, 'profileUsernameText');
+    return (result.payload ?? '').trim();
+}
+
 export async function assertPremiumBadgeVisible(): Promise<void> {
     if (isApiDriver()) return;
     if (skipIfMobileOnlyOnWeb('premiumBadgeText', 'assertPremiumBadgeVisible')) return;

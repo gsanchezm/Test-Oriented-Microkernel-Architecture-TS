@@ -20,20 +20,26 @@ export async function selectCategory(categoryId: string): Promise<void> {
     }
     const id = categoryId.toLowerCase();
     const platform = (process.env.PLATFORM ?? '').toLowerCase();
-    let selector: string;
     if (driver === 'appium' && platform === 'android') {
         // The category pills are a horizontally-scrollable list; `meat`/`sides`
-        // sit off-screen to the right (verified on-device 2026-05-28 — only
-        // all/popular/veggie are initially rendered). Scroll the wanted pill
-        // into view before tapping, scoped to the `view-category-pills`
-        // HorizontalScrollView so we don't grab the vertical catalog scroller.
-        selector = `android=new UiScrollable(new UiSelector().description("view-category-pills").scrollable(true))`
+        // sit off-screen to the right. Two steps, because a
+        // `UiScrollable(...).scrollIntoView(...)` selector used directly as the
+        // CLICK target taps the scrollable container/centre pill rather than the
+        // wanted one — that mis-tap is why JP (wider labels shift the layout)
+        // landed on the wrong category and showed the wrong cards. So: (1)
+        // resolve the UiScrollable selector via WAIT_FOR_ELEMENT to SCROLL the
+        // pill into view (no click), scoped to `view-category-pills` by
+        // resourceId (the rebuilt app instruments it via getTestProps), then
+        // (2) tap the pill directly by its own accessibility id.
+        const scrollSel = `android=new UiScrollable(new UiSelector().resourceId("view-category-pills").scrollable(true))`
             + `.setAsHorizontalList().scrollIntoView(new UiSelector().description("btn-category-${id}"))`;
-    } else if (isMobileDriver()) {
-        selector = `~btn-category-${id}`;
-    } else {
-        selector = `[data-testid='category-${id}']`;
+        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `${scrollSel}||8000`);
+        await sendIntent(INTENT.CLICK, `~btn-category-${id}`);
+        return;
     }
+    const selector = isMobileDriver()
+        ? `~btn-category-${id}`
+        : `[data-testid='category-${id}']`;
     await sendIntent(INTENT.CLICK, selector);
 }
 
