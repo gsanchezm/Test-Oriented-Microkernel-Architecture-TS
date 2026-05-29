@@ -80,14 +80,14 @@ Toggle plugins with `PLUGIN_<TOOL>=true|false` in `.env` and they hot-reload.
 
 ## Layers (Atomic-Helix)
 
-| Layer     | Folder                        | Responsibility                                                             |
-|-----------|-------------------------------|----------------------------------------------------------------------------|
-| Atom      | `kernel/client.ts`            | `sendIntent()` — single gRPC primitive                                     |
-| Molecule  | `[domain]/molecules/*.molecule` | One UI action wrapped over `sendIntent`                                    |
-| Route     | `[domain]/organisms/*.route`     | Orchestrates molecules + DAOs; chooses plugin per intent                   |
-| Step      | `[domain]/step_definitions/`  | Thin Gherkin binding — one line, calls a route method                      |
-| DAO       | `[domain]/dao/`               | Direct API calls for `Given` state injection ($S_0$)                       |
-| Resonance | `[domain]/resonance/`       | Gatling simulations co-located with the feature, driven by Examples table  |
+| Layer            | Folder                                                | Responsibility                                                                                        |
+|------------------|-------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Atoms            | `kernel/client.ts`                                    | `sendIntent()` — the single, indivisible gRPC primitive                                               |
+| Molecules        | `[domain]/molecules/*.molecule`                       | Grouped atomic intents — one cross-platform UI action wrapped over `sendIntent`                       |
+| Organisms        | `[domain]/organisms/*.route`                          | Orchestrate molecules + DAOs into business flows; choose the plugin per intent                        |
+| Eco-Systems      | `[domain]/features/` + `step_definitions/` (+ `dao/`) | BDD scenarios composing use cases + DAOs — steps are thin one-line bindings; DAOs do `Given` $S_0$ state injection |
+| Resonance        | `[domain]/resonance/`                                 | Gatling simulations co-located with the feature, driven by the same Examples table                    |
+| Execution Helix  | `.github/workflows/`                                  | CI/CD uniting every layer into parallel, isolated orbits (`ahm-execution-helix.yml`)                  |
 
 Steps look like this:
 
@@ -130,15 +130,14 @@ src/
   core/
     test-data/                     # users.json, fixtures
     tests/
-      login/dao/                   # login slice — currently API-only
-      checkout/
-        actions/                   # *.molecule.ts
-        dao/                       # checkout.dao + checkout.types
-        routes/                    # *.route.ts (Organisms)
-        step_definitions/          # thin Gherkin bindings
-        features/                  # *.feature
+      <domain>/                    # one slice per domain: login, checkout, catalog, pizzaBuilder, navbar, order_success, …
+        molecules/                 # *.molecule.ts        (Molecules)
+        organisms/                 # *.route.ts           (Organisms)
+        step_definitions/          # *.steps.ts + visual.hooks.ts — thin Gherkin bindings (Eco-Systems)
+        features/                  # *.feature            (Eco-Systems)
+        dao/                       # *.dao.ts + *.types.ts — Given $S_0$ state injection
         contracts/                 # *.locators.json, api/visual contracts
-        simulations/               # *.gatling.ts (JVM bundle, isolated)
+        resonance/                 # *.gatling.ts (JVM bundle, isolated) (Resonance)
   telemetry/                       # JSONL → MinIO
   utils/                           # pino logger
 ```
@@ -242,9 +241,65 @@ The `mobile` profile chains: `android-emulator (docker-android)` → `appium-ser
 | `ahm-execution-helix.yml`   | Unified test execution: api, web (desktop + responsive), android, ios, perf. Manual dispatch via `platform: all\|api\|web\|mobile\|android\|ios\|perf`. |
 | `deploy-pages.yml`          | Static site deploy when `web/**` changes (GitHub Pages).                 |
 
-The Helix workflow gates jobs by input — Android/iOS are manual-only because they need KVM + docker-android.
+The Helix workflow gates jobs by the `platform` input on manual dispatch. **On `push`/`pull_request` to `main`, every job runs** — including `e2e-android` (KVM + docker-android) and `e2e-ios` (`macos-latest`) — because each gate's `if` is `github.event_name != 'workflow_dispatch' || inputs.platform == …`, and the first operand is already `true` for push/PR. A published OmniPizza release is therefore a prerequisite for *all* event-triggered runs, not only mobile dispatches. (If you want mobile to be manual-only, the gate `if:` blocks must be tightened to `github.event_name == 'workflow_dispatch' && …`.)
 
 Each job is named after the **tool** that executes it (`Playwright`, `Appium`, `Gatling`, `Pixelmatch`) rather than the platform — consistent with the *plugin identity = the tool* principle, so a status check names exactly which engine ran. The job **keys** (`e2e-web`, `e2e-android`, …) are unchanged, so `needs:` wiring and the `update-visual-baselines.yml` references stay intact; only the display names shift. If branch protection requires checks by their old display name, update those required checks in repo settings.
+
+### Before you run `ahm-execution-helix.yml`
+
+The workflow assumes a few things already exist in the repo. Set these up **once**, then trigger runs freely.
+
+**1. Repository secrets** — _Settings → Secrets and variables → Actions → Secrets_:
+
+| Secret          | Needed by                                                        | Notes                                                            |
+|-----------------|------------------------------------------------------------------|------------------------------------------------------------------|
+| `API_BASE_URL`  | **every** job (api, web, responsive, visual, android, ios, perf) | Backend used for `$S_0$` state injection.                        |
+| `BASE_URL`      | web + visual jobs only (`e2e-web*`, `visual-web*`)               | Frontend under test. Not read by api/mobile/perf jobs.           |
+| `GITHUB_TOKEN`  | `resolve-omnipizza-release`                                      | **Automatic** — GitHub injects it. No setup needed.              |
+
+**2. Repository variables** — _Settings → Secrets and variables → Actions → Variables_:
+
+| Variable          | Needed by                          | Notes                                                                        |
+|-------------------|------------------------------------|------------------------------------------------------------------------------|
+| `IOS_APP_PATH`    | `e2e-ios` (optional)               | Overrides the auto-discovered `.app` bundle path. Omit to auto-discover.     |
+| `VISUAL_BASE_URL` | `update-visual-baselines.yml` only | The baseline-refresh workflow reads this as its `BASE_URL`. Required to seed baselines (step 4). |
+
+**3. OmniPizza release must be published** (`gsanchezm/OmniPizza`) — required because mobile runs on every push/PR (see note above):
+
+- The repo's `releases/latest` must exist with assets named **exactly** `omnipizza-release.apk` (Android) and `OmniPizza-Simulator.zip` (iOS). The resolver job reads `tag_name` from `/releases/latest`; the mobile jobs download `<base_url>/<asset>`.
+- `gsanchezm/OmniPizza` must be **public** — the API query sends a `GITHUB_TOKEN` Bearer (scoped to *this* repo only), but the asset download uses an unauthenticated `curl -fL`. For a private OmniPizza you'd need to supply a PAT secret and add `-H "Authorization"` to the download.
+
+**4. Seed visual baselines (recommended, not mandatory):**
+
+- The `Visual gate` step does **not** fail on missing baselines — a snapshot with no baseline is *bootstrapped* (created on the fly, counted as `bootstrapped`, status ≠ `FAIL`). So a first run won't go red just because `visual-baselines/` is empty.
+- But bootstrapped baselines are ephemeral (per-run). For meaningful drift detection, seed canonical baselines first by dispatching **`update-visual-baselines.yml`** (requires `VISUAL_BASE_URL` from step 2):
+
+  ```bash
+  gh workflow run update-visual-baselines.yml -f reason="seed initial baselines"
+  # optional: -f target_branch=main
+  ```
+
+  It wipes `visual-baselines/*.png`, regenerates them in the pinned `playwright:v1.58.2-jammy` Linux container, `git add -f`'s them, and opens a PR. **Merge that PR** so the canonical PNGs land in git. Thereafter the helix `Visual gate` compares against them.
+
+**5. Dispatch the workflow** — _Actions → "AHM — Execution Helix" → Run workflow_, or via CLI:
+
+```bash
+gh workflow run ahm-execution-helix.yml -f platform=web
+gh workflow run ahm-execution-helix.yml -f platform=perf -f perf_profile=load -f perf_users=30 -f perf_duration=60
+gh workflow run ahm-execution-helix.yml -f platform=mobile -f android_api_level=33
+```
+
+**What each `platform` choice needs** (push/PR ⇒ `all`):
+
+| `platform` | Requires                                                                 | Dispatch inputs honored                                  |
+|------------|--------------------------------------------------------------------------|----------------------------------------------------------|
+| `api`      | `API_BASE_URL`                                                           | —                                                        |
+| `web`      | `API_BASE_URL` + `BASE_URL` (+ baselines recommended for the visual sub-jobs) | —                                                   |
+| `android`  | `API_BASE_URL` + OmniPizza release (`omnipizza-release.apk`)             | `android_api_level`                                      |
+| `ios`      | `API_BASE_URL` + OmniPizza release (`OmniPizza-Simulator.zip`) + `IOS_APP_PATH` (optional) | —                                      |
+| `mobile`   | both android + ios prerequisites                                         | `android_api_level`                                      |
+| `perf`     | `API_BASE_URL`                                                           | `perf_profile`, `perf_users`, `perf_duration`            |
+| `all`      | all of the above                                                         | all of the above                                         |
 
 ## Stack
 

@@ -258,10 +258,20 @@ export async function scrollIntoViewSafe(
     let displayed = await isTrulyDisplayed(driver, target);
     let attempts = 0;
     while (!displayed && attempts < maxAttempts) {
-        try {
-            await swipeUpBulk(driver);
-        } catch {
+        if (PLATFORM === 'android') {
+            // On UiAutomator2 `mobile: swipe` is unsupported and `mobile: scroll`
+            // with a bare direction silently no-ops — so swipeUpBulk never threw
+            // and the W3C fallback was dead code, leaving Android scrolls
+            // ineffective (off-screen elements were never reached). Drive the
+            // W3C touch swipe directly on Android — verified on-device
+            // 2026-05-28 that it actually scrolls RN ScrollViews.
             await swipeUpW3C(driver, 0.66);
+        } else {
+            try {
+                await swipeUpBulk(driver);
+            } catch {
+                await swipeUpW3C(driver, 0.66);
+            }
         }
         displayed = await isFrameInTapZone(driver, target) || await isTrulyDisplayed(driver, target);
         attempts++;

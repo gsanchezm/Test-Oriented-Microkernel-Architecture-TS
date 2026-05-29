@@ -19,9 +19,21 @@ export async function selectCategory(categoryId: string): Promise<void> {
         return;
     }
     const id = categoryId.toLowerCase();
-    const selector = isMobileDriver()
-        ? `~btn-category-${id}`
-        : `[data-testid='category-${id}']`;
+    const platform = (process.env.PLATFORM ?? '').toLowerCase();
+    let selector: string;
+    if (driver === 'appium' && platform === 'android') {
+        // The category pills are a horizontally-scrollable list; `meat`/`sides`
+        // sit off-screen to the right (verified on-device 2026-05-28 — only
+        // all/popular/veggie are initially rendered). Scroll the wanted pill
+        // into view before tapping, scoped to the `view-category-pills`
+        // HorizontalScrollView so we don't grab the vertical catalog scroller.
+        selector = `android=new UiScrollable(new UiSelector().description("view-category-pills").scrollable(true))`
+            + `.setAsHorizontalList().scrollIntoView(new UiSelector().description("btn-category-${id}"))`;
+    } else if (isMobileDriver()) {
+        selector = `~btn-category-${id}`;
+    } else {
+        selector = `[data-testid='category-${id}']`;
+    }
     await sendIntent(INTENT.CLICK, selector);
 }
 

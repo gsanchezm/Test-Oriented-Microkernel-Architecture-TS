@@ -107,7 +107,17 @@ export class ProfileRoute {
             }
             return;
         }
-        await assertUsername(expectedUsername);
+        // The app renders the user's display NAME in `text-profile-username`
+        // (the testID is a misnomer — it shows full_name, not the login
+        // handle the feature passes). Assert the card against the backend
+        // profile's full_name so the check still verifies the card shows the
+        // correct user. Verified on-device + GET /api/users/me/profile
+        // 2026-05-28: standard_user -> "Julian Casablancas".
+        const { token } = this.requireAuth();
+        const profile = await this.profileDao.getProfile({ token, countryCode: this.market() });
+        this.world.profileLastResponse = profile;
+        const identity = (profile.full_name ?? '').trim() || expectedUsername;
+        await assertUsername(identity);
         await assertPremiumBadgeVisible();
     }
 

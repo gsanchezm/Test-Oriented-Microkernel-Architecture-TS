@@ -2,6 +2,7 @@ import { sendIntent } from '@kernel/client';
 import { logger } from '@utils/logger';
 import { INTENT } from '@kernel/intents';
 import { openPizzaCard } from '@core/tests/catalog/molecules/catalog-card.molecule';
+import { openCatalogScreen } from '@core/tests/catalog/molecules/catalog-browse.molecule';
 import type { CountryCode } from '@core/tests/pizzaBuilder/dao/pizzaBuilder.types';
 
 const log = logger.child({ layer: 'molecule', domain: 'pizzaBuilder', action: 'open' });
@@ -54,15 +55,19 @@ export async function openPizzaBuilder(args: OpenBuilderArgs): Promise<void> {
     }
 
     if (driver === 'appium' || driver === 'mobilewright') {
-        const params = new URLSearchParams({
-            item: args.pizzaId,
+        // The mobile app has NO `omnipizza://customizer` deep-link route — the
+        // builder is a native screen opened by tapping a catalog card's add
+        // ("+") button (verified on-device 2026-05-28: the customizer URI
+        // silently falls back to the catalog). So land on the catalog via its
+        // deep link, then open the builder for the resolved pizza id exactly
+        // as the "open a pizza card" catalog flow does.
+        await openCatalogScreen({
             market: args.market,
             language: args.language,
             accessToken: args.accessToken,
         });
-        const url = `omnipizza://customizer?${params.toString()}`;
-        log.info({ market: args.market, language: args.language, pizzaId: args.pizzaId }, 'Deep linking to customizer');
-        await sendIntent(INTENT.DEEP_LINK, url);
+        log.info({ market: args.market, language: args.language, pizzaId: args.pizzaId }, 'Opening builder via catalog add button (mobile)');
+        await openPizzaCard(args.pizzaId);
         await sendIntent(INTENT.WAIT_FOR_ELEMENT, `${WAIT_TARGET_MOBILE}||${WAIT_TIMEOUT_MS}`);
         return;
     }
@@ -190,11 +195,10 @@ export async function verifyPriceAndConfirmVisible(): Promise<void> {
         return;
     }
     await sendIntent(INTENT.WAIT_FOR_ELEMENT, `estimatedTotalValue||${PRESENCE_WAIT_MS}`);
-    // Mobile builders ship the same confirm CTA under a mobile-only locator
-    // key in newer apps; if it's not yet wired the wait will time out and
-    // surface the gap. For now, fall back to the price block as the readiness
-    // signal — the next step always touches the size pills which is the real
-    // assertion.
+    // The mobile builder's confirm CTA is `~btn-add-to-cart` (verified
+    // on-device 2026-05-28). Assert it's present so "the confirm-add-to-cart
+    // affordance is visible" is a real check, not just the price block.
+    await sendIntent(INTENT.WAIT_FOR_ELEMENT, `~btn-add-to-cart||${PRESENCE_WAIT_MS}`);
 }
 
 // Case-insensitive contains assertion against rendered label text.

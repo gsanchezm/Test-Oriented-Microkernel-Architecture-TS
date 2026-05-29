@@ -159,8 +159,8 @@ export class CatalogRoute {
             this.assertAllNamesContain(filtered.map((p) => p.name), query);
             return;
         }
-        // UI: read names off the DOM and apply the same containment rule.
-        const visible = await readVisiblePizzaNames();
+        // UI: read names off the screen and apply the same containment rule.
+        const visible = await readVisiblePizzaNames(this.world.catalogCache?.map((p) => p.id));
         if (visible.length === 0) {
             throw new Error(
                 `[ui] Catalog search for "${query}" left no pizza cards visible — ` +
@@ -192,7 +192,16 @@ export class CatalogRoute {
             }
             return;
         }
-        const visible = await readVisiblePizzaNames();
+        const visible = await readVisiblePizzaNames(this.world.catalogCache?.map((p) => p.id));
+        // Mobile RN virtualizes the grid — only on-screen cards are in the
+        // accessibility tree, so we can't count all baseline pizzas. Assert
+        // the grid came back non-empty after clearing the filter.
+        if (this.driver === 'appium' || this.driver === 'mobilewright') {
+            if (visible.length === 0) {
+                throw new Error('[ui] Catalog grid is empty after clearing filters (mobile).');
+            }
+            return;
+        }
         const baselineCount = this.world.catalogCache?.length ?? 0;
         if (baselineCount === 0) {
             // Without a cached baseline we can only assert non-emptiness.
@@ -243,28 +252,43 @@ export class CatalogRoute {
         }
         // UI: read visible names, map each back to the cached catalog payload
         // (which carries the API-provided `category`), assert all match.
-        const visible = await readVisiblePizzaNames();
-        if (visible.length === 0) {
-            throw new Error(
-                `[ui] Category filter "${normalized}" left no cards visible.`,
-            );
-        }
+        const ids = this.world.catalogCache?.map((p) => p.id);
         const cache = this.world.catalogCache ?? [];
-        for (const name of visible) {
-            const found = cache.find((p) => p.name.toLowerCase() === name.toLowerCase());
-            if (!found) {
-                throw new Error(
-                    `[ui] Visible pizza "${name}" is not in the catalog API response — ` +
-                    `cache may be stale or the FE rendered a pizza /api/pizzas didn't return.`,
-                );
+        // Returns a descriptive error for the current visible set, or null when
+        // it's a clean match for the requested category.
+        const evaluate = (visible: string[]): string | null => {
+            if (visible.length === 0) {
+                return `[ui] Category filter "${normalized}" left no cards visible.`;
             }
-            if (found.category !== normalized) {
-                throw new Error(
-                    `[ui] Pizza "${name}" is visible under category "${normalized}" ` +
-                    `but the API stamps it as "${found.category ?? '(unset)'}".`,
-                );
+            for (const name of visible) {
+                const found = cache.find((p) => p.name.toLowerCase() === name.toLowerCase());
+                if (!found) {
+                    return `[ui] Visible pizza "${name}" is not in the catalog API response — ` +
+                        `cache may be stale or the FE rendered a pizza /api/pizzas didn't return.`;
+                }
+                if (found.category !== normalized) {
+                    return `[ui] Pizza "${name}" is visible under category "${normalized}" ` +
+                        `but the API stamps it as "${found.category ?? '(unset)'}".`;
+                }
             }
+            return null;
+        };
+
+        // Mobile: the grid re-renders asynchronously after tapping a category,
+        // so an immediate read can catch pre-filter (stale) or mid-unmount
+        // (empty) cards. Poll until the visible set is a clean match.
+        if (this.driver === 'appium' || this.driver === 'mobilewright') {
+            let lastErr: string | null = null;
+            for (let attempt = 0; attempt < 12; attempt++) {
+                lastErr = evaluate(await readVisiblePizzaNames(ids));
+                if (!lastErr) return;
+                await new Promise((r) => setTimeout(r, 500));
+            }
+            throw new Error(lastErr ?? `[ui] Category filter "${normalized}" did not settle.`);
         }
+
+        const err = evaluate(await readVisiblePizzaNames(ids));
+        if (err) throw new Error(err);
     }
 
     async openPizza(itemDisplayName: string): Promise<void> {

@@ -21,7 +21,11 @@ export async function clickConfirmAddToCart(): Promise<void> {
         return;
     }
     log.info({ driver }, 'Confirming add to cart');
-    await sendIntent(INTENT.CLICK, 'confirmAddToCartButton');
+    // Web's confirm CTA is the `confirmAddToCartButton` locator key (web-only);
+    // the mobile builder's CTA is `~btn-add-to-cart` (verified on-device
+    // 2026-05-28). Branch per-driver like the size/topping molecules do.
+    const selector = isMobileDriver() ? '~btn-add-to-cart' : 'confirmAddToCartButton';
+    await sendIntent(INTENT.CLICK, selector);
 }
 
 /**

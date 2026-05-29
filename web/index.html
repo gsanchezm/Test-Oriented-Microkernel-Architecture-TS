@@ -438,6 +438,7 @@
     <li><a href="#features">Features</a></li>
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#cicd">CI/CD</a></li>
+    <li><a href="#prerequisites">Run It</a></li>
     <li><a href="#reports">Reports</a></li>
     <li><a href="#laws">Laws</a></li>
   </ul>
@@ -597,22 +598,22 @@ graph TD
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #818cf8;">Molecules</td>
-              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/actions/</td>
+              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/molecules/</td>
               <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Grouped atomic intents (cross-platform reusable)</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #4ade80;">Organisms</td>
-              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/routes/</td>
-              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Orchestrate actions + pick the plugin (playwright / appium / mobilewright / api)</td>
+              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/organisms/</td>
+              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Orchestrate molecules + DAOs into business flows; pick the plugin per intent (playwright / appium / mobilewright / api)</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #facc15;">Eco-Systems</td>
               <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/features/ + step_def/</td>
-              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">BDD scenarios; thin steps that delegate to routes</td>
+              <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">BDD scenarios composing use cases + DAOs; thin steps that delegate to organisms</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border);">
               <td style="padding: 16px; font-size: .85rem; font-weight: 700; color: #fb923c;">Resonance</td>
-              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/simulations/</td>
+              <td style="padding: 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: .8rem;">[domain]/resonance/</td>
               <td style="padding: 16px; font-size: .85rem; color: var(--text-muted);">Gatling simulations driven by Examples data</td>
             </tr>
             <tr>
@@ -691,6 +692,108 @@ graph TD
       Each Pull Request runs the Web E2E job inside the same container, captures actuals via the
       <code style="color: var(--accent); font-size: .8rem;">pixelmatch</code> plugin co-located in the Playwright process, and the dedicated
       <code style="color: var(--accent); font-size: .8rem;">Visual gate</code> step fails the check only on drift &mdash; keeping functional and visual regressions independently visible.
+    </p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Prerequisites ─────────────────────────────────────────────────────────── -->
+<section id="prerequisites">
+  <div class="container">
+    <span class="tag">Before You Dispatch</span>
+    <h2 class="section-title">Steps before running the Execution Helix.</h2>
+    <p class="section-sub">The <code style="color: var(--accent); font-size: .85rem;">ahm-execution-helix.yml</code> workflow assumes a few things already exist in the repo. Set them up <strong>once</strong>, then trigger runs freely &mdash; from the Actions tab or via <code style="color: var(--accent); font-size: .85rem;">gh workflow run</code>. On <code style="color: var(--accent); font-size: .85rem;">push</code> / <code style="color: var(--accent); font-size: .85rem;">pull_request</code> to <code style="color: var(--accent); font-size: .85rem;">main</code>, <strong>every</strong> job runs &mdash; including Android &amp; iOS &mdash; so a published OmniPizza release is a prerequisite for all event-triggered runs, not only mobile dispatches.</p>
+
+    <!-- Secrets & variables -->
+    <div class="cicd-table" style="margin-top: 48px; overflow-x: auto; background: var(--surface-2); border-radius: var(--radius); border: 1px solid var(--border);">
+      <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border);">
+            <th style="padding: 18px; font-size: .9rem;">Step</th>
+            <th style="padding: 18px; font-size: .9rem;">Key</th>
+            <th style="padding: 18px; font-size: .9rem;">Needed by</th>
+            <th style="padding: 18px; font-size: .9rem;">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 18px; font-size: .88rem; font-weight: 700;" rowspan="3">1 · Secrets</td>
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">API_BASE_URL</code></td>
+            <td style="padding: 18px; color: #3fb950; font-size: .85rem;">Every job</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);">Backend for S₀ state injection.</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">BASE_URL</code></td>
+            <td style="padding: 18px; font-size: .85rem;">Web + Visual jobs</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);">Frontend under test. Not read by api/mobile/perf.</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">GITHUB_TOKEN</code></td>
+            <td style="padding: 18px; font-size: .85rem;">Release resolver</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);">Automatic &mdash; injected by GitHub. No setup.</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 18px; font-size: .88rem; font-weight: 700;" rowspan="2">2 · Variables</td>
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">IOS_APP_PATH</code></td>
+            <td style="padding: 18px; font-size: .85rem;">iOS (optional)</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);">Overrides the auto-discovered <code style="font-size: .78rem;">.app</code> bundle.</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">VISUAL_BASE_URL</code></td>
+            <td style="padding: 18px; font-size: .85rem;">Baseline refresh</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);">Used by <code style="font-size: .78rem;">update-visual-baselines.yml</code> as its <code style="font-size: .78rem;">BASE_URL</code>.</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 18px; font-size: .88rem; font-weight: 700;">3 · OmniPizza release</td>
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">gsanchezm/OmniPizza</code></td>
+            <td style="padding: 18px; font-size: .85rem;">Android + iOS</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);"><code style="font-size: .78rem;">releases/latest</code> with assets <code style="font-size: .78rem;">omnipizza-release.apk</code> &amp; <code style="font-size: .78rem;">OmniPizza-Simulator.zip</code>. Repo must be <strong>public</strong> (download is unauthenticated).</td>
+          </tr>
+          <tr>
+            <td style="padding: 18px; font-size: .88rem; font-weight: 700;">4 · Seed baselines</td>
+            <td style="padding: 18px;"><code style="color: var(--accent); font-size: .8rem;">update-visual-baselines.yml</code></td>
+            <td style="padding: 18px; color: #ffbd2e; font-size: .85rem;">Recommended</td>
+            <td style="padding: 18px; font-size: .85rem; color: var(--text-muted);">Missing baselines are <em>bootstrapped</em> (no red), but for real drift detection seed them first &mdash; then merge the PR it opens.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Dispatch commands -->
+    <p style="margin-top: 40px; font-size: .95rem; color: var(--text-soft, var(--text-muted)); font-weight: 600;">5 · Dispatch the workflow</p>
+    <pre style="margin-top: 16px; padding: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; font-size: .82rem; line-height: 1.7;"><code># seed canonical visual baselines once (opens a PR — merge it)
+gh workflow run update-visual-baselines.yml -f reason="seed initial baselines"
+
+# then dispatch the helix per platform
+gh workflow run ahm-execution-helix.yml -f platform=web
+gh workflow run ahm-execution-helix.yml -f platform=perf -f perf_profile=load -f perf_users=30 -f perf_duration=60
+gh workflow run ahm-execution-helix.yml -f platform=mobile -f android_api_level=33</code></pre>
+
+    <!-- Platform matrix -->
+    <div class="cicd-table" style="margin-top: 40px; overflow-x: auto; background: var(--surface-2); border-radius: var(--radius); border: 1px solid var(--border);">
+      <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border);">
+            <th style="padding: 18px; font-size: .9rem;"><code style="color: var(--accent); font-size: .82rem;">platform</code></th>
+            <th style="padding: 18px; font-size: .9rem;">Requires</th>
+            <th style="padding: 18px; font-size: .9rem;">Dispatch inputs honored</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 16px 18px; font-weight: 700;">api</td><td style="padding: 16px 18px; font-size: .85rem;">API_BASE_URL</td><td style="padding: 16px 18px; color: var(--text-muted);">—</td></tr>
+          <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 16px 18px; font-weight: 700;">web</td><td style="padding: 16px 18px; font-size: .85rem;">API_BASE_URL + BASE_URL (+ baselines recommended)</td><td style="padding: 16px 18px; color: var(--text-muted);">—</td></tr>
+          <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 16px 18px; font-weight: 700;">android</td><td style="padding: 16px 18px; font-size: .85rem;">API_BASE_URL + OmniPizza APK</td><td style="padding: 16px 18px; font-size: .85rem;">android_api_level</td></tr>
+          <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 16px 18px; font-weight: 700;">ios</td><td style="padding: 16px 18px; font-size: .85rem;">API_BASE_URL + OmniPizza sim bundle (+ IOS_APP_PATH)</td><td style="padding: 16px 18px; color: var(--text-muted);">—</td></tr>
+          <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 16px 18px; font-weight: 700;">mobile</td><td style="padding: 16px 18px; font-size: .85rem;">android + ios prerequisites</td><td style="padding: 16px 18px; font-size: .85rem;">android_api_level</td></tr>
+          <tr style="border-bottom: 1px solid var(--border);"><td style="padding: 16px 18px; font-weight: 700;">perf</td><td style="padding: 16px 18px; font-size: .85rem;">API_BASE_URL</td><td style="padding: 16px 18px; font-size: .85rem;">perf_profile, perf_users, perf_duration</td></tr>
+          <tr><td style="padding: 16px 18px; font-weight: 700;">all</td><td style="padding: 16px 18px; font-size: .85rem;">all of the above</td><td style="padding: 16px 18px; font-size: .85rem;">all of the above</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top: 24px; font-size: .85rem; color: var(--text-muted); line-height: 1.6;">
+      Push/PR runs ignore the <code style="color: var(--accent); font-size: .8rem;">platform</code> input and behave like <code style="color: var(--accent); font-size: .8rem;">all</code> &mdash; the per-job <code style="color: var(--accent); font-size: .8rem;">if:</code> gate short-circuits to <code style="color: var(--accent); font-size: .8rem;">true</code> on any non-dispatch event. Tighten the gates to <code style="color: var(--accent); font-size: .8rem;">github.event_name == 'workflow_dispatch' &amp;&amp; …</code> if you want Android/iOS to stay manual-only.
     </p>
   </div>
 </section>

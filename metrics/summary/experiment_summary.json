@@ -1,0 +1,54 @@
+{
+  "architecture_type": "TOM",
+  "experiment_batch_id": "batch-001",
+  "run_index": "001",
+  "generated_at": "2026-05-29T01:57:19.704Z",
+  "totals": {
+    "scenarios": 22,
+    "executions": 454,
+    "pass": 376,
+    "fail": 78
+  },
+  "artifacts": {
+    "scenario_inventory.csv": {
+      "present": true,
+      "rows": 22
+    },
+    "platform_coverage_matrix.csv": {
+      "present": true,
+      "rows": 22
+    },
+    "scenario_outcome_history.csv": {
+      "present": true,
+      "rows": 454
+    },
+    "scenario_durations.csv": {
+      "present": true,
+      "rows": 599
+    },
+    "platform_durations.csv": {
+      "present": true,
+      "rows": 1
+    },
+    "api_isolated_results.csv": {
+      "present": true,
+      "rows": 0
+    },
+    "visual_comparison_results.csv": {
+      "present": true,
+      "rows": 0
+    },
+    "performance_summary.csv": {
+      "present": true,
+      "rows": 0
+    },
+    "failure_buckets.csv": {
+      "present": true,
+      "rows": 85
+    },
+    "proxy_overhead_summary.csv": {
+      "present": true,
+      "rows": 15
+    }
+  }
+}

@@ -119,7 +119,12 @@ export async function assertCatalogDisplayed(): Promise<void> {
  * uses an equivalent UiSelector + iOS class-chain probe; the route gates
  * mobile out via the UI driver check.
  */
-export async function readVisiblePizzaNames(): Promise<string[]> {
+// Demo backend pizza id space (p01..p12). Used as the probe set on mobile
+// when the route doesn't pass the cached ids — the catalog has a stable,
+// small id range so this stays cheap.
+const DEFAULT_PIZZA_IDS = Array.from({ length: 12 }, (_, i) => `p${String(i + 1).padStart(2, '0')}`);
+
+export async function readVisiblePizzaNames(candidateIds?: string[]): Promise<string[]> {
     const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
     if (driver === 'api') {
         // The route handles api-driver assertions via CatalogDao; this
@@ -127,12 +132,21 @@ export async function readVisiblePizzaNames(): Promise<string[]> {
         return [];
     }
     if (driver === 'appium' || driver === 'mobilewright') {
-        // Mobile carries the names via `~text-pizza-name-{id}` accessibility
-        // ids. There's no INTENT to list-by-pattern on Appium, and the
-        // catalog feature's mobile UI assertion concerns are covered by the
-        // direct ASSERT_TEXT on `addToCartLabel` and `sectionTitleText`. The
-        // route gates this molecule out of mobile paths.
-        return [];
+        // Mobile carries each name via `~text-pizza-name-{id}`. There's no
+        // list-by-pattern intent, so probe the candidate ids (the cached
+        // catalog ids when the route passes them, else the p01..p12 range)
+        // and collect the ones currently in the accessibility tree. RN
+        // virtualizes the grid, so this returns the on-screen subset — which
+        // is exactly "what's visible" for the narrowing/containment checks.
+        const ids = candidateIds && candidateIds.length ? candidateIds : DEFAULT_PIZZA_IDS;
+        const names: string[] = [];
+        for (const id of ids) {
+            const r = await sendIntent(INTENT.READ_TEXT, `~text-pizza-name-${id.toLowerCase()}`)
+                .catch(() => null);
+            const t = (r?.payload ?? '').trim();
+            if (t) names.push(t);
+        }
+        return names;
     }
     const script = `JSON.stringify(
         Array.from(document.querySelectorAll("[data-testid^='pizza-name-']"))
@@ -157,15 +171,23 @@ export async function readVisiblePizzaNames(): Promise<string[]> {
 export async function assertAddToCartLabelVisible(label: string): Promise<void> {
     const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
     if (driver === 'appium' || driver === 'mobilewright') {
-        // Mobile cards expose the label as `~text-add-pizza-{id}`; we can't
-        // template here, so probe the first card's label via a partial match.
-        // The route's caller knows the catalog has at least one pizza.
-        const probe = '~text-add-pizza-pepperoni'; // arbitrary anchor; the
-        // assertion is "ANY card carries this label", so any visible card
-        // with the localized text satisfies it. If the demo backend's pizza
-        // ids drift we revisit; the locator key intent is documented above.
-        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `${probe}||5000`);
-        await sendIntent(INTENT.ASSERT_TEXT, `${probe}||${label}`);
+        // Mobile catalog cards show a "+" icon (`~btn-add-pizza-{id}`), not a
+        // text label. The localized add-to-cart label lives on the builder's
+        // primary CTA (`~text-add-to-cart`) — exactly as the web path reads
+        // it off the customizer modal. Open the builder for the first pizza,
+        // read the CTA label, assert, then close. Verified on-device
+        // 2026-05-28 the CTA is correctly localized (en "Add to Cart" /
+        // es "Agregar" / de "Hinzufügen" / fr "Ajouter").
+        await sendIntent(INTENT.CLICK, '~btn-add-pizza-p01');
+        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `~text-add-to-cart||${CATALOG_WAIT_TIMEOUT_MS}`);
+        const read = await sendIntent(INTENT.READ_TEXT, '~text-add-to-cart');
+        const actual = (read.payload ?? '').trim();
+        await sendIntent(INTENT.CLICK, '~btn-close-builder').catch(() => { /* best-effort close */ });
+        if (!actual.toLowerCase().includes(label.trim().toLowerCase())) {
+            throw new Error(
+                `[catalog] add-to-cart label "${label}" not found on the builder CTA — got "${actual}".`,
+            );
+        }
         return;
     }
     // Web: the per-card add-to-cart control is an icon-only "+" button (no
@@ -236,7 +258,20 @@ async function openPizzaCardById(id: string): Promise<void> {
 export async function assertSectionTitle(title: string): Promise<void> {
     const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
     if (driver === 'appium' || driver === 'mobilewright') {
-        await sendIntent(INTENT.ASSERT_TEXT, `sectionTitleText||${title}`);
+        // The mobile catalog has no dedicated section-title node; the
+        // localized pizza term surfaces on the "All" category pill
+        // (`~text-category-all`: "All Pizza" / "Todas las Pizzas" /
+        // "Alle Pizzen" / "すべてのピザ"). Assert that pill carries the
+        // localized title (case-insensitive; tolerate singular/plural so
+        // "Pizzas" matches "All Pizza"). Verified on-device 2026-05-28.
+        const read = await sendIntent(INTENT.READ_TEXT, '~text-category-all');
+        const actual = (read.payload ?? '').trim().toLowerCase();
+        const wanted = title.trim().toLowerCase();
+        if (!actual.includes(wanted) && !actual.includes(wanted.replace(/s$/, ''))) {
+            throw new Error(
+                `[catalog] localized section title "${title}" not found on the All-category pill — got "${read.payload}".`,
+            );
+        }
         return;
     }
     // Web: scan all headings for the localized text.

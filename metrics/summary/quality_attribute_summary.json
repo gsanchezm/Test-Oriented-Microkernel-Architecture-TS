@@ -1,0 +1,639 @@
+{
+  "architecture_type": "TOM",
+  "attributes": {
+    "Maintainability": [
+      {
+        "metric_name": "average_file_size_loc",
+        "metric_value": "71.27",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/**/*.ts"
+      },
+      {
+        "metric_name": "cyclomatic_complexity_if_available",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "complexity",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no AST pass (heuristic unavailable)"
+      },
+      {
+        "metric_name": "duplicated_code_percentage",
+        "metric_value": "8.34",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/**/*.ts"
+      },
+      {
+        "metric_name": "duplicated_loc",
+        "metric_value": "1111",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/**/*.ts"
+      },
+      {
+        "metric_name": "failure_bucket_coverage_percentage",
+        "metric_value": "100",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/failure_buckets.csv"
+      },
+      {
+        "metric_name": "files_touched_per_change",
+        "metric_value": "12.26",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git log"
+      },
+      {
+        "metric_name": "max_file_size_loc",
+        "metric_value": "380",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/**/*.ts"
+      },
+      {
+        "metric_name": "telemetry_completeness_percentage",
+        "metric_value": "100",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw/tool-events/*.jsonl"
+      }
+    ],
+    "Modifiability": [
+      {
+        "metric_name": "adapter_files_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "change_impact_score",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "score",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "configuration_files_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "core_files_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "execution_layer_files_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "loc_added",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "loc_deleted",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "loc_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "reporting_files_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "git diff unavailable (set METRICS_BASE_REF)"
+      }
+    ],
+    "Extensibility": [
+      {
+        "metric_name": "existing_core_files_changed_for_new_tool",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "integration_effort_proxy_score",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "score",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "new_action_or_adapter_count",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "new_tool_files_added",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "new_tool_files_modified",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "files",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "new_tool_loc_added",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "loc",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      },
+      {
+        "metric_name": "registration_changes_count",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "no tool-integration manifests; git diff unavailable (set METRICS_BASE_REF)"
+      }
+    ],
+    "Reusability": [
+      {
+        "metric_name": "api_contract_reuse_count",
+        "metric_value": "6",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "heuristic: *.api.contract.json under src/core/tests/**/contracts/**"
+      },
+      {
+        "metric_name": "feature_to_tool_coverage",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "executed (feature,tool) pairs / expected (feature,tool) pairs from tags; NA when tool attribution absent"
+      },
+      {
+        "metric_name": "locator_contract_reuse_count",
+        "metric_value": "7",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "heuristic: *.locators.json under src/core/tests/**/contracts/**"
+      },
+      {
+        "metric_name": "scenario_reuse_ratio",
+        "metric_value": "0.95",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/platform_coverage_matrix.csv"
+      },
+      {
+        "metric_name": "shared_contract_reuse_count",
+        "metric_value": "20",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "heuristic: all contract files under src/core/tests/**/contracts/**"
+      },
+      {
+        "metric_name": "shared_step_reuse_count",
+        "metric_value": "14",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "heuristic: src/core/tests/**/step_definitions/*.ts file count"
+      },
+      {
+        "metric_name": "test_data_reuse_count",
+        "metric_value": "22",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "heuristic: data-access and fixture/data files under the test slices (excl .gitkeep)"
+      },
+      {
+        "metric_name": "visual_contract_reuse_count",
+        "metric_value": "7",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "heuristic: *.visual.json under src/core/tests/**/contracts/**"
+      }
+    ],
+    "Reliability": [
+      {
+        "metric_name": "fail_rate",
+        "metric_value": "0.17",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "fail_to_pass_probability",
+        "metric_value": "0.78",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "flaky_scenario_count",
+        "metric_value": "52",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "infrastructure_failure_rate",
+        "metric_value": "0.1",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/failure_buckets.csv (INFRASTRUCTURE_FAILURE / total observations)"
+      },
+      {
+        "metric_name": "pass_rate",
+        "metric_value": "0.83",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "pass_to_fail_probability",
+        "metric_value": "0.02",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "retry_count",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "not measured upstream"
+      },
+      {
+        "metric_name": "tool_failure_rate",
+        "metric_value": "0.05",
+        "metric_unit": "ratio",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/failure_buckets.csv (WEB/MOBILE_SESSION + LOCATOR_RESOLUTION / total observations)"
+      }
+    ],
+    "Performance Efficiency": [
+      {
+        "metric_name": "grpc_or_ipc_latency_ms",
+        "metric_value": "1.22",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "TOM-only overhead"
+      },
+      {
+        "metric_name": "job_duration_ms",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw/run-manifest/*.json (mean per-manifest endedAt - startedAt)"
+      },
+      {
+        "metric_name": "p50_scenario_duration_ms",
+        "metric_value": "1144",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_durations.csv (p50 of duration_ms)"
+      },
+      {
+        "metric_name": "p95_scenario_duration_ms",
+        "metric_value": "66340",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_durations.csv (p95 of duration_ms)"
+      },
+      {
+        "metric_name": "p99_scenario_duration_ms",
+        "metric_value": "132835",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_durations.csv (p99 of duration_ms)"
+      },
+      {
+        "metric_name": "proxy_overhead_ms",
+        "metric_value": "0.05",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "TOM-only overhead"
+      },
+      {
+        "metric_name": "scenario_duration_ms",
+        "metric_value": "11634.99",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_durations.csv (mean of duration_ms)"
+      },
+      {
+        "metric_name": "telemetry_processing_duration_ms",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "not measured upstream"
+      },
+      {
+        "metric_name": "tool_startup_duration_ms",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "not measured upstream"
+      },
+      {
+        "metric_name": "workflow_duration_ms",
+        "metric_value": "NOT_AVAILABLE",
+        "metric_unit": "ms",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw/run-manifest/*.json (max endedAt - min startedAt)"
+      }
+    ],
+    "Observability": [
+      {
+        "metric_name": "artifacts_uploaded",
+        "metric_value": "1",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics"
+      },
+      {
+        "metric_name": "classified_failure_percentage",
+        "metric_value": "100",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/failure_buckets.csv"
+      },
+      {
+        "metric_name": "logs_uploaded",
+        "metric_value": "1",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "logs"
+      },
+      {
+        "metric_name": "missing_failure_bucket_count",
+        "metric_value": "0",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/failure_buckets.csv"
+      },
+      {
+        "metric_name": "missing_run_manifest_count",
+        "metric_value": "26",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed"
+      },
+      {
+        "metric_name": "missing_scenario_duration_count",
+        "metric_value": "454",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "processed_metrics_uploaded",
+        "metric_value": "1",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed"
+      },
+      {
+        "metric_name": "raw_metrics_uploaded",
+        "metric_value": "1",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw"
+      },
+      {
+        "metric_name": "telemetry_completeness_percentage",
+        "metric_value": "0",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw/tool-events"
+      },
+      {
+        "metric_name": "telemetry_event_count",
+        "metric_value": "3284",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw/tool-events"
+      },
+      {
+        "metric_name": "unclassified_failure_percentage",
+        "metric_value": "0",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/failure_buckets.csv"
+      }
+    ],
+    "Portability": [
+      {
+        "metric_name": "environment_specific_config_count",
+        "metric_value": "12",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/** (caps|profile) + *.env profiles"
+      },
+      {
+        "metric_name": "failed_tool_count",
+        "metric_value": "0",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "platform_coverage_percentage",
+        "metric_value": "0",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/platform_coverage_matrix.csv; metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "platform_specific_code_count",
+        "metric_value": "14",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/** (android|ios|mobile|web in path)"
+      },
+      {
+        "metric_name": "platform_specific_locator_count",
+        "metric_value": "7",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/**/*.locators.json"
+      },
+      {
+        "metric_name": "successful_platform_matrix_percentage",
+        "metric_value": "0",
+        "metric_unit": "percent",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/platform_coverage_matrix.csv; metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "successful_tool_count",
+        "metric_value": "0",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "supported_tool_count",
+        "metric_value": "8",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "scripts/metrics/measure-portability.ts (known TOM tool set)"
+      }
+    ],
+    "Interoperability": [
+      {
+        "metric_name": "api_oracle_available",
+        "metric_value": "0",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/api_isolated_results.csv"
+      },
+      {
+        "metric_name": "oracle_composition_count",
+        "metric_value": "5",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/core/tests (*.feature tags)"
+      },
+      {
+        "metric_name": "oracle_count",
+        "metric_value": "2",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/{api_isolated_results,visual_comparison_results,performance_summary}.csv; tool-events"
+      },
+      {
+        "metric_name": "performance_oracle_available",
+        "metric_value": "0",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/performance_summary.csv"
+      },
+      {
+        "metric_name": "successful_oracle_composition_count",
+        "metric_value": "0",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "src/core/tests + evidence CSVs"
+      },
+      {
+        "metric_name": "tool_count",
+        "metric_value": "0",
+        "metric_unit": "count",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "ui_oracle_available",
+        "metric_value": "1",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/raw/tool-events; metrics/processed/scenario_outcome_history.csv"
+      },
+      {
+        "metric_name": "visual_oracle_available",
+        "metric_value": "0",
+        "metric_unit": "boolean",
+        "tool_name": "ALL",
+        "platform": "ALL",
+        "source_file": "metrics/processed/visual_comparison_results.csv"
+      }
+    ]
+  }
+}
