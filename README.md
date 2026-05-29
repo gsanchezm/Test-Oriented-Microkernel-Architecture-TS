@@ -161,6 +161,25 @@ PERF_USERS=30 PERF_DURATION=60 pnpm perf:load
 
 The plugin returns a `SimulationMetrics` JSON in the gRPC payload — TOM-driven mode also fails the Cucumber step when the KO rate exceeds 1%.
 
+## Test results dashboard
+
+`apps/dashboard/` is a React + Vite + Express app that visualizes runs from `./reports/`. It reads `reports/manifest.json` plus the per-run `reports/<runId>/<tool>.json` files — **not** the scratch `reports/<tool>.json` a bare test run leaves behind.
+
+```bash
+pnpm dashboard:fixtures   # seed demo data, then
+pnpm dashboard            # → http://localhost:5173
+```
+
+**A run only appears in the dashboard after it is ingested.** A direct `cucumber-js` invocation just writes scratch JSON (`reports/playwright.json`, `reports/api.json`, `reports/android.json`, …). Those files are the *source*, not what the dashboard renders. Convert them into a dashboard run with:
+
+```bash
+# after a manual run — bundles whatever scratch reports/*.json exist into ONE run
+pnpm dashboard:ingest --run-id android-2026-05-29
+#   → writes reports/<runId>/{playwright,api,appium,gatling,pixelmatch}.json + a manifest entry
+```
+
+So if you ran `cucumber-js --tags @android` by hand and the dashboard still shows an old (red) run, you simply haven't ingested the new one yet. `scripts/orchestrate-full-run.sh` runs the ingest automatically after each phase, so an orchestrated run shows up with no extra step. The newest run sorts to the top of the run dropdown. Full adapter/ingest details: `apps/dashboard/README.md`.
+
 ## Environment
 
 ```bash

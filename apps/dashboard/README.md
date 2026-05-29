@@ -265,6 +265,7 @@ The (market, language) bucketing documented in `src/plugins/pixelmatch/support/v
 
 ## Gotchas
 
+- **Only *ingested* runs appear — scratch JSON does not.** The dashboard renders `reports/manifest.json` + `reports/<runId>/<tool>.json`. A bare `cucumber-js` run only writes scratch `reports/<tool>.json` (e.g. `reports/android.json`), which the dashboard never reads directly — so a fresh manual run will *not* show up until you ingest it: `pnpm dashboard:ingest [--run-id <id>]` converts the current scratch `reports/{playwright,api,android,ios}.json` into `reports/<runId>/<tool>.json` and adds a manifest entry. If the dashboard still shows an old result after a new run, you just haven't ingested yet. **One ingest = one run bundling every scratch tool present**, so an Android-only cucumber run still picks up the last web/api/visual/perf scratch reports under the same runId. `scripts/orchestrate-full-run.sh` ingests automatically after each phase.
 - **`pnpm test` from the repo root runs cucumber-js, not the dashboard's Vitest.** Use `pnpm --filter dashboard test` for the dashboard's tests.
 - **`reports/` is gitignored** — your local fixtures don't follow you to other clones. Re-run `pnpm dashboard:fixtures` after a fresh clone.
 - **PNG cache** — `/reports/*` has `Cache-Control: public, max-age=3600`. If you replace a fixture PNG and the browser shows the old one, hard-refresh.

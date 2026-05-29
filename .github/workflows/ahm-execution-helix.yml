@@ -8,10 +8,13 @@
 name: AHM — Execution Helix
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # Auto-triggers temporarily disabled — run only via manual dispatch while
+  # iterating on tom-quantitative-execution.yml. Re-enable push/pull_request
+  # when ready to restore automatic CI for this workflow.
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       platform:
@@ -304,6 +307,7 @@ jobs:
       # workflow artifact regardless of MinIO availability.
 
       - name: Start proxy + plugins
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/ahm-ci-logs
@@ -428,6 +432,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Start proxy + plugins
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/ahm-ci-logs
@@ -559,6 +564,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Start proxy + plugins
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/ahm-ci-logs
@@ -700,6 +706,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Start proxy + plugins
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/ahm-ci-logs

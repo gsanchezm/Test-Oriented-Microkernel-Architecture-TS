@@ -840,6 +840,14 @@ gh workflow run ahm-execution-helix.yml -f platform=mobile -f android_api_level=
       </figure>
 
     </div>
+
+    <p class="section-sub" style="margin-top: 24px;">
+      The live React dashboard (<code>apps/dashboard</code>) renders <strong>ingested</strong> runs from
+      <code>reports/manifest.json</code> — not the scratch <code>reports/&lt;tool&gt;.json</code> a bare
+      <code>cucumber-js</code> run leaves behind. Surface a manual run with
+      <code>pnpm dashboard:ingest --run-id &lt;id&gt;</code>; <code>scripts/orchestrate-full-run.sh</code>
+      ingests automatically after each phase, and the newest run sorts to the top of the dropdown.
+    </p>
   </div>
 </section>
 
