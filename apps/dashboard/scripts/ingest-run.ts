@@ -508,7 +508,59 @@ async function buildPlaywrightTool(dir: string = reportsDir): Promise<WebUiTool 
   };
 }
 
-export { buildPlaywrightTool, materializeScreenshots };
+/**
+ * An absent platform still occupies its slot in the `mobile_ui` discriminated
+ * union — render it as a muted, zero-count block (mirrors `makeMissingTool`'s
+ * `device: '—'`, empty arrays) rather than dropping the key.
+ */
+function emptyPlatformBlock(): PlatformBlock {
+  return { passed: 0, failed: 0, skipped: 0, duration: '—', device: '—', suites: [], tests: [] };
+}
+
+/**
+ * Build the Appium (mobile_ui) tool from whichever of `android.json` / `ios.json`
+ * exist in `dir`. Mirrors `buildPlaywrightTool`'s "build from what's present"
+ * convention: a single-platform run (e.g. Android-only on a physical device)
+ * produces a valid tool with the absent platform as an empty block. Returns null
+ * only when NEITHER platform's cucumber JSON is present.
+ */
+async function buildAppiumTool(dir: string = reportsDir): Promise<MobileUiTool | null> {
+  const androidRaw = await readCucumberJson(path.join(dir, 'android.json'));
+  const iosRaw     = await readCucumberJson(path.join(dir, 'ios.json'));
+  if (!androidRaw && !iosRaw) return null;
+
+  const platformBlock = (s: IngestedSuite, device: string): PlatformBlock => ({
+    passed: s.passed, failed: s.failed, skipped: s.skipped, duration: s.duration,
+    device,
+    suites: s.suites,
+    tests: s.tests,
+  });
+
+  const android = androidRaw
+    ? platformBlock(ingestCucumber(androidRaw), process.env.ANDROID_DEVICE ?? 'Android device')
+    : emptyPlatformBlock();
+  const ios = iosRaw
+    ? platformBlock(ingestCucumber(iosRaw), process.env.IOS_DEVICE ?? 'iOS device')
+    : emptyPlatformBlock();
+
+  const durationParts: string[] = [];
+  if (androidRaw) durationParts.push(`${android.duration} (Android)`);
+  if (iosRaw) durationParts.push(`${ios.duration} (iOS)`);
+
+  return {
+    kind: 'mobile_ui',
+    id: 'appium',
+    name: 'Appium',
+    description: 'Native mobile flows on iOS simulators and Android emulators.',
+    passed: android.passed + ios.passed,
+    failed: android.failed + ios.failed,
+    skipped: android.skipped + ios.skipped,
+    duration: durationParts.join(' + '),
+    platforms: { android, ios },
+  };
+}
+
+export { buildPlaywrightTool, buildAppiumTool, materializeScreenshots };
 
 async function main(): Promise<void> {
   const { runId: argRunId } = parseArgs();
@@ -557,43 +609,18 @@ async function main(): Promise<void> {
     wroteTools.push(`api (${s.passed}P/${s.failed}F/${s.skipped}S)`);
   }
 
-  // ---- Appium (mobile_ui) — only if both platforms are present ----------
-  const androidRaw = await readCucumberJson(path.join(reportsDir, 'android.json'));
-  const iosRaw     = await readCucumberJson(path.join(reportsDir, 'ios.json'));
-  if (androidRaw && iosRaw) {
-    const android = ingestCucumber(androidRaw);
-    const ios = ingestCucumber(iosRaw);
-    const platformBlock = (s: IngestedSuite, device: string): PlatformBlock => ({
-      passed: s.passed, failed: s.failed, skipped: s.skipped, duration: s.duration,
-      device,
-      suites: s.suites,
-      tests: s.tests,
-    });
-    const tool: MobileUiTool = {
-      kind: 'mobile_ui',
-      id: 'appium',
-      name: 'Appium',
-      description: 'Native mobile flows on iOS simulators and Android emulators.',
-      passed: android.passed + ios.passed,
-      failed: android.failed + ios.failed,
-      skipped: android.skipped + ios.skipped,
-      duration: `${android.duration} (Android) + ${ios.duration} (iOS)`,
-      platforms: {
-        android: platformBlock(android, process.env.ANDROID_DEVICE ?? 'Android device'),
-        ios:     platformBlock(ios,     process.env.IOS_DEVICE     ?? 'iOS device'),
-      },
-    };
+  // ---- Appium (mobile_ui) — built from whichever platform(s) are present --
+  const appiumTool = await buildAppiumTool();
+  if (appiumTool) {
     // MobileUiTool has no top-level tests — walk both platforms in one call so
     // the shared usedKeys Set deduplicates across android and ios (identical
     // suite+name on both platforms would otherwise produce the same filename).
     await materializeScreenshots(
-      [...tool.platforms.android.tests, ...tool.platforms.ios.tests],
+      [...appiumTool.platforms.android.tests, ...appiumTool.platforms.ios.tests],
       runDir, runId,
     );
-    await writeJson(path.join(runDir, 'appium.json'), tool);
-    wroteTools.push(`appium (${tool.passed}P/${tool.failed}F/${tool.skipped}S)`);
-  } else if (androidRaw || iosRaw) {
-    console.log('[ingest] note: found android.json XOR ios.json — appium needs BOTH; skipping. Run both flavors to populate this tool.');
+    await writeJson(path.join(runDir, 'appium.json'), appiumTool);
+    wroteTools.push(`appium (${appiumTool.passed}P/${appiumTool.failed}F/${appiumTool.skipped}S)`);
   }
 
   // ---- Gatling (performance) --------------------------------------------

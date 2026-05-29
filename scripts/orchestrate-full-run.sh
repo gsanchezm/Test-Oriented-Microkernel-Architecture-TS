@@ -47,6 +47,24 @@ start_web_stack(){ # viewport pixelmatch
   wait_port 50051 && wait_port 50052 && wait_port 50055
 }
 
+start_android_stack(){ # mirrors ahm-execution-helix.yml android job: proxy + appium plugin + api plugin.
+  # PLATFORM=android makes the proxy load android locators (it caches by PLATFORM —
+  # starting it as web would resolve android keys against the web cache → timeouts).
+  # Device specifics (DEVICE_PROFILE, APPIUM_HOST/PORT) come from .env via dotenv/config.
+  PLATFORM=android DRIVER=appium \
+    npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > "$LOG/proxy.log" 2>&1 &
+  PLATFORM=android DRIVER=appium PLUGIN_APPIUM=true APPIUM_PLUGIN_PORT=50053 \
+    npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/appium/server.ts > "$LOG/appium-plugin.log" 2>&1 &
+  PLUGIN_API=true API_PLUGIN_PORT=50055 \
+    npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > "$LOG/api.log" 2>&1 &
+  wait_port 50051 && wait_port 50053 && wait_port 50055
+}
+
+# Stale mobile scratch from a PRIOR run must not leak into THIS run's ingest: one
+# run = one ingest. The per-run ingested copies (reports/<runId>/appium.json) are the
+# durable record and are untouched; only the top-level scratch is cleared.
+rm -f reports/android.json reports/ios.json
+
 # ---------------- Phase B: Web Desktop (functional) ----------------
 say "PHASE B — web desktop: starting stack"
 if start_web_stack desktop false; then
@@ -102,6 +120,35 @@ say "PHASE F — checkout-load exit=$?"
 say "PHASE F — gatling smoke: invalid-login-load"
 PERF_PROFILE=smoke pnpm perf:login-invalid:smoke > "$LOG/phaseF-login.log" 2>&1
 say "PHASE F — invalid-login-load exit=$?"
+
+# ---------------- Phase G: Android (Appium) — conditional on a connected device ----------------
+# Runs LAST: a single reused Appium session over @android is ~60 min on a physical device,
+# so web/visual/gatling land first. Auto-skips when there's no adb device or no Appium daemon
+# on :4723, so this orchestrator still runs end-to-end on a dev box without a phone. The daemon
+# (port 4723) is started externally (`appium`); we only require it to be reachable. Continues
+# through scenario failures by design (contract-drift is captured, not fatal); retry:1 absorbs
+# cold-starts. Produces reports/android.json, which the INGEST step below turns into the
+# (android-only, empty-iOS) Appium card.
+say "PHASE G — android: pre-flight (adb device + Appium daemon :4723)"
+if ! command -v adb >/dev/null 2>&1; then
+  say "PHASE G — SKIP: adb not on PATH"
+elif [ -z "$(adb devices | awk 'NR>1 && $2=="device"{print $1}')" ]; then
+  say "PHASE G — SKIP: no adb device in 'device' state (connect a phone or start an emulator)"
+elif ! node -e "require('net').connect(4723,'127.0.0.1').on('connect',function(){process.exit(0)}).on('error',function(){process.exit(1)})" 2>/dev/null; then
+  say "PHASE G — SKIP: Appium daemon not reachable on :4723 (start it with \`appium\`)"
+else
+  ANDROID_DEV="$(adb devices | awk 'NR>1 && $2=="device"{print $1; exit}')"
+  say "PHASE G — device $ANDROID_DEV + daemon up; starting android stack"
+  if start_android_stack; then
+    say "PHASE G — stack up; running cucumber @android (single Appium session, ~60min)"
+    PLATFORM=android DRIVER=appium PLUGIN_APPIUM=true PLUGIN_API=true \
+      "$CUKE" --tags "@android" --format json:reports/android.json --format progress > "$LOG/phaseG.log" 2>&1
+    say "PHASE G — cucumber exit=$? ($(grep -aoE '[0-9]+ scenarios \([^)]*\)' "$LOG/phaseG.log" | tail -1))"
+  else
+    say "PHASE G — STACK FAILED to come up (see proxy/appium-plugin logs)"
+  fi
+  teardown "50051,50053,50055"
+fi
 
 # ---------------- Ingest ----------------
 # No merge needed: the dashboard ingest (ingest-run.ts) now reads

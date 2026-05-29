@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tom-architecture/schemas/quality-attribute-metric.schema.json",
+  "title": "QualityAttributeMetric",
+  "description": "One architecture-quality metric observation. Evaluates the automation architecture, not the application under test. Shared, unchanged, by the future GTAA_BASELINE repository.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "architecture_type",
+    "repository_name",
+    "experiment_batch_id",
+    "run_index",
+    "workflow_run_id",
+    "workflow_attempt",
+    "tool_name",
+    "platform",
+    "viewport",
+    "metric_category",
+    "metric_name",
+    "metric_value",
+    "metric_unit",
+    "source_file",
+    "generated_at"
+  ],
+  "properties": {
+    "architecture_type": { "type": "string" },
+    "repository_name": { "type": "string" },
+    "experiment_batch_id": { "type": "string" },
+    "run_index": { "type": "string" },
+    "workflow_run_id": { "type": "string" },
+    "workflow_attempt": { "type": "string" },
+    "tool_name": { "type": "string", "description": "ALL for repository-level metrics." },
+    "platform": { "type": "string", "description": "ALL for repository-level metrics." },
+    "viewport": { "type": "string" },
+    "metric_category": {
+      "type": "string",
+      "enum": [
+        "Maintainability",
+        "Modifiability",
+        "Extensibility",
+        "Reusability",
+        "Reliability",
+        "Performance Efficiency",
+        "Observability",
+        "Portability",
+        "Interoperability"
+      ]
+    },
+    "metric_name": { "type": "string" },
+    "metric_value": {
+      "type": ["string", "number", "null"],
+      "description": "Numeric value, or null / UNKNOWN / NOT_AVAILABLE when the metric cannot be computed. Never fabricated."
+    },
+    "metric_unit": { "type": "string" },
+    "source_file": { "type": "string" },
+    "generated_at": { "type": "string" }
+  }
+}

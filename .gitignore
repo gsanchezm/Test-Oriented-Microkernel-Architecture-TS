@@ -44,7 +44,11 @@ assets/**
 !assets/apps/ios/.gitkeep
 .antigravity/
 .agents/
-docs/
+# Docs are local by default; paper-facing documentation is tracked as reproducible evidence.
+docs/*
+!docs/research/
+!docs/architecture/
+!docs/superpowers/
 target/
 src/core/tests/checkout/simulations/checkout-rows.generated.ts
 results/

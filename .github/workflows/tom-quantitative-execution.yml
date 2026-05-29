@@ -1,0 +1,1304 @@
+# =============================================================================
+# TOM — Quantitative Execution
+#
+# Runs the Test-Oriented Microkernel (TOM) cross-platform suite tool-by-tool
+# and emits objective, reproducible quantitative metrics tagged
+# `architecture_type = TOM`. Mirrors the service-startup / container patterns
+# of `ahm-execution-helix.yml` (proxy + plugins, port waits, pinned Playwright
+# container, docker-android emulator, macOS iOS simulator, Gatling) but emits
+# tool-normalized artifact names free of AHM/Helix terminology. Each job writes
+# a run manifest + processed metrics and uploads a single `tom-metrics-<tool>`
+# artifact; a final `consolidate` job merges them and runs the full
+# operational + quality metrics pipeline.
+#
+# The existing `ahm-execution-helix.yml` is intentionally left untouched.
+# =============================================================================
+
+name: TOM — Quantitative Execution
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Tool / platform to execute'
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - api
+          - playwright
+          - playwright-desktop
+          - playwright-responsive
+          - appium
+          - appium-android
+          - appium-ios
+          - gatling
+          - pixelmatch
+          - pixelmatch-desktop
+          - pixelmatch-responsive
+      experiment_batch_id:
+        description: 'Experiment batch id (groups repeated runs)'
+        required: true
+        default: batch-001
+      run_index:
+        description: 'Run index within the batch (e.g. 001, 002, ...)'
+        required: true
+        default: '001'
+      perf_profile:
+        description: 'Gatling injection profile'
+        required: false
+        default: smoke
+        type: choice
+        options: [smoke, load, stress]
+      perf_users:
+        description: 'Virtual user count (perf load/stress)'
+        required: false
+        default: '20'
+      perf_duration:
+        description: 'Ramp duration in seconds (perf load only)'
+        required: false
+        default: '120'
+      android_api_level:
+        description: 'Android API level'
+        required: false
+        default: '33'
+        type: choice
+        options: ['28', '29', '30', '31', '32', '33']
+
+# ---------------------------------------------------------------------------
+# Shared environment — inherited by every job. Carries the experimental
+# identity that the metrics layer stamps onto every record.
+# ---------------------------------------------------------------------------
+env:
+  ARCHITECTURE_TYPE: TOM
+  EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+  RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+  REPOSITORY_NAME: ${{ github.repository }}
+  WORKFLOW_RUN_ID: ${{ github.run_id }}
+  WORKFLOW_ATTEMPT: ${{ github.run_attempt }}
+  COMMIT_SHA: ${{ github.sha }}
+  BRANCH_NAME: ${{ github.ref_name }}
+  NODE_VERSION: '22'
+  LOG_LEVEL: info
+  OMNIPIZZA_RELEASES_REPO: gsanchezm/OmniPizza
+  PLAYWRIGHT_VERSION: '1.58.2'
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.58.2-jammy
+
+# Cancel in-flight runs of the same ref when a new commit lands.
+concurrency:
+  group: tom-quantitative-${{ github.ref }}
+  cancel-in-progress: true
+
+# =============================================================================
+# JOBS
+# =============================================================================
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Resolver: latest OmniPizza release (copied from helix; consumed by the
+  # mobile jobs via `needs.resolve-omnipizza-release.outputs.*`).
+  # ---------------------------------------------------------------------------
+  resolve-omnipizza-release:
+    name: Resolve — OmniPizza latest release
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'appium'
+      || inputs.platform == 'appium-android'
+      || inputs.platform == 'appium-ios'
+    outputs:
+      tag: ${{ steps.fetch.outputs.tag }}
+      base_url: ${{ steps.fetch.outputs.base_url }}
+    steps:
+      - name: Fetch latest release tag
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${OMNIPIZZA_RELEASES_REPO}/releases/latest" \
+            | jq -r .tag_name)
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "Failed to resolve latest OmniPizza release tag."
+            exit 1
+          fi
+          BASE_URL="https://github.com/${OMNIPIZZA_RELEASES_REPO}/releases/download/${TAG}"
+          echo "Resolved OmniPizza release: $TAG"
+          echo "Download base URL: $BASE_URL"
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # Job: API
+  # ---------------------------------------------------------------------------
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'api'
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: api
+      PLATFORM: api
+      DRIVER: api
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-api
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start MinIO Telemetry Storage
+        run: |
+          if docker compose version >/dev/null 2>&1; then
+            docker compose -f infrastructure/minio-compose.yml up -d
+          else
+            docker-compose -f infrastructure/minio-compose.yml up -d
+          fi
+          sleep 5
+
+      - name: Start proxy + API plugin
+        run: |
+          set -euo pipefail
+          mkdir -p logs/api
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/api/proxy.log 2>&1 &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/api/api-plugin.log 2>&1 &
+          for port in 50051 50055; do
+            for i in $(seq 1 20); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              sleep 1
+            done
+          done
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: api
+          DRIVER: api
+          PLUGIN_API: 'true'
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run Cucumber suite (API layer)
+        run: pnpm test:json:api
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: api
+          DRIVER: api
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: '9000'
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-api-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: Playwright — Desktop (functional)
+  # ---------------------------------------------------------------------------
+  playwright-desktop:
+    name: Playwright — Desktop
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'playwright'
+      || inputs.platform == 'playwright-desktop'
+      || inputs.platform == 'pixelmatch'
+      || inputs.platform == 'pixelmatch-desktop'
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: playwright
+      PLATFORM: web
+      VIEWPORT: desktop
+      DRIVER: playwright
+      PLUGIN_PIXELMATCH: 'false'
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-playwright-desktop
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start proxy + plugins
+        run: |
+          set -euo pipefail
+          mkdir -p logs/playwright
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/playwright/proxy.log 2>&1 &
+          PROXY_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > logs/playwright/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/playwright/api.log 2>&1 &
+          API_PID=$!
+
+          for port in 50051 50052 50055; do
+            ready=false
+            for i in $(seq 1 30); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              sleep 1
+            done
+            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+              echo "Port $port did not become ready."
+              cat logs/playwright/proxy.log || true
+              cat logs/playwright/playwright.log || true
+              cat logs/playwright/api.log || true
+              exit 1
+            fi
+          done
+
+          kill -0 "$PROXY_PID"
+          kill -0 "$PLAYWRIGHT_PID"
+          kill -0 "$API_PID"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: desktop
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
+          PLUGIN_PLAYWRIGHT: 'true'
+          PLUGIN_PIXELMATCH: 'false'
+          PLUGIN_API: 'true'
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run E2E tests
+        run: pnpm test:json:web:desktop
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: desktop
+          DRIVER: playwright
+          PROXY_ADDRESS: 127.0.0.1:50051
+          HEADLESS: 'true'
+          PLUGIN_PIXELMATCH: 'false'
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-playwright-desktop-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: Playwright — Responsive (functional)
+  # ---------------------------------------------------------------------------
+  playwright-responsive:
+    name: Playwright — Responsive
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'playwright'
+      || inputs.platform == 'playwright-responsive'
+      || inputs.platform == 'pixelmatch'
+      || inputs.platform == 'pixelmatch-responsive'
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: playwright
+      PLATFORM: web
+      VIEWPORT: responsive
+      DRIVER: playwright
+      PLUGIN_PIXELMATCH: 'false'
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-playwright-responsive
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start proxy + plugins
+        run: |
+          set -euo pipefail
+          mkdir -p logs/playwright
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/playwright/proxy.log 2>&1 &
+          PROXY_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > logs/playwright/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/playwright/api.log 2>&1 &
+          API_PID=$!
+
+          for port in 50051 50052 50055; do
+            ready=false
+            for i in $(seq 1 30); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              sleep 1
+            done
+            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+              echo "Port $port did not become ready."
+              cat logs/playwright/proxy.log || true
+              cat logs/playwright/playwright.log || true
+              cat logs/playwright/api.log || true
+              exit 1
+            fi
+          done
+
+          kill -0 "$PROXY_PID"
+          kill -0 "$PLAYWRIGHT_PID"
+          kill -0 "$API_PID"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
+          PLUGIN_PLAYWRIGHT: 'true'
+          PLUGIN_PIXELMATCH: 'false'
+          PLUGIN_API: 'true'
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run E2E tests
+        run: pnpm test:json:web:responsive
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          PROXY_ADDRESS: 127.0.0.1:50051
+          HEADLESS: 'true'
+          PLUGIN_PIXELMATCH: 'false'
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-playwright-responsive-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: Pixelmatch — Desktop (visual capture + gate)
+  # Co-located inside the Playwright plugin (see plugins.config.ts) — do NOT
+  # wait on port 50056; PIXELMATCH_ADDRESS is set as env only.
+  # ---------------------------------------------------------------------------
+  pixelmatch-desktop:
+    name: Pixelmatch — Desktop
+    needs: playwright-desktop
+    if: >-
+      always()
+      && needs.playwright-desktop.result != 'skipped'
+      && needs.playwright-desktop.result != 'cancelled'
+      && (
+        github.event_name != 'workflow_dispatch'
+        || inputs.platform == 'all'
+        || inputs.platform == 'pixelmatch'
+        || inputs.platform == 'pixelmatch-desktop'
+      )
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: pixelmatch
+      PLATFORM: web
+      VIEWPORT: desktop
+      DRIVER: playwright
+      PLUGIN_PIXELMATCH: 'true'
+      VISUAL_UPDATE_BASELINE: 'false'
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-pixelmatch-desktop
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start proxy + plugins
+        run: |
+          set -euo pipefail
+          mkdir -p logs/pixelmatch
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/pixelmatch/proxy.log 2>&1 &
+          PROXY_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > logs/pixelmatch/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/pixelmatch/api.log 2>&1 &
+          API_PID=$!
+
+          # Pixelmatch is co-located in the Playwright process — only wait on
+          # the proxy / playwright / api ports, never on 50056.
+          for port in 50051 50052 50055; do
+            ready=false
+            for i in $(seq 1 30); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              sleep 1
+            done
+            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+              echo "Port $port did not become ready."
+              cat logs/pixelmatch/proxy.log || true
+              cat logs/pixelmatch/playwright.log || true
+              cat logs/pixelmatch/api.log || true
+              exit 1
+            fi
+          done
+
+          kill -0 "$PROXY_PID"
+          kill -0 "$PLAYWRIGHT_PID"
+          kill -0 "$API_PID"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: desktop
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
+          PIXELMATCH_ADDRESS: 127.0.0.1:50056
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
+          PLUGIN_PLAYWRIGHT: 'true'
+          PLUGIN_PIXELMATCH: 'true'
+          PLUGIN_API: 'true'
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run visual capture
+        run: pnpm test:json:visual:desktop
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: desktop
+          DRIVER: playwright
+          PROXY_ADDRESS: 127.0.0.1:50051
+          HEADLESS: 'true'
+          PLUGIN_PIXELMATCH: 'true'
+          VISUAL_UPDATE_BASELINE: 'false'
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Visual gate — fail the job if any snapshot drifted
+        if: success() || failure()
+        run: node scripts/visual-gate.js
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-pixelmatch-desktop-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+            visual-results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: Pixelmatch — Responsive (visual capture + gate)
+  # ---------------------------------------------------------------------------
+  pixelmatch-responsive:
+    name: Pixelmatch — Responsive
+    needs: playwright-responsive
+    if: >-
+      always()
+      && needs.playwright-responsive.result != 'skipped'
+      && needs.playwright-responsive.result != 'cancelled'
+      && (
+        github.event_name != 'workflow_dispatch'
+        || inputs.platform == 'all'
+        || inputs.platform == 'pixelmatch'
+        || inputs.platform == 'pixelmatch-responsive'
+      )
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-jammy
+      options: --user 0
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: pixelmatch
+      PLATFORM: web
+      VIEWPORT: responsive
+      DRIVER: playwright
+      PLUGIN_PIXELMATCH: 'true'
+      VISUAL_UPDATE_BASELINE: 'false'
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-pixelmatch-responsive
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start proxy + plugins
+        run: |
+          set -euo pipefail
+          mkdir -p logs/pixelmatch
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/pixelmatch/proxy.log 2>&1 &
+          PROXY_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/playwright/server.ts > logs/pixelmatch/playwright.log 2>&1 &
+          PLAYWRIGHT_PID=$!
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/pixelmatch/api.log 2>&1 &
+          API_PID=$!
+
+          # Pixelmatch is co-located in the Playwright process — only wait on
+          # the proxy / playwright / api ports, never on 50056.
+          for port in 50051 50052 50055; do
+            ready=false
+            for i in $(seq 1 30); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              sleep 1
+            done
+            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+              echo "Port $port did not become ready."
+              cat logs/pixelmatch/proxy.log || true
+              cat logs/pixelmatch/playwright.log || true
+              cat logs/pixelmatch/api.log || true
+              exit 1
+            fi
+          done
+
+          kill -0 "$PROXY_PID"
+          kill -0 "$PLAYWRIGHT_PID"
+          kill -0 "$API_PID"
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          HEADLESS: 'true'
+          PLAYWRIGHT_ADDRESS: 127.0.0.1:50052
+          PIXELMATCH_ADDRESS: 127.0.0.1:50056
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
+          PLUGIN_PLAYWRIGHT: 'true'
+          PLUGIN_PIXELMATCH: 'true'
+          PLUGIN_API: 'true'
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run visual capture
+        run: pnpm test:json:visual:responsive
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: web
+          VIEWPORT: responsive
+          DRIVER: playwright
+          PROXY_ADDRESS: 127.0.0.1:50051
+          HEADLESS: 'true'
+          PLUGIN_PIXELMATCH: 'true'
+          VISUAL_UPDATE_BASELINE: 'false'
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Visual gate — fail the job if any snapshot drifted
+        if: success() || failure()
+        run: node scripts/visual-gate.js
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-pixelmatch-responsive-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+            visual-results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: Appium — Android (docker-android emulator)
+  # ---------------------------------------------------------------------------
+  appium-android:
+    name: Appium — Android
+    needs: resolve-omnipizza-release
+    if: >-
+      always()
+      && needs.resolve-omnipizza-release.result == 'success'
+      && (
+        github.event_name != 'workflow_dispatch'
+        || inputs.platform == 'all'
+        || inputs.platform == 'appium'
+        || inputs.platform == 'appium-android'
+      )
+    runs-on: ubuntu-latest
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: appium-android
+      PLATFORM: android
+      DRIVER: appium
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-appium-android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Android platform tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y android-sdk-platform-tools
+          adb version
+
+      - name: Download Android app artifact
+        env:
+          OMNIPIZZA_RELEASE_BASE_URL: ${{ needs.resolve-omnipizza-release.outputs.base_url }}
+          OMNIPIZZA_RELEASE_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
+        run: |
+          mkdir -p assets/apps/android
+          echo "Downloading OmniPizza Android APK from release ${OMNIPIZZA_RELEASE_TAG}"
+          curl -fL "$OMNIPIZZA_RELEASE_BASE_URL/omnipizza-release.apk" \
+            -o assets/apps/android/app-release.apk
+          ls -lh assets/apps/android/app-release.apk
+
+      - name: Start MinIO Telemetry Storage
+        run: |
+          if docker compose version >/dev/null 2>&1; then
+            docker compose -f infrastructure/minio-compose.yml up -d
+          else
+            docker-compose -f infrastructure/minio-compose.yml up -d
+          fi
+          sleep 5
+
+      - name: Start Android emulator (docker-android)
+        run: |
+          docker run -d \
+            --name android-emulator \
+            --privileged \
+            --device /dev/kvm \
+            -p 5554:5554 \
+            -p 5555:5555 \
+            -e API_LEVEL=${{ inputs.android_api_level || '33' }} \
+            -e IMG_TYPE=google_apis \
+            -e ARCHITECTURE=x86_64 \
+            -e DEVICE_ID=pixel \
+            -e MEMORY=4096 \
+            -e CORES=2 \
+            -e DISABLE_ANIMATION=true \
+            -e DISABLE_HIDDEN_POLICY=true \
+            -e SKIP_AUTH=1 \
+            halimqarroum/docker-android:api-${{ inputs.android_api_level || '33' }}
+
+      - name: Start Appium server
+        run: |
+          mkdir -p logs/appium-android
+          pnpm exec appium --relaxed-security > logs/appium-android/appium.log 2>&1 &
+          sleep 5
+
+      - name: Wait for emulator to be ready
+        run: |
+          echo "Waiting for ADB device to appear..."
+          adb connect localhost:5555
+          for i in $(seq 1 40); do
+            if adb -s localhost:5555 shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; then
+              echo "Emulator ready after $((i * 15))s"
+              break
+            fi
+            echo "  Attempt $i/40 — waiting 15s..."
+            sleep 15
+          done
+          adb devices
+
+      - name: Start proxy + Appium plugin
+        run: |
+          mkdir -p logs/appium-android
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/appium-android/proxy.log 2>&1 &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/appium/server.ts > logs/appium-android/appium-plugin.log 2>&1 &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/appium-android/api.log 2>&1 &
+          for port in 50051 50053 50055; do
+            for i in $(seq 1 20); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              sleep 1
+            done
+          done
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: android
+          DRIVER: appium
+          APPIUM_HOST: localhost
+          APPIUM_PORT: '4723'
+          CAP_PROFILE: docker_android
+          ANDROID_APP_PATH: assets/apps/android/app-release.apk
+          ANDROID_UDID: localhost:5555
+          PLUGIN_APPIUM: 'true'
+          PLUGIN_API: 'true'
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run E2E tests
+        id: android_tests
+        run: pnpm test --tags '@android'
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: android
+          DRIVER: appium
+          APPIUM_HOST: localhost
+          APPIUM_PORT: '4723'
+          CAP_PROFILE: docker_android
+          ANDROID_APP_PATH: assets/apps/android/app-release.apk
+          ANDROID_UDID: localhost:5555
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: '9000'
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Show Android emulator logs
+        if: failure()
+        run: |
+          docker ps -a --filter name=android-emulator
+          if docker ps -a --format '{{.Names}}' | grep -qx android-emulator; then
+            docker logs --tail 200 android-emulator
+          else
+            echo "android-emulator container was not created."
+          fi
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-appium-android-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Stop emulator
+        if: always()
+        run: docker rm -f android-emulator || true
+
+  # ---------------------------------------------------------------------------
+  # Job: Appium — iOS (macOS simulator)
+  # ---------------------------------------------------------------------------
+  appium-ios:
+    name: Appium — iOS
+    needs: resolve-omnipizza-release
+    if: >-
+      always()
+      && needs.resolve-omnipizza-release.result == 'success'
+      && (
+        github.event_name != 'workflow_dispatch'
+        || inputs.platform == 'all'
+        || inputs.platform == 'appium'
+        || inputs.platform == 'appium-ios'
+      )
+    runs-on: macos-latest
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: appium-ios
+      PLATFORM: ios
+      DRIVER: appium
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-appium-ios
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download iOS simulator artifact
+        env:
+          OMNIPIZZA_RELEASE_BASE_URL: ${{ needs.resolve-omnipizza-release.outputs.base_url }}
+          OMNIPIZZA_RELEASE_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
+        run: |
+          mkdir -p assets/apps/ios
+          echo "Downloading OmniPizza iOS simulator bundle from release ${OMNIPIZZA_RELEASE_TAG}"
+          curl -fL "$OMNIPIZZA_RELEASE_BASE_URL/OmniPizza-Simulator.zip" \
+            -o assets/apps/ios/OmniPizza-Simulator.zip
+          ls -lh assets/apps/ios/OmniPizza-Simulator.zip
+
+      - name: Unpack iOS simulator app
+        run: |
+          rm -rf assets/apps/ios/unpacked
+          mkdir -p assets/apps/ios/unpacked
+          unzip -q assets/apps/ios/OmniPizza-Simulator.zip -d assets/apps/ios/unpacked
+          IOS_APP_PATH=$(find assets/apps/ios/unpacked -maxdepth 3 -name '*.app' -type d | head -n 1)
+          if [ -z "$IOS_APP_PATH" ]; then
+            echo "No .app bundle found inside OmniPizza-Simulator.zip"
+            exit 1
+          fi
+          echo "IOS_APP_PATH=$IOS_APP_PATH" >> "$GITHUB_ENV"
+
+      - name: Select and boot iOS simulator
+        run: |
+          DEVICE_LINE=$(xcrun simctl list devices available | grep -E 'iPhone .*\([A-F0-9-]+\) \((Shutdown|Booted)\)' | head -n 1)
+          if [ -z "$DEVICE_LINE" ]; then
+            echo "No available iPhone simulator found"
+            exit 1
+          fi
+          IOS_DEVICE_NAME=$(echo "$DEVICE_LINE" | sed -E 's/^[[:space:]]*([^()]+)[[:space:]]+\(.*/\1/' | xargs)
+          IOS_UDID=$(echo "$DEVICE_LINE" | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          echo "IOS_DEVICE_NAME=$IOS_DEVICE_NAME" >> "$GITHUB_ENV"
+          echo "IOS_UDID=$IOS_UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$IOS_UDID" || true
+          xcrun simctl bootstatus "$IOS_UDID" -b
+
+      - name: Start MinIO Telemetry Storage
+        run: |
+          case "$(uname -m)" in
+            arm64) MINIO_ARCH="arm64" ;;
+            x86_64) MINIO_ARCH="amd64" ;;
+            *)
+              echo "Unsupported macOS architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          curl -fL "https://dl.min.io/server/minio/release/darwin-${MINIO_ARCH}/minio" \
+            -o /tmp/minio
+          chmod +x /tmp/minio
+
+          mkdir -p /tmp/tom-minio-data
+          MINIO_ROOT_USER=minioadmin \
+          MINIO_ROOT_PASSWORD=minioadmin \
+            /tmp/minio server /tmp/tom-minio-data --address ":9000" --console-address ":9001" &
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
+              echo "MinIO ready"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "MinIO did not become healthy"
+          exit 1
+
+      - name: Start Appium server
+        run: |
+          mkdir -p logs/appium-ios
+          pnpm exec appium --relaxed-security > logs/appium-ios/appium.log 2>&1 &
+          sleep 5
+
+      - name: Start proxy + Appium plugin
+        run: |
+          mkdir -p logs/appium-ios
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/kernel/chaos-proxy.ts > logs/appium-ios/proxy.log 2>&1 &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/appium/server.ts > logs/appium-ios/appium-plugin.log 2>&1 &
+          npx ts-node -r tsconfig-paths/register -r dotenv/config src/plugins/api/server.ts > logs/appium-ios/api.log 2>&1 &
+          for port in 50051 50053 50055; do
+            for i in $(seq 1 20); do
+              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
+              sleep 1
+            done
+          done
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: ios
+          DRIVER: appium
+          APPIUM_HOST: localhost
+          APPIUM_PORT: '4723'
+          CAP_PROFILE: ci_ios_headless
+          IOS_APP_PATH: ${{ vars.IOS_APP_PATH || env.IOS_APP_PATH }}
+          IOS_UDID: ${{ env.IOS_UDID }}
+          IOS_DEVICE_NAME: ${{ env.IOS_DEVICE_NAME }}
+          PLUGIN_APPIUM: 'true'
+          PLUGIN_API: 'true'
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: '9000'
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run E2E tests
+        run: pnpm test --tags '@ios'
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PLATFORM: ios
+          DRIVER: appium
+          APPIUM_HOST: localhost
+          APPIUM_PORT: '4723'
+          CAP_PROFILE: ci_ios_headless
+          IOS_APP_PATH: ${{ vars.IOS_APP_PATH || env.IOS_APP_PATH }}
+          IOS_UDID: ${{ env.IOS_UDID }}
+          IOS_DEVICE_NAME: ${{ env.IOS_DEVICE_NAME }}
+          MINIO_ENDPOINT: localhost
+          MINIO_PORT: '9000'
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-appium-ios-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: Gatling (performance)
+  # ---------------------------------------------------------------------------
+  gatling:
+    name: Gatling
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'gatling'
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: gatling
+      PLATFORM: performance
+      DRIVER: gatling
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-gatling-${{ inputs.perf_profile || 'smoke' }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Cache Gatling JRE bundle
+        uses: actions/cache@v4
+        with:
+          path: node_modules/@gatling.io/cli/.gatling
+          key: gatling-jre-${{ runner.os }}-${{ hashFiles('node_modules/@gatling.io/cli/package.json') }}
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Capture run start time
+        if: always()
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Run simulation
+        run: pnpm perf:${{ inputs.perf_profile || 'smoke' }}
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PERF_USERS: ${{ inputs.perf_users || '20' }}
+          PERF_DURATION: ${{ inputs.perf_duration || '120' }}
+          LANGUAGE: en
+
+      - name: Capture run end time
+        if: always()
+        run: echo "RUN_ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Generate run manifest
+        if: always()
+        run: pnpm run metrics:manifest
+
+      - name: Run metrics pipeline
+        if: always()
+        run: pnpm run metrics:all
+
+      - name: Upload TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-gatling-${{ github.run_id }}
+          path: |
+            metrics/
+            results/
+            logs/
+            target/gatling/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # Job: consolidate — merge every per-tool artifact and run the full
+  # operational + quality metrics pipeline over the combined inputs.
+  # ---------------------------------------------------------------------------
+  consolidate:
+    name: Consolidate — Experiment metrics
+    needs:
+      - api
+      - playwright-desktop
+      - playwright-responsive
+      - pixelmatch-desktop
+      - pixelmatch-responsive
+      - appium-android
+      - appium-ios
+      - gatling
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      ARCHITECTURE_TYPE: TOM
+      EXPERIMENT_BATCH_ID: ${{ inputs.experiment_batch_id || 'batch-adhoc' }}
+      RUN_INDEX: ${{ inputs.run_index || github.run_attempt }}
+      TOOL_NAME: ALL
+      PLATFORM: ALL
+      DRIVER: none
+      TOM_RUN_ID: tom-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.run_index || github.run_attempt }}-consolidated
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download all per-tool metrics artifacts
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tom-metrics-*
+          merge-multiple: true
+          path: .
+
+      - name: Run consolidated experiment metrics
+        if: always()
+        run: pnpm run metrics:experiment
+
+      - name: Upload consolidated TOM metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tom-metrics-consolidated-${{ github.run_id }}
+          path: |
+            metrics/
+          if-no-files-found: ignore
+          retention-days: 30

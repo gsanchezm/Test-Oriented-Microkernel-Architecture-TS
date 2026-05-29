@@ -30,13 +30,16 @@ jobs:
       pull-requests: write
 
     env:
+      ARCHITECTURE_TYPE: TOM
+      TOOL_NAME: pixelmatch
+      PLATFORM: web
       DRIVER: playwright
       PLUGIN_PLAYWRIGHT: 'true'
       PLUGIN_PIXELMATCH: 'true'
       PLUGIN_API: 'true'
       VISUAL_UPDATE_BASELINE: 'true'
       BASE_URL: ${{ vars.VISUAL_BASE_URL }}
-      TOM_RUN_ID: gh-refresh-${{ github.run_id }}-${{ github.run_attempt }}
+      TOM_RUN_ID: tom-refresh-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - uses: actions/checkout@v4

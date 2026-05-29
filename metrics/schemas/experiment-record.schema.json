@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tom-architecture/schemas/experiment-record.schema.json",
+  "title": "ExperimentRecord",
+  "description": "Common experimental columns prepended to every processed operational CSV row. Shared, unchanged, by the future GTAA_BASELINE repository.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "architecture_type",
+    "repository_name",
+    "experiment_batch_id",
+    "run_index",
+    "workflow_run_id",
+    "workflow_attempt",
+    "job_name",
+    "tool_name",
+    "platform",
+    "viewport",
+    "run_id",
+    "commit_sha",
+    "branch",
+    "timestamp",
+    "status"
+  ],
+  "properties": {
+    "architecture_type": { "type": "string", "description": "TOM in this repository." },
+    "repository_name": { "type": "string" },
+    "experiment_batch_id": { "type": "string" },
+    "run_index": { "type": "string" },
+    "workflow_run_id": { "type": "string" },
+    "workflow_attempt": { "type": "string" },
+    "job_name": { "type": "string" },
+    "tool_name": { "type": "string", "description": "ALL for repository-level rows." },
+    "platform": { "type": "string", "description": "ALL for repository-level rows." },
+    "viewport": { "type": "string" },
+    "run_id": { "type": "string" },
+    "commit_sha": { "type": "string" },
+    "branch": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "status": { "type": "string", "enum": ["PASS", "FAIL", "SKIP", "UNKNOWN"] }
+  }
+}
