@@ -38,7 +38,10 @@ jobs:
       PLUGIN_PIXELMATCH: 'true'
       PLUGIN_API: 'true'
       VISUAL_UPDATE_BASELINE: 'true'
-      BASE_URL: ${{ vars.VISUAL_BASE_URL }}
+      # Capture baselines against the SAME URL the TOM pixelmatch jobs compare
+      # against (secrets.BASE_URL), so baseline source == comparison source and
+      # no URL drift can invalidate the visual oracle.
+      BASE_URL: ${{ secrets.BASE_URL }}
       TOM_RUN_ID: tom-refresh-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
@@ -59,6 +62,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Start TOM stack
+        shell: bash
         run: |
           mkdir -p logs
           pnpm run proxy   > logs/proxy.log   2>&1 &

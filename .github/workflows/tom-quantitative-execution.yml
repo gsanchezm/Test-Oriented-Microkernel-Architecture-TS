@@ -17,10 +17,14 @@
 name: TOM — Quantitative Execution
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # Auto-triggers silenced during the 100-run scientific batch so only the
+  # explicit workflow_dispatch runs (against the frozen experiment tag) execute
+  # — avoids adhoc noise runs on push/PR (e.g. merging the baselines PR).
+  # Re-enable push/pull_request when the batch is complete.
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       platform:
