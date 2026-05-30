@@ -6,12 +6,16 @@ import type {
     ProfileUpdateRequest,
 } from '@core/tests/profile/dao/profile.types';
 
-// Canonical path per profile.api.contract.json. The endpoints are NOT yet
-// implemented in the OmniPizza backend — this DAO is TDD-style scaffolding.
-// If a runtime call returns 404 the contract is signalling the backend to
-// add this endpoint.
+// Canonical paths. `me` (GET/PATCH /api/users/me/profile) is the live
+// per-user profile. `seed` (POST /api/profile) is the atomic deterministic
+// reset/seed added by OmniPizza (commit 124b268): it replaces the user's
+// profile with defaults + any fields supplied, so a known state can be frozen
+// right before a visual snapshot. The full_name field is shared+mutable per
+// username on the demo backend, so without a pre-snapshot seed the screen
+// hydrates whatever another scenario/run last saved (visual drift).
 const PATHS = {
     me: '/api/users/me/profile',
+    seed: '/api/profile',
 } as const;
 
 // Overrides HttpClient's default. Must stay ≥45s — Render free tier cold
@@ -60,6 +64,24 @@ export class ProfileDao {
         return this.httpClient.patch<ProfileResponse>(PATHS.me, {
             headers: this.authHeaders(params.token, params.countryCode),
             body: params.body,
+        });
+    }
+
+    /**
+     * Atomic deterministic seed/reset (POST /api/profile). Replaces the user's
+     * profile with defaults + the provided fields; OMITTED fields reset to
+     * their default (empty strings, premium=true) — it does NOT merge. Call it
+     * right before a visual snapshot to freeze the (otherwise shared+mutable
+     * per-username) profile to a known state. Market-independent, so no
+     * x-country-code header. Empty body ⇒ clean pre-edit defaults.
+     */
+    seedProfile(params: {
+        token: string;
+        body?: ProfileUpdateRequest;
+    }): Promise<ProfileResponse> {
+        return this.httpClient.post<ProfileResponse>(PATHS.seed, {
+            headers: this.authHeaders(params.token),
+            body: params.body ?? {},
         });
     }
 

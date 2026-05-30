@@ -86,6 +86,16 @@ export class ProfileRoute {
         this.world.languageOverride = lang;
 
         const { token } = this.requireAuth();
+        // Freeze the profile to a deterministic empty pre-edit state BEFORE the
+        // screen hydrates from the shared+mutable-per-username backend value —
+        // else the form/card render whatever another scenario/run last saved,
+        // drifting every frozen visual baseline (observed: "田中 健太" leaking
+        // into a US/en render). POST /api/profile {} resets to defaults. UI
+        // drivers only — the @api scenarios drive their own PATCH read-after-
+        // write and must not be reset mid-flow.
+        if (this.driver !== 'api') {
+            await this.profileDao.seedProfile({ token });
+        }
         await openProfileScreen({ market: code, language: lang, accessToken: token });
     }
 
