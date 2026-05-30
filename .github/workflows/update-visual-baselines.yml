@@ -17,32 +17,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh:
-    name: Regenerate baselines & open PR
+  # ---------------------------------------------------------------------------
+  # capture — one leg per viewport. The visual bucket key comes from the
+  # plugin's VIEWPORT (see visual-target-options.ts:
+  # `variables.viewport ?? process.env.VIEWPORT ?? 'desktop'`), so a single
+  # all-viewports pass would funnel every snapshot into one viewport bucket and
+  # leave the other empty. Each matrix leg therefore starts the stack AT its
+  # viewport and runs scripts/visual-regen.js <viewport>, which wipes only that
+  # viewport's subtree and captures `@<viewport> and @visual` with
+  # VISUAL_UPDATE_BASELINE=true. Fresh containers avoid the proxy-restart /
+  # pnpm-child-survives-kill footgun a single-job two-pass design would hit.
+  # ---------------------------------------------------------------------------
+  capture:
+    name: Capture baselines (${{ matrix.viewport }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: [desktop, responsive]
 
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-jammy
       options: --user 0
 
-    permissions:
-      contents: write
-      pull-requests: write
-
     env:
       ARCHITECTURE_TYPE: TOM
       TOOL_NAME: pixelmatch
       PLATFORM: web
+      # The render axis — must match the plugin VIEWPORT the TOM pixelmatch
+      # jobs compare under, or the baseline buckets won't line up.
+      VIEWPORT: ${{ matrix.viewport }}
       DRIVER: playwright
+      HEADLESS: 'true'
       PLUGIN_PLAYWRIGHT: 'true'
       PLUGIN_PIXELMATCH: 'true'
       PLUGIN_API: 'true'
       VISUAL_UPDATE_BASELINE: 'true'
-      # Capture baselines against the SAME URL the TOM pixelmatch jobs compare
-      # against (secrets.BASE_URL), so baseline source == comparison source and
-      # no URL drift can invalidate the visual oracle.
+      # Capture against the SAME URLs the TOM pixelmatch jobs compare against
+      # (secrets.BASE_URL / secrets.API_BASE_URL), so baseline source ==
+      # comparison source and no URL drift can invalidate the visual oracle.
+      # API_BASE_URL is required: the @visual Background logs in via the
+      # LoginDao, whose constructor throws "Missing required env var: API_BASE_URL".
       BASE_URL: ${{ secrets.BASE_URL }}
-      TOM_RUN_ID: tom-refresh-${{ github.run_id }}-${{ github.run_attempt }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      TOM_RUN_ID: tom-refresh-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.viewport }}
 
     steps:
       - uses: actions/checkout@v4
@@ -75,22 +93,73 @@ jobs:
           tail -n 200 logs/proxy.log logs/plugins.log
           exit 1
 
-      - name: Wipe existing baselines so the refresh is total
+      - name: Regenerate ${{ matrix.viewport }} baselines
+        shell: bash
+        # visual-regen.js wipes only THIS viewport's subtree, then runs
+        # `@<viewport> and @visual` with VISUAL_UPDATE_BASELINE=true (green by
+        # construction). Plugin already started at the matching VIEWPORT above.
+        # `reports/` is gitignored (absent in a fresh checkout) and cucumber's
+        # json formatter won't mkdir it — create it so the format write doesn't
+        # ENOENT.
         run: |
-          # Keep the directory, drop the PNGs. Stale baselines from removed
-          # snapshot ids should not survive a refresh.
-          find visual-baselines -type f -name '*.png' -delete
+          mkdir -p reports
+          node scripts/visual-regen.js ${{ matrix.viewport }}
 
-      - name: Regenerate baselines
-        run: ./node_modules/.bin/cucumber-js --tags "@visual"
+      - name: Upload ${{ matrix.viewport }} baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: baselines-${{ matrix.viewport }}
+          path: visual-baselines/
+          # Fail loudly if the capture produced no PNGs — a silent empty
+          # artifact would later open a no-op PR and look like success.
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload ${{ matrix.viewport }} logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-logs-${{ matrix.viewport }}
+          path: |
+            logs/
+            reports/playwright-visual-${{ matrix.viewport }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # open-pr — merge every viewport's captured baselines into one working tree
+  # and open a single refresh PR. Runs only if BOTH capture legs succeeded
+  # (default `needs` semantics), so a half-captured set never lands a PR.
+  # ---------------------------------------------------------------------------
+  open-pr:
+    name: Open baselines refresh PR
+    needs: capture
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_branch || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Download all viewport baselines
+        uses: actions/download-artifact@v4
+        with:
+          pattern: baselines-*
+          merge-multiple: true
+          path: visual-baselines/
 
       - name: Force-stage baselines (override the local-only PNG ignore rule)
         # The repo's .gitignore excludes `visual-baselines/*` (only the
         # .gitkeep is tracked by default) so dev laptops don't accidentally
         # commit Windows/macOS-rendered PNGs that would diff against the
-        # CI Linux container. This workflow IS that Linux container — its
-        # baselines are the canonical ones — so we override the ignore via
-        # `git add -f` and let peter-evans commit the resulting index.
+        # CI Linux container. These artifacts ARE the canonical Linux
+        # baselines — so we override the ignore via `git add -f` and let
+        # peter-evans commit the resulting index.
         run: git add -f visual-baselines/
 
       - name: Open refresh PR
@@ -110,23 +179,13 @@ jobs:
             Workflow run: ${{ github.run_id }}
           title: 'chore(visual): refresh baselines (run ${{ github.run_id }})'
           body: |
-            Automated refresh of `visual-baselines/`.
+            Automated refresh of `visual-baselines/` (desktop + responsive).
 
             **Reason:** ${{ github.event.inputs.reason }}
             **Triggered by:** @${{ github.actor }}
             **Source run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
             Review the PNG diffs in this PR before merging — every checked-in
-            baseline becomes the new source of truth for the `e2e-web` /
-            `e2e-web-responsive` jobs in `ahm-execution-helix.yml` (the
-            Visual gate compares actual captures against these PNGs).
-
-      - name: Upload refresh artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-refresh-${{ github.run_id }}
-          path: |
-            visual-baselines/
-            metrics/raw/visual/
-            logs/
+            baseline becomes the new source of truth for the TOM pixelmatch
+            jobs (`pixelmatch-desktop` / `pixelmatch-responsive`), whose Visual
+            gate compares actual captures against these PNGs.
