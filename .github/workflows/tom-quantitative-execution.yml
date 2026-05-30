@@ -609,7 +609,11 @@ jobs:
         run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
       - name: Run visual capture
-        run: pnpm test:json:visual:desktop
+        # COMPARE against the committed baselines (the gate). `test:json:visual:desktop`
+        # maps to scripts/visual-regen.js which WIPES + regenerates baselines and forces
+        # VISUAL_UPDATE_BASELINE=true (local-iteration only) — use the compare script so the
+        # visual gate actually validates against visual-baselines/.
+        run: pnpm test:json:visual:compare:desktop
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
@@ -753,7 +757,8 @@ jobs:
         run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
       - name: Run visual capture
-        run: pnpm test:json:visual:responsive
+        # COMPARE against the committed baselines (see desktop note above).
+        run: pnpm test:json:visual:compare:responsive
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
