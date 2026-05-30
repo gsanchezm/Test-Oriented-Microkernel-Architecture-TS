@@ -659,7 +659,12 @@ jobs:
   # ---------------------------------------------------------------------------
   pixelmatch-responsive:
     name: Pixelmatch — Responsive
-    needs: playwright-responsive
+    # Serialized AFTER pixelmatch-desktop so the two visual jobs never mutate the
+    # shared-per-username profile concurrently — cross-job re-hydration of the
+    # demo backend's shared full_name poisoned the pre-edit profile baselines.
+    # iOS dominates the run wall-clock (~80 min), so the added ~17 min on the
+    # visual path is free.
+    needs: [playwright-responsive, pixelmatch-desktop]
     if: >-
       always()
       && needs.playwright-responsive.result != 'skipped'

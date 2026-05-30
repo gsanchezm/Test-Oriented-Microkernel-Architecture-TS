@@ -33,6 +33,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # One viewport at a time: the profile is shared per-username on the demo
+      # backend, so capturing desktop + responsive concurrently as the same user
+      # lets one leg's post_save poison the other's pre-edit baseline.
+      max-parallel: 1
       matrix:
         viewport: [desktop, responsive]
 
