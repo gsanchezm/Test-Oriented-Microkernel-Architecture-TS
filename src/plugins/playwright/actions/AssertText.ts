@@ -7,7 +7,10 @@ export const AssertTextAction: ActionHandler<PlaywrightActionContext> = {
     async execute({ page, target }) {
         const { selector, value: expected } = parseSelectorValue(target, 'ASSERT_TEXT action');
         const actual = await page.locator(selector).innerText();
-        if (actual !== expected) {
+        // Case/whitespace-insensitive: label casing is presentation, not
+        // semantics (web CSS text-transform uppercases; native renders as-is),
+        // so "FULL NAME" (web innerText) and "Full name" (native) both match.
+        if (actual.trim().toLowerCase() !== expected.trim().toLowerCase()) {
             throw new Error(
                 `[ASSERT_TEXT] Mismatch on "${selector}": expected "${expected}", got "${actual}"`,
             );

@@ -13,7 +13,10 @@ export const AssertTextAction: ActionHandler<MobilewrightActionContext> = {
         const strategy = parseLocator(selector);
         const locator = await locate(driver, strategy);
         const actual = await locator.getText();
-        if (actual !== expected) {
+        // Case/whitespace-insensitive: label casing is presentation, not
+        // semantics (web CSS text-transform uppercases; native renders as-is),
+        // so "FULL NAME" (web innerText) and "Full name" (native) both match.
+        if (actual.trim().toLowerCase() !== expected.trim().toLowerCase()) {
             throw new Error(
                 `[ASSERT_TEXT] mobilewright element ${strategy.kind}=${strategy.value} ` +
                 `expected "${expected}" but got "${actual}"`,

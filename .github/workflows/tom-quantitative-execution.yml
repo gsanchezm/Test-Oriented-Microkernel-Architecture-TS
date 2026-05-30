@@ -303,11 +303,13 @@ jobs:
           for port in 50051 50052 50055; do
             ready=false
             for i in $(seq 1 30); do
-              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
-              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              # netcat isn't installed in the playwright jammy container, so use
+              # the bash /dev/tcp builtin (shell: bash above) for the readiness
+              # probe — same approach as update-visual-baselines.yml.
+              if (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1; then echo "port $port ready"; ready=true; break; fi
               sleep 1
             done
-            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+            if [ "$ready" != "true" ]; then
               echo "Port $port did not become ready."
               cat logs/playwright/proxy.log || true
               cat logs/playwright/playwright.log || true
@@ -431,11 +433,13 @@ jobs:
           for port in 50051 50052 50055; do
             ready=false
             for i in $(seq 1 30); do
-              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
-              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              # netcat isn't installed in the playwright jammy container, so use
+              # the bash /dev/tcp builtin (shell: bash above) for the readiness
+              # probe — same approach as update-visual-baselines.yml.
+              if (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1; then echo "port $port ready"; ready=true; break; fi
               sleep 1
             done
-            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+            if [ "$ready" != "true" ]; then
               echo "Port $port did not become ready."
               cat logs/playwright/proxy.log || true
               cat logs/playwright/playwright.log || true
@@ -568,11 +572,13 @@ jobs:
           for port in 50051 50052 50055; do
             ready=false
             for i in $(seq 1 30); do
-              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
-              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              # netcat isn't installed in the playwright jammy container, so use
+              # the bash /dev/tcp builtin (shell: bash above) for the readiness
+              # probe — same approach as update-visual-baselines.yml.
+              if (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1; then echo "port $port ready"; ready=true; break; fi
               sleep 1
             done
-            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+            if [ "$ready" != "true" ]; then
               echo "Port $port did not become ready."
               cat logs/pixelmatch/proxy.log || true
               cat logs/pixelmatch/playwright.log || true
@@ -710,11 +716,13 @@ jobs:
           for port in 50051 50052 50055; do
             ready=false
             for i in $(seq 1 30); do
-              nc -z localhost $port 2>/dev/null && echo "port $port ready" && break
-              nc -z 127.0.0.1 $port 2>/dev/null && echo "port $port ready" && ready=true && break
+              # netcat isn't installed in the playwright jammy container, so use
+              # the bash /dev/tcp builtin (shell: bash above) for the readiness
+              # probe — same approach as update-visual-baselines.yml.
+              if (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1; then echo "port $port ready"; ready=true; break; fi
               sleep 1
             done
-            if [ "$ready" != "true" ] && ! nc -z 127.0.0.1 "$port" 2>/dev/null; then
+            if [ "$ready" != "true" ]; then
               echo "Port $port did not become ready."
               cat logs/pixelmatch/proxy.log || true
               cat logs/pixelmatch/playwright.log || true
@@ -924,6 +932,11 @@ jobs:
           ANDROID_UDID: localhost:5555
           PLUGIN_APPIUM: 'true'
           PLUGIN_API: 'true'
+          # Pin the proxy's plugin dial addresses to explicit IPv4 (the plugin
+          # binds 0.0.0.0, IPv4-only) — matches the web jobs and avoids the
+          # localhost->::1 ECONNREFUSED seen on the macOS iOS runner.
+          APPIUM_ADDRESS: 127.0.0.1:50053
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
 
       - name: Capture run start time
         if: always()
@@ -941,6 +954,7 @@ jobs:
           CAP_PROFILE: docker_android
           ANDROID_APP_PATH: assets/apps/android/app-release.apk
           ANDROID_UDID: localhost:5555
+          PROXY_ADDRESS: 127.0.0.1:50051
           MINIO_ENDPOINT: localhost
           MINIO_PORT: '9000'
           MINIO_ACCESS_KEY: minioadmin
@@ -1118,6 +1132,11 @@ jobs:
           IOS_DEVICE_NAME: ${{ env.IOS_DEVICE_NAME }}
           PLUGIN_APPIUM: 'true'
           PLUGIN_API: 'true'
+          # On macOS, localhost can resolve to ::1 (IPv6); the plugin binds
+          # 0.0.0.0 (IPv4-only), so gRPC re-resolution caused ECONNREFUSED
+          # ::1:50053 mid-run. Pin the proxy's plugin dials to explicit IPv4.
+          APPIUM_ADDRESS: 127.0.0.1:50053
+          API_ADAPTER_ADDRESS: 127.0.0.1:50055
           MINIO_ENDPOINT: localhost
           MINIO_PORT: '9000'
           MINIO_ACCESS_KEY: minioadmin
@@ -1139,6 +1158,7 @@ jobs:
           IOS_APP_PATH: ${{ vars.IOS_APP_PATH || env.IOS_APP_PATH }}
           IOS_UDID: ${{ env.IOS_UDID }}
           IOS_DEVICE_NAME: ${{ env.IOS_DEVICE_NAME }}
+          PROXY_ADDRESS: 127.0.0.1:50051
           MINIO_ENDPOINT: localhost
           MINIO_PORT: '9000'
           MINIO_ACCESS_KEY: minioadmin
