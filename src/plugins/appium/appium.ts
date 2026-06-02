@@ -85,10 +85,37 @@ async function ensureSession(sessionId: string): Promise<Browser> {
     };
 
     logger.info({ sessionId, platform: PLATFORM }, '[Appium] Bootstrapping session...');
-    const driver = await remote(wdioOptions);
-    sessions.set(sessionId, driver);
+    // Retry the bootstrap on transient emulator/WDA hiccups. The docker-android
+    // image flakily fails when Appium enables the io.appium.settings UnicodeIME
+    // before the settings app finishes installing ("ime enable ... UnicodeIME
+    // ... cannot be enabled", adbExec exit 255). unicodeKeyboard/resetKeyboard
+    // are required for CJK (JP/ja) text entry, so we keep them and instead
+    // re-attempt the whole session — the next try lands once the settings app /
+    // uiautomator2 server is in place. Also covers transient iOS WDA bring-up.
+    let driver: Browser | undefined;
+    const MAX_BOOTSTRAP_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_BOOTSTRAP_ATTEMPTS; attempt++) {
+        try {
+            driver = await remote(wdioOptions);
+            break;
+        } catch (err) {
+            const msg = (err as Error)?.message ?? String(err);
+            const transient =
+                /UnicodeIME|ime enable|cannot be enabled|adbExec|uiautomator2|instrumentation|socket hang up|ECONNREFUSED|not installed|WDA/i.test(
+                    msg,
+                );
+            if (attempt >= MAX_BOOTSTRAP_ATTEMPTS || !transient) throw err;
+            const backoffMs = 5000 * attempt;
+            logger.warn(
+                { sessionId, attempt, backoffMs, err: msg },
+                '[Appium] Transient session bootstrap failure — retrying',
+            );
+            await new Promise((r) => setTimeout(r, backoffMs));
+        }
+    }
+    sessions.set(sessionId, driver!);
     logger.info({ sessionId, total: sessions.size }, '[Appium] Session created');
-    return driver;
+    return driver!;
 }
 
 async function teardown(sessionId: string): Promise<void> {
