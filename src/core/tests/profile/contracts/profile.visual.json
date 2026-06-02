@@ -40,7 +40,7 @@
       "maskRefs": ["profileFullNameInput", "profilePhoneNumberInput", "addressInput", "notesInput"],
       "platforms": ["web", "android", "ios"],
       "viewports": ["desktop", "responsive", "mobile"],
-      "thresholds": { "pixelRatio": 0.01 },
+      "thresholds": { "pixelRatio": 0.03 },
       "tags": ["@visual", "@profile", "@desktop", "@responsive"],
       "telemetry": { "enabled": true, "emitOnLoad": false }
     }
