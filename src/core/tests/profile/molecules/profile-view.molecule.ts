@@ -205,6 +205,13 @@ export async function assertFormInputsVisible(): Promise<void> {
     if (!skipIfWebOnlyOnMobile('addressInput', 'assertFormInputsVisible.address')) {
         await sendIntent(INTENT.WAIT_FOR_ELEMENT, `addressInput||${PRESENCE_WAIT_MS}`);
     }
+    // The notes input is the last field; on small mobile screens it sits below
+    // the fold, so the visibility check times out (~input-profile-notes "still
+    // not displayed after 8000ms") without scrolling. Bring it into view first
+    // — mobile only; web shows the whole form at once.
+    if (isMobileDriver()) {
+        await sendIntent(INTENT.SCROLL_TO, 'notesInput');
+    }
     await sendIntent(INTENT.WAIT_FOR_ELEMENT, `notesInput||${PRESENCE_WAIT_MS}`);
 }
 
