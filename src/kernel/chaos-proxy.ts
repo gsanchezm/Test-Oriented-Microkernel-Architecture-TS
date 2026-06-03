@@ -108,7 +108,15 @@ function routeToPlugin(
 // --- 4. Transient Jitter Detection via Compiled RegExp ---
 
 const TRANSIENT_SIGNATURE_REGEX = new RegExp(
-    'staleelementreference|elementnotinteractable|nosuchelement|timeouterror|targetclosederror|node is detached',
+    // UI-level jitter — element flakiness during a render/transition.
+    'staleelementreference|elementnotinteractable|nosuchelement|timeouterror|targetclosederror|node is detached' +
+    // Transport-level jitter — under long iOS/WDA operations the appium plugin's
+    // event loop momentarily blocks and refuses the proxy's gRPC connection
+    // (gRPC "14 UNAVAILABLE" / ECONNREFUSED). It recovers once the op completes,
+    // so the same backoff-retry the suppressor applies to UI jitter is the
+    // correct remedy. (Same retry policy — no change to maxRetries/backoff, so
+    // the measured chaos-suppression behavior stays comparable across the batch.)
+    '|econnrefused|econnreset|socket hang up|no connection established|unavailable: no connection',
     'i',
 );
 
