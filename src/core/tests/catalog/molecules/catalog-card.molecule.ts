@@ -51,7 +51,11 @@ export async function assertBuilderOpen(pizzaId: string): Promise<void> {
     const driver = (process.env.DRIVER ?? 'playwright').toLowerCase();
     if (driver === 'appium' || driver === 'mobilewright') {
         log.info({ pizzaId, driver }, 'Verifying builder open (mobile)');
-        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `~screen-pizza-builder||${BUILDER_WAIT_TIMEOUT_MS}`);
+        // NOTE 2026-06-04: iOS 1.0.8 no longer exposes `~screen-pizza-builder`
+        // (the modal renders but the container id is absent — 30s timeout in
+        // the @ios run while the builder is visibly open). Anchor on the
+        // confirm CTA `~btn-add-to-cart`, verified present on-device, instead.
+        await sendIntent(INTENT.WAIT_FOR_ELEMENT, `~btn-add-to-cart||${BUILDER_WAIT_TIMEOUT_MS}`);
         return;
     }
     await sendIntent(INTENT.WAIT_FOR_ELEMENT, `confirmAddToCartButton||${BUILDER_WAIT_TIMEOUT_MS}`);

@@ -2,6 +2,7 @@ import { sendIntent } from '@kernel/client';
 import { INTENT } from '@kernel/intents';
 import { logger } from '@utils/logger';
 import type { CountryCode } from '@plugins/api/http';
+import { dismissIOSSaveAlertIfPresent } from './profile-save.molecule';
 
 const log = logger.child({ layer: 'molecule', domain: 'profile', action: 'view' });
 
@@ -46,6 +47,13 @@ export async function openProfileScreen(args: OpenProfileArgs): Promise<void> {
         const url = `omnipizza://profile?${params.toString()}`;
         log.info({ market: args.market, language: args.language }, 'Deep linking to profile');
         await sendIntent(INTENT.DEEP_LINK, url);
+        // A reused iOS simulator session can carry an orphan native "Profile
+        // saved" alert from a prior scenario; it sits modal over the screen so
+        // XCUI reports the form inputs as not-displayed and waitForProfileScreen
+        // times out (the profile-gate cluster). Clear it best-effort before
+        // waiting — iOS-only and side-effect-free when absent. Short budget: if
+        // an orphan is present it's already on screen.
+        await dismissIOSSaveAlertIfPresent(3);
         await waitForProfileScreen();
         return;
     }

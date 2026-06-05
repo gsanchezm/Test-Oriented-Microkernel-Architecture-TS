@@ -27,7 +27,24 @@ export async function verifyOrderAccepted(
     // fade transition. Older Android devices (Huawei Y9 / Android 9) on
     // a cold Render free-tier backend can exceed 30 s before the success
     // screen renders; 90 s absorbs both without masking real regressions.
-    await sendIntent(INTENT.WAIT_FOR_ELEMENT, 'orderSuccessScreen||90000');
+    try {
+        await sendIntent(INTENT.WAIT_FOR_ELEMENT, 'orderSuccessScreen||90000');
+    } catch (err) {
+        // The success screen never rendered within budget. Before re-throwing,
+        // surface the app's inline checkout error (if any) so the failure is
+        // ATTRIBUTABLE — validation-blocked (a field left empty on the tall
+        // MX/JP card form) vs backend reject vs late render — instead of an
+        // opaque 90s timeout. Additive/read-only: the happy path is unchanged.
+        // `text-checkout-error` (CheckoutScreen.tsx:687) exposes the localized
+        // message as its iOS accessibilityLabel, so READ_TEXT returns it.
+        const probe = await sendIntent(INTENT.READ_TEXT, '~text-checkout-error').catch(() => null);
+        const inlineError = (probe?.payload ?? '').trim();
+        throw new Error(
+            `[checkout] order-success ('btn-order-details') never rendered for ${countryInfo.code} within 90s; ` +
+            `inline checkout error=${inlineError ? `"${inlineError}"` : '<none>'} ` +
+            `(original: ${(err as Error)?.message ?? String(err)})`,
+        );
+    }
 
     const subtotal = round(
         cartItems.reduce((sum, item) => sum + unitPriceOf(item) * item.quantity, 0),

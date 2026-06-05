@@ -37,6 +37,21 @@ export async function selectCategory(categoryId: string): Promise<void> {
         await sendIntent(INTENT.CLICK, `~btn-category-${id}`);
         return;
     }
+    if (driver === 'appium' && platform === 'ios') {
+        // iOS analogue of the Android off-screen problem above: the pills are a
+        // horizontal list and the wide localized labels (es: "Vegetariana"/
+        // "Carnes") push `meat`/`sides` past the right edge. CLICK's
+        // scrollIntoViewSafe only swipes vertically, and tapElementCenter
+        // clamps an off-screen X to the screen edge — so the tap misses and the
+        // filter never engages (root cause of BUG-OMNI-001's MX/meat false
+        // positive). Bring the pill into view first via the native
+        // scroll-to-element idiom (SCROLL_TO -> `mobile: scroll`), then tap by
+        // its accessibility id. Mirrors profile-view.molecule's
+        // SCROLL_TO -> WAIT_FOR_ELEMENT precedent.
+        await sendIntent(INTENT.SCROLL_TO, `~btn-category-${id}`);
+        await sendIntent(INTENT.CLICK, `~btn-category-${id}`);
+        return;
+    }
     const selector = isMobileDriver()
         ? `~btn-category-${id}`
         : `[data-testid='category-${id}']`;

@@ -139,10 +139,24 @@ export async function assertNavbarCartCount(expected: string): Promise<void> {
         return;
     }
     if (isMobileDriver()) {
-        const result = await sendIntent(INTENT.READ_TEXT, 'bottomNavBadgeText');
-        const actual = (result.payload ?? '').trim();
-        if (!actual.includes(expected)) {
-            throw new Error(`[bottomNavBadgeText] expected "${expected}", got "${actual}"`);
+        // The badge text node is conditionally rendered (absent at count 0) and
+        // only mounts after the post-confirm goBack pops back to Catalog and it
+        // re-renders. A single READ_TEXT can fire inside that transition window
+        // and get '' (READ_TEXT uses find-many → empty array → ''), which is the
+        // observed failure. Poll instead — mirroring the web branch above and
+        // profile-view's assertInputValue, reusing the constants already defined
+        // for this purpose. The terminal throw is retained, so a genuine
+        // non-render (e.g. cart actually empty) still fails red.
+        let actual = '';
+        for (let attempt = 0; attempt < CART_COUNT_POLL_ATTEMPTS; attempt++) {
+            const result = await sendIntent(INTENT.READ_TEXT, 'bottomNavBadgeText');
+            actual = (result.payload ?? '').trim();
+            if (actual.includes(expected)) {
+                log.info({ expected, driver }, 'Cart badge matched (mobile)');
+                return;
+            }
+            await new Promise((r) => setTimeout(r, CART_COUNT_POLL_INTERVAL_MS));
         }
+        throw new Error(`[bottomNavBadgeText] expected "${expected}", got "${actual}"`);
     }
 }

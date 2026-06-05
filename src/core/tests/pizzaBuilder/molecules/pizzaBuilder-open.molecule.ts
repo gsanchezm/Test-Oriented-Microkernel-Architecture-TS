@@ -14,7 +14,15 @@ const log = logger.child({ layer: 'molecule', domain: 'pizzaBuilder', action: 'o
 // link path because Appium/mobilewright actually drive a native screen.
 const CATALOG_WAIT_TARGET_WEB = 'catalogScreen';
 const WAIT_TARGET_WEB = 'confirmAddToCartButton';
-const WAIT_TARGET_MOBILE = 'pizzaBuilderScreen';
+// NOTE 2026-06-04: on iOS 1.0.8 the builder modal renders correctly but does
+// NOT expose the `~screen-pizza-builder` container id that this gate used
+// (30s timeout while the modal is visibly open — verified via failure
+// screenshot; other screens DO expose `~screen-<name>`). Re-anchor the
+// "builder is open" gate on the confirm CTA `~btn-add-to-cart`, which the
+// builder authors verified present on-device (see verifyPriceAndConfirmVisible).
+// TODO(verify): confirm on the next @ios run that this recovers the builder
+// scenarios; if OmniPizza adds a screen-level id to the iOS modal, prefer it.
+const WAIT_TARGET_MOBILE = '~btn-add-to-cart';
 const WAIT_TIMEOUT_MS = 30_000;
 
 export type LanguageCode = 'en' | 'es' | 'de' | 'fr' | 'ja';
