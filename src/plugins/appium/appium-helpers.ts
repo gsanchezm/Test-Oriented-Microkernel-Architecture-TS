@@ -98,7 +98,7 @@ async function swipeUpW3C(driver: Browser, percent = 0.55): Promise<void> {
 
 // --- Keyboard handling ---
 
-async function isKeyboardShown(driver: Browser): Promise<boolean> {
+export async function isKeyboardShown(driver: Browser): Promise<boolean> {
     if (PLATFORM !== 'ios') return false;
     try {
         const kb = driver.$('XCUIElementTypeKeyboard');
@@ -171,6 +171,67 @@ export async function dismissKeyboard(driver: Browser): Promise<void> {
         await driver.executeScript('mobile: hideKeyboard', [{ strategy: 'tapOutside' }]);
         if (await waitForKeyboardState(driver, false, 250)) return;
     } catch { /* try next */ }
+}
+
+// Robust dismissal of the iOS numeric keypad on a SCROLLED form. The generic
+// dismissKeyboard above taps at y≈120/150 to "tap outside", but on the JP
+// credit-card form those coordinates land ON `input-card-number` (y≈103–151),
+// re-focusing it so the pad never closes — and then btn-place-order renders
+// UNDER the pad, so a tap at its center hits a keyboard key ('8'). These
+// strategies instead target genuinely neutral, non-input scroll content ABOVE
+// the keyboard, verifying isKeyboardShown after each. Each step logs its effect
+// so a single run reveals which gesture works (or that none does — i.e. the app
+// traps the keyboard over its own submit button, which would be an app UX bug).
+export async function dismissNumericKeyboardRobust(driver: Browser): Promise<boolean> {
+    if (PLATFORM !== 'ios') return true;
+    if (!(await isKeyboardShown(driver))) return true;
+
+    const kbTop = await keyboardTopY(driver);
+    const size = await driver.getWindowSize();
+    const check = async (label: string): Promise<boolean> => {
+        const dismissed = await waitForKeyboardState(driver, false, 600);
+        process.stderr.write(`[Appium-DBG] KBDISMISS ${label} -> kbShown=${!dismissed}\n`);
+        return dismissed;
+    };
+
+    // Strategy 1: tap a non-input StaticText above the keyboard. RN ScrollViews
+    // default to keyboardShouldPersistTaps='never', so a tap on inert content
+    // blurs the focused input. The totals labels sit above kbTop and are NOT the
+    // tip controls (tapping a tip % would change the total and fail assertions).
+    for (const sel of ['~text-subtotal-label', '~text-delivery-label', '~text-section-summary']) {
+        try {
+            const el = driver.$(sel);
+            if (!(await (el.isExisting() as Promise<boolean>).catch(() => false))) continue;
+            const loc = await (el.getLocation() as Promise<{ x: number; y: number }>);
+            const sz = await (el.getSize() as Promise<{ width: number; height: number }>);
+            const cy = loc.y + sz.height / 2;
+            if (kbTop !== null && cy >= kbTop - 8) continue; // must be above the keyboard
+            await driver.executeScript('mobile: tap', [{ x: Math.floor(loc.x + sz.width / 2), y: Math.floor(cy) }]);
+            if (await check(`tap-static(${sel})`)) return true;
+        } catch { /* try next */ }
+    }
+
+    // Strategy 2: swipe down on the content (catches keyboardDismissMode='on-drag').
+    try {
+        const top = kbTop ?? size.height;
+        await driver.executeScript('mobile: dragFromToForDuration', [{
+            duration: 0.4,
+            fromX: Math.floor(size.width / 2), fromY: Math.floor(top * 0.45),
+            toX: Math.floor(size.width / 2), toY: Math.floor(top - 6),
+        }]);
+        if (await check('swipe-down')) return true;
+    } catch { /* try next */ }
+
+    // Strategy 3: tap the scrollview background in the left margin (x≈6), above
+    // the keyboard and clear of the content's ~24px padding (so not on an input).
+    try {
+        const top = kbTop ?? size.height;
+        const y = Math.max(110, Math.floor((100 + top) / 2));
+        await driver.executeScript('mobile: tap', [{ x: 6, y }]);
+        if (await check(`margin-tap(6,${y})`)) return true;
+    } catch { /* try next */ }
+
+    return !(await isKeyboardShown(driver));
 }
 
 // --- Tap-zone safety ---
@@ -392,6 +453,8 @@ export async function typeTextIntoTarget(
 // Bundled helper object used as ActionContext.helpers in handlers.
 export const appiumHelpers = {
     dismissKeyboard,
+    isKeyboardShown,
+    dismissNumericKeyboardRobust,
     dismissAndroidSystemDialog,
     scrollIntoViewSafe,
     isFrameInTapZone,
